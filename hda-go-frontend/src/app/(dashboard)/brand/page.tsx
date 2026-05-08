@@ -40,32 +40,32 @@ export default function BrandDashboard() {
           <h1 className="text-3xl font-black text-white tracking-tight">Brand Command Center</h1>
           <p className="text-gray-500 font-medium mt-1">Track your campaign ROI, SOW fulfillment, and creator performance in real-time.</p>
         </div>
-        <button className="bg-white text-black hover:bg-gray-200 text-sm font-bold px-6 py-3 rounded-2xl transition-all shadow-lg">
+        <button onClick={() => alert('Opening Campaign Creation Modal...')} className="bg-white text-black hover:bg-gray-200 text-sm font-bold px-6 py-3 rounded-2xl transition-all shadow-lg">
           Submit New Deal
         </button>
       </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="bg-[#121212] border-white/5 shadow-xl">
+                <Card className="glass-card rounded-2xl border-0 shadow-xl">
           <CardContent className="p-6">
             <p className="text-sm font-medium text-gray-500 mb-1">Total Investment</p>
             <p className="text-3xl font-bold text-white tracking-tight">Rp 15M</p>
           </CardContent>
         </Card>
-        <Card className="bg-[#121212] border-white/5 shadow-xl">
+                <Card className="glass-card rounded-2xl border-0 shadow-xl">
           <CardContent className="p-6">
             <p className="text-sm font-medium text-gray-500 mb-1">Generated GMV</p>
             <p className="text-3xl font-bold text-emerald-500 tracking-tight">Rp 125.5M</p>
           </CardContent>
         </Card>
-        <Card className="bg-[#121212] border-white/5 shadow-xl">
+                <Card className="glass-card rounded-2xl border-0 shadow-xl">
           <CardContent className="p-6">
             <p className="text-sm font-medium text-gray-500 mb-1">Overall ROI</p>
             <p className="text-3xl font-bold text-blue-500 tracking-tight">{brandStats.roi}%</p>
           </CardContent>
         </Card>
-        <Card className="bg-[#121212] border-white/5 shadow-xl">
+                <Card className="glass-card rounded-2xl border-0 shadow-xl">
           <CardContent className="p-6">
             <p className="text-sm font-medium text-gray-500 mb-1">Active Creators</p>
             <p className="text-3xl font-bold text-white tracking-tight">{brandStats.activeCreators}</p>
@@ -78,7 +78,7 @@ export default function BrandDashboard() {
         <h2 className="text-xl font-bold text-white tracking-tight">Campaign Tracker</h2>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {campaigns.map((camp) => (
-            <Card key={camp.id} className="bg-[#121212] border-white/5 relative overflow-hidden group hover:border-white/10 transition-colors">
+            <Card key={camp.id} className="glass-card rounded-2xl border-0 relative overflow-hidden group">
               <CardContent className="p-6">
                 <div className="flex justify-between items-start mb-6">
                   <div>

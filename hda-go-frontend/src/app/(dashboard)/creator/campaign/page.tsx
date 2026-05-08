@@ -1,23 +1,64 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { campaignService } from '@/services';
+import { campaignService, notificationService } from '@/services';
 import { Card, CardContent } from '@/components/ui/card';
-import { Target, Zap, Clock, Users, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Target, Zap, Clock, Users, ArrowRight, CheckCircle2, Bell } from 'lucide-react';
 
 export default function CampaignHub() {
   const [campaigns, setCampaigns] = useState<any[]>([]);
+  const [recommendedCampaigns, setRecommendedCampaigns] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [joining, setJoining] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchCampaigns();
+    fetchData();
   }, []);
 
-  const fetchCampaigns = async () => {
+  const fetchData = async () => {
     try {
-      const data = await campaignService.getHub();
-      setCampaigns(data);
+      // 1. Fetch all eligible campaigns
+      const campData = await campaignService.getHub().catch(() => []);
+      const allCampaigns = Array.isArray(campData) ? campData : [];
+      setCampaigns(allCampaigns);
+
+      // 2. Fetch notifications to find CM-pushed campaign IDs
+      try {
+        const notifications = await notificationService.getAll();
+        const notifList = Array.isArray(notifications) ? notifications : [];
+        
+        // Extract campaign IDs from PUSH notifications with format "CAMPAIGN_REC::campaignId"
+        const pushedCampaignIds: string[] = [];
+        for (const notif of notifList) {
+          if (notif.type === 'PUSH' && notif.title?.startsWith('CAMPAIGN_REC::')) {
+            const campId = notif.title.replace('CAMPAIGN_REC::', '');
+            if (campId && !pushedCampaignIds.includes(campId)) {
+              pushedCampaignIds.push(campId);
+            }
+          }
+        }
+
+        if (pushedCampaignIds.length > 0) {
+          // Match pushed IDs against available campaigns
+          const recommended = allCampaigns.filter(c => pushedCampaignIds.includes(c.id));
+          
+          // If some pushed campaigns aren't in the hub list, fetch them individually
+          if (recommended.length < pushedCampaignIds.length) {
+            for (const id of pushedCampaignIds) {
+              if (!recommended.find(r => r.id === id)) {
+                try {
+                  const detail = await campaignService.getDetail(id);
+                  if (detail) recommended.push(detail);
+                } catch {}
+              }
+            }
+          }
+          
+          setRecommendedCampaigns(recommended);
+        }
+      } catch (err) {
+        console.error('Failed to fetch recommendations:', err);
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -29,7 +70,7 @@ export default function CampaignHub() {
     setJoining(id);
     try {
       await campaignService.join(id);
-      await fetchCampaigns(); // refresh list
+      await fetchData(); // refresh
     } catch (err) {
       console.error(err);
     } finally {
@@ -49,6 +90,70 @@ export default function CampaignHub() {
       <div>
         <h1 className="text-3xl font-black text-white tracking-tight">Campaign Hub</h1>
         <p className="text-gray-500 font-medium mt-1">Discover and join exclusive campaigns tailored to your level.</p>
+      </div>
+
+      {/* ── Recommended For You (CM Pushed) ── */}
+      <div className="space-y-6 mb-4">
+        <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
+          <Zap className="h-5 w-5 text-amber-500" /> Recommended For You
+        </h2>
+        {recommendedCampaigns.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {recommendedCampaigns.map((camp) => (
+              <Card key={`rec-${camp.id}`} className="bg-gradient-to-br from-blue-900/40 to-indigo-900/40 border-blue-500/50 shadow-2xl shadow-blue-500/20 group overflow-hidden relative">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/20 rounded-full blur-3xl -mr-16 -mt-16" />
+                <CardContent className="p-6 relative z-10">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="p-3 bg-blue-500/20 rounded-xl">
+                      <Target className="h-6 w-6 text-blue-400" />
+                    </div>
+                    <span className="text-[10px] font-black bg-blue-500 text-white px-2.5 py-1 rounded-full uppercase tracking-widest shadow-lg">CM Pick</span>
+                  </div>
+                  <h3 className="font-bold text-xl text-white mb-2 leading-tight">{camp.title}</h3>
+                  <div className="space-y-2 mb-6">
+                    <div className="flex items-center text-sm text-gray-300">
+                      <Zap className="h-4 w-4 mr-2 text-amber-400" />
+                      <span>Reward: <span className="text-white font-bold">{camp.reward_type}</span></span>
+                    </div>
+                    {camp.deadline && (
+                      <div className="flex items-center text-sm text-gray-300">
+                        <Clock className="h-4 w-4 mr-2 text-blue-400" />
+                        <span>Deadline: <span className="text-white font-bold">{new Date(camp.deadline).toLocaleDateString()}</span></span>
+                      </div>
+                    )}
+                    <div className="flex items-center text-sm text-gray-300">
+                      <Bell className="h-4 w-4 mr-2 text-purple-400" />
+                      <span className="text-purple-300 font-medium">Direkomendasikan oleh CM kamu</span>
+                    </div>
+                  </div>
+                  {camp.status === 'JOINED' ? (
+                    <div className="w-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-sm font-bold py-3 rounded-xl flex items-center justify-center">
+                      <CheckCircle2 className="h-4 w-4 mr-2" /> Joined Successfully
+                    </div>
+                  ) : (
+                    <button 
+                      onClick={() => handleJoin(camp.id)}
+                      disabled={joining === camp.id}
+                      className="w-full bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold py-3 rounded-xl transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center disabled:opacity-50"
+                    >
+                      {joining === camp.id ? 'Joining...' : 'Accept & Join Campaign'} <ArrowRight className="h-4 w-4 ml-2" />
+                    </button>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className="glass-panel rounded-2xl p-8 text-center border border-dashed border-white/10">
+            <Bell className="h-8 w-8 text-gray-600 mx-auto mb-3" />
+            <p className="text-gray-500 text-sm font-medium">Belum ada rekomendasi dari CM. Tunggu CM kamu mendorong kampanye untukmu!</p>
+          </div>
+        )}
+      </div>
+
+      {/* ── Explore All Campaigns ── */}
+      <div>
+        <h2 className="text-xl font-bold text-white tracking-tight mb-6">Explore All Campaigns</h2>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

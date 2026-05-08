@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useCMStore } from '@/store';
+import Link from 'next/link';
 import { 
   Card, 
   CardContent, 
@@ -25,6 +26,7 @@ import { cmService } from '@/services';
 export default function CMDashboard() {
   const { dashboard, fetchDashboard, fetchSmartRecommendations, pushRecommendation, isLoading } = useCMStore();
   const [isPushing, setIsPushing] = useState(false);
+  const [filter, setFilter] = useState('ALL');
 
   useEffect(() => {
     fetchDashboard();
@@ -88,7 +90,7 @@ export default function CMDashboard() {
             {isPushing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
             AUTO-PUSH
           </button>
-          <button className="bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold px-6 py-3 rounded-2xl transition-all shadow-lg shadow-blue-500/20">
+          <button onClick={() => alert('Generating PDF Report...')} className="bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold px-6 py-3 rounded-2xl transition-all shadow-lg shadow-blue-500/20">
             GENERATE REPORT
           </button>
         </div>
@@ -96,7 +98,7 @@ export default function CMDashboard() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {statCards.map((stat) => (
-          <Card key={stat.name} className="bg-[#121212] border-white/5 shadow-xl">
+          <Card key={stat.name} className="glass-card rounded-2xl border-0 shadow-xl">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <div className={`p-2.5 rounded-xl ${stat.bg}`}>
@@ -116,14 +118,14 @@ export default function CMDashboard() {
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold text-gray-500 uppercase tracking-widest mr-2">Filter by:</span>
             {['ALL', 'ACTIVE', 'DORMANT', 'NEAR_LEVEL_UP'].map(f => (
-              <button key={f} className={`text-[10px] font-black px-3 py-1.5 rounded-full border transition-all ${f === 'ALL' ? 'bg-white text-black border-white' : 'bg-white/5 text-gray-400 border-white/5 hover:border-white/10'}`}>
+              <button key={f} onClick={() => setFilter(f)} className={`text-[10px] font-black px-3 py-1.5 rounded-full border transition-all ${filter === f ? 'bg-white text-black border-white' : 'bg-white/5 text-gray-400 border-white/5 hover:border-white/10'}`}>
                 {f}
               </button>
             ))}
           </div>
         </div>
 
-        <div className="bg-[#121212] border border-white/5 rounded-[32px] overflow-hidden shadow-2xl">
+        <div className="glass-panel rounded-[32px] overflow-hidden shadow-2xl">
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-white/5 bg-white/[0.02]">
@@ -135,7 +137,7 @@ export default function CMDashboard() {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {pipeline.map((item: any) => {
+              {(Array.isArray(pipeline) ? pipeline : []).filter((item: any) => filter === 'ALL' || item.status === filter).map((item: any) => {
                 const statusColor = item.status === 'ACTIVE' ? 'text-emerald-500 bg-emerald-500/10' : 
                                     item.status === 'NEAR_LEVEL_UP' ? 'text-blue-500 bg-blue-500/10' : 
                                     item.status === 'DORMANT' ? 'text-red-500 bg-red-500/10' : 
@@ -180,7 +182,7 @@ export default function CMDashboard() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <button className="p-2 rounded-xl hover:bg-white/5 transition-colors text-gray-500 hover:text-white">
+                      <button onClick={() => alert('Opening creator actions...')} className="p-2 rounded-xl hover:bg-white/5 transition-colors text-gray-500 hover:text-white">
                         <MoreVertical className="h-4 w-4" />
                       </button>
                     </td>
@@ -190,9 +192,9 @@ export default function CMDashboard() {
             </tbody>
           </table>
           <div className="p-4 border-t border-white/5 bg-white/[0.01] text-center">
-             <button className="text-[10px] font-black text-gray-600 hover:text-white transition-colors tracking-widest uppercase">
+             <Link href="/cm/pipeline" className="inline-block text-[10px] font-black text-gray-600 hover:text-white transition-colors tracking-widest uppercase">
                SHOW ALL 248 CREATORS
-             </button>
+             </Link>
           </div>
         </div>
       </div>

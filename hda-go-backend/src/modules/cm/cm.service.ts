@@ -140,11 +140,11 @@ export class CmService {
 
     if (!campaign || !creator) return null;
 
-    // Save notification in DB
+    // Save notification in DB — embed campaign_id in title for frontend parsing
     const notification = await this.prisma.notification.create({
       data: {
         user_id: creatorId,
-        title: '💡 Rekomendasi Campaign dari CM',
+        title: `CAMPAIGN_REC::${campaign.id}`,
         message: `CM merekomendasikan campaign "${campaign.title}" (${campaign.category}) untukmu. Deadline: ${campaign.deadline.toLocaleDateString('id-ID')}. Klik untuk bergabung!`,
         type: 'PUSH',
         read_status: false,

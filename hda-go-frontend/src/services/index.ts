@@ -17,6 +17,7 @@ export const campaignService = {
   getCategories: () => api.get<string[]>('/campaigns/categories'),
   join: (campaignId: string) => 
     api.post<any>('/campaigns/join', { campaign_id: campaignId }),
+  create: (data: any) => api.post<any>('/campaigns', data),
   getDetail: (id: string) => api.get<any>(`/campaigns/${id}`),
   getAll: (status?: string, category?: string) => {
     const params = new URLSearchParams();
