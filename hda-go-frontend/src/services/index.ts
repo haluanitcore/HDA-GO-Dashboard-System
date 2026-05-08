@@ -32,6 +32,9 @@ export const submissionService = {
     api.post<any>('/submissions', data),
   getSowProgress: (campaignId: string) => 
     api.get<any>(`/submissions/sow/${campaignId}`),
+  getQcQueue: () => api.get<any>('/submissions/qc-queue'),
+  review: (id: string, data: { status: 'APPROVED' | 'REVISION'; feedback?: string }) => 
+    api.patch<any>(`/submissions/${id}/review`, data),
 };
 
 export const gmvService = {

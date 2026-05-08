@@ -149,11 +149,11 @@ export class AuthService {
   private getRedirectUrl(role: string): string {
     const routes: Record<string, string> = {
       CREATOR: '/creator/overview',
-      CM: '/cm/dashboard',
-      BRAND: '/brand/dashboard',
-      ADMIN: '/admin/dashboard',
-      EXECUTIVE: '/executive/dashboard',
+      CM: '/cm',
+      BRAND: '/brand',
+      ADMIN: '/admin',
+      EXECUTIVE: '/executive',
     };
-    return routes[role] || '/dashboard';
+    return routes[role] || '/';
   }
 }

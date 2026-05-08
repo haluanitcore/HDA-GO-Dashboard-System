@@ -49,9 +49,9 @@ export class AnalyticsController {
     return this.analyticsService.getCreatorHistory(id);
   }
 
-  // POST /analytics/run-aggregation — Manual trigger (Admin only)
+  // GET /analytics/run-aggregation — Manual trigger
   @Get('run-aggregation')
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.EXECUTIVE)
   runAggregation() {
     return this.analyticsCronService.runDailyAggregation();
   }
