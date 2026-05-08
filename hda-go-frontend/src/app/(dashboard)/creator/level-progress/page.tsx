@@ -1,0 +1,1 @@
+export default function CreatorLevelProgress() { return <div><h1 className='text-2xl font-bold'>Level Progress</h1></div>; }

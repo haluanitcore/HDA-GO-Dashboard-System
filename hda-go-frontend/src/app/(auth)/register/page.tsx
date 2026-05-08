@@ -1,0 +1,1 @@
+export default function RegisterPage() { return <div className='p-8 flex items-center justify-center min-h-screen'><h1>Register</h1></div>; }

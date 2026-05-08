@@ -1,0 +1,1 @@
+export default function CMPage() { return <div><h1 className='text-2xl font-bold'>Creator Manager Dashboard</h1></div>; }

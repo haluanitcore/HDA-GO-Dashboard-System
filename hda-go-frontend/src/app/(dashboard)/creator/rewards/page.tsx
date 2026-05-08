@@ -1,0 +1,1 @@
+export default function CreatorRewards() { return <div><h1 className='text-2xl font-bold'>Rewards</h1></div>; }

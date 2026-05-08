@@ -1,0 +1,208 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// ═══════════════════════════════════════════════════
+// USER & AUTH
+// ═══════════════════════════════════════════════════
+
+model User {
+  id            String          @id @default(uuid())
+  name          String
+  email         String          @unique
+  password      String
+  role          String          // CREATOR, CM, BRAND, ADMIN, EXECUTIVE
+  created_at    DateTime        @default(now())
+  
+  creator       Creator?
+  notifications Notification[]
+}
+
+// ═══════════════════════════════════════════════════
+// CREATOR CORE
+// ═══════════════════════════════════════════════════
+
+model Creator {
+  user_id           String             @id
+  user              User               @relation(fields: [user_id], references: [id])
+  creator_level     Int                @default(0)
+  gmv_total         Float              @default(0)
+  gmv_monthly       Float              @default(0)
+  total_orders      Int                @default(0)
+  total_campaigns   Int                @default(0)
+  total_posts       Int                @default(0)
+  streak_days       Int                @default(0)
+  live_participation Int               @default(0)    // LIVE sessions joined
+  posting_consistency Float            @default(0)    // % consistency score
+  cm_id             String?
+
+  progress          CreatorProgress?
+  participants      CampaignParticipant[]
+  submissions       Submission[]
+  orders            CreatorOrder[]
+  monthlyStats      CreatorMonthlyStats[]
+}
+
+// ═══════════════════════════════════════════════════
+// CREATOR LEVEL ENGINE
+// ═══════════════════════════════════════════════════
+
+model CreatorProgress {
+  creator_id          String   @id
+  creator             Creator  @relation(fields: [creator_id], references: [user_id])
+  current_level       Int
+  target_level        Int
+  progress_percentage Float    @default(0)
+  gmv_progress        Float    @default(0)
+  campaign_progress   Int      @default(0)
+  order_progress      Int      @default(0)
+  updated_at          DateTime @updatedAt
+}
+
+// ═══════════════════════════════════════════════════
+// CAMPAIGN SYSTEM
+// ═══════════════════════════════════════════════════
+
+model Campaign {
+  id                String                 @id @default(uuid())
+  title             String
+  category          String                 // HOTEL, FNB, TTD, LIVE, BEAUTY, TECH
+  min_level         Int                    @default(0)
+  brand_id          String
+  sow_total         Int
+  reward_type       String                 // FIXED, COMMISSION
+  deadline          DateTime
+  status            String                 // DRAFT, ACTIVE, COMPLETED, CANCELLED
+  slot              Int                    @default(0)  // max participants
+  created_at        DateTime               @default(now())
+  
+  participants      CampaignParticipant[]
+  submissions       Submission[]
+  orders            CreatorOrder[]
+  analytics         CampaignAnalytics?
+}
+
+model CampaignParticipant {
+  campaign_id       String
+  creator_id        String
+  status            String                 // JOINED, APPROVED, REJECTED
+  joined_at         DateTime               @default(now())
+
+  campaign          Campaign               @relation(fields: [campaign_id], references: [id])
+  creator           Creator                @relation(fields: [creator_id], references: [user_id])
+
+  @@id([campaign_id, creator_id])
+}
+
+// ═══════════════════════════════════════════════════
+// SUBMISSION & SOW TRACKING
+// ═══════════════════════════════════════════════════
+
+model Submission {
+  id                String                 @id @default(uuid())
+  campaign_id       String
+  creator_id        String
+  tiktok_url        String
+  status            String                 // DRAFT, QC_REVIEW, APPROVED, REVISION, POSTED, COMPLETED
+  qc_notes          String?
+  submitted_at      DateTime               @default(now())
+  reviewed_at       DateTime?
+  posted_at         DateTime?
+  completed_at      DateTime?
+
+  campaign          Campaign               @relation(fields: [campaign_id], references: [id])
+  creator           Creator                @relation(fields: [creator_id], references: [user_id])
+  deliverable       SubmissionDeliverable?
+}
+
+model SubmissionDeliverable {
+  submission_id     String     @id
+  submission        Submission @relation(fields: [submission_id], references: [id])
+  total_sow         Int
+  completed_sow     Int        @default(0)
+  remaining_sow     Int
+}
+
+// ═══════════════════════════════════════════════════
+// GMV & ORDER TRACKING
+// ═══════════════════════════════════════════════════
+
+model CreatorOrder {
+  id                String     @id @default(uuid())
+  creator_id        String
+  campaign_id       String
+  order_count       Int        @default(0)
+  gmv_amount        Float      @default(0)
+  recorded_at       DateTime   @default(now())
+
+  creator           Creator    @relation(fields: [creator_id], references: [user_id])
+  campaign          Campaign   @relation(fields: [campaign_id], references: [id])
+}
+
+// ═══════════════════════════════════════════════════
+// NOTIFICATION SYSTEM
+// ═══════════════════════════════════════════════════
+
+model Notification {
+  id                String     @id @default(uuid())
+  user_id           String
+  title             String
+  message           String
+  type              String     // SYSTEM, CAMPAIGN, REWARD, LEVEL_UP, QC, PUSH
+  read_status       Boolean    @default(false)
+  created_at        DateTime   @default(now())
+
+  user              User       @relation(fields: [user_id], references: [id])
+}
+
+// ═══════════════════════════════════════════════════
+// ANALYTICS AGGREGATION TABLES (Cron-populated)
+// ═══════════════════════════════════════════════════
+
+model CreatorMonthlyStats {
+  id                String     @id @default(uuid())
+  creator_id        String
+  month             String     // Format: "2026-05"
+  gmv               Float      @default(0)
+  orders            Int        @default(0)
+  campaigns_joined  Int        @default(0)
+  campaigns_completed Int      @default(0)
+  posts_count       Int        @default(0)
+  completion_rate   Float      @default(0)   // % of SOW completed
+  calculated_at     DateTime   @default(now())
+
+  creator           Creator    @relation(fields: [creator_id], references: [user_id])
+
+  @@unique([creator_id, month])
+}
+
+model CampaignAnalytics {
+  id                String     @id @default(uuid())
+  campaign_id       String     @unique
+  total_participants Int       @default(0)
+  total_submissions Int        @default(0)
+  approved_submissions Int     @default(0)
+  total_orders      Int        @default(0)
+  total_gmv         Float      @default(0)
+  completion_rate   Float      @default(0)
+  calculated_at     DateTime   @default(now())
+
+  campaign          Campaign   @relation(fields: [campaign_id], references: [id])
+}
+
+model PlatformMetrics {
+  id                String     @id @default(uuid())
+  date              String     @unique  // Format: "2026-05-08"
+  total_creators    Int        @default(0)
+  active_creators   Int        @default(0)
+  total_campaigns   Int        @default(0)
+  active_campaigns  Int        @default(0)
+  total_gmv         Float      @default(0)
+  total_orders      Int        @default(0)
+  total_submissions Int        @default(0)
+  calculated_at     DateTime   @default(now())
+}
