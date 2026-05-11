@@ -28,11 +28,11 @@ export default function BrandLayout({ children }: { children: React.ReactNode })
   }
 
   return (
-    <div className="flex min-h-screen bg-[#0a0a0a]">
+    <div className="flex min-h-screen glass-bg">
       <Sidebar />
       <div className="flex-1 flex flex-col">
         <Navbar />
-        <main className="flex-1 p-8 overflow-y-auto">
+        <main className="flex-1 p-4 md:p-8 overflow-y-auto w-full relative z-10">
           {children}
         </main>
       </div>

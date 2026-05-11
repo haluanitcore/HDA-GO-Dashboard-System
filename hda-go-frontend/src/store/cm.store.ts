@@ -5,12 +5,15 @@ interface CMState {
   dashboard: any;
   pipeline: any[];
   recommendations: any[];
+  gmvMonitoring: any[];
+  levelMonitoring: any[];
   isLoading: boolean;
   error: string | null;
 
   fetchDashboard: () => Promise<void>;
   fetchPipeline: (status?: string) => Promise<void>;
   fetchSmartRecommendations: () => Promise<void>;
+  fetchMonitoring: () => Promise<void>;
   pushRecommendation: (creatorId: string, campaignId: string) => Promise<void>;
 }
 
@@ -18,6 +21,8 @@ export const useCMStore = create<CMState>((set) => ({
   dashboard: null,
   pipeline: [],
   recommendations: [],
+  gmvMonitoring: [],
+  levelMonitoring: [],
   isLoading: false,
   error: null,
 
@@ -47,6 +52,19 @@ export const useCMStore = create<CMState>((set) => ({
       set({ recommendations: data });
     } catch (err: any) {
       console.error('Failed to fetch recommendations:', err);
+    }
+  },
+
+  fetchMonitoring: async () => {
+    set({ isLoading: true });
+    try {
+      const [gmvData, levelData] = await Promise.all([
+        cmService.getGMVMonitoring().catch(() => []),
+        cmService.getLevelMonitoring().catch(() => []),
+      ]);
+      set({ gmvMonitoring: gmvData, levelMonitoring: levelData, isLoading: false });
+    } catch (err: any) {
+      set({ error: err.message, isLoading: false });
     }
   },
 

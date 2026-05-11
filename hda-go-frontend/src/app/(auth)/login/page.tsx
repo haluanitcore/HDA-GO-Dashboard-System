@@ -24,19 +24,21 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a] p-4 font-sans relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center glass-bg p-4 font-sans">
       {/* Background Gradients */}
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-900/20 rounded-full blur-[120px]" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-900/10 rounded-full blur-[120px]" />
 
-      <Card className="w-full max-w-md bg-[#121212] border-white/10 shadow-2xl relative z-10 overflow-hidden">
+      <Card className="w-full max-w-md glass-panel-solid shadow-2xl relative z-10 overflow-hidden rounded-3xl">
         <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-blue-500 to-transparent" />
         
         <CardHeader className="space-y-1 pb-6 text-center">
           <div className="flex justify-center mb-4">
-            <div className="h-12 w-12 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
-              <span className="text-white text-2xl font-black tracking-tighter">H</span>
-            </div>
+            <img 
+              src="/logo-hda-go.png" 
+              alt="HDA GO" 
+              className="w-32 h-auto object-contain"
+            />
           </div>
           <CardTitle className="text-2xl font-bold tracking-tight text-white">Welcome back</CardTitle>
           <CardDescription className="text-gray-400">
