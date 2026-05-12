@@ -129,4 +129,34 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       timestamp: new Date(),
     });
   }
+
+  // ══════════════════════════════════════════════
+  // BD WORKFLOW EVENTS
+  // ══════════════════════════════════════════════
+
+  // Brand submits new campaign → Notify assigned BD users
+  emitBDNewCampaign(bdUserIds: string[], data: { campaignId: string; title: string; brandName: string }) {
+    bdUserIds.forEach((uid) => {
+      this.server.to(`user:${uid}`).emit('bd:new-campaign', {
+        type: 'bd:new-campaign',
+        ...data,
+        title: '📥 Campaign Baru Masuk',
+        message: `${data.brandName} mengirimkan campaign "${data.title}". Silakan review.`,
+        timestamp: new Date(),
+      });
+    });
+  }
+
+  // BD approves campaign → Notify CM users
+  emitBDApproved(cmUserIds: string[], data: { campaignId: string; title: string; bdName: string }) {
+    cmUserIds.forEach((uid) => {
+      this.server.to(`user:${uid}`).emit('bd:campaign-approved', {
+        type: 'bd:campaign-approved',
+        ...data,
+        title: '📋 Campaign Approved by BD',
+        message: `Campaign "${data.title}" telah di-approve oleh ${data.bdName}. Siap dikelola.`,
+        timestamp: new Date(),
+      });
+    });
+  }
 }

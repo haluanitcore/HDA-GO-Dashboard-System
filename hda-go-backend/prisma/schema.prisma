@@ -64,7 +64,23 @@ model CreatorProgress {
 }
 
 // ═══════════════════════════════════════════════════
+// BD — BRAND-BD ASSIGNMENT
+// Each BD user is assigned to specific brands
+// ═══════════════════════════════════════════════════
+
+model BrandBDAssignment {
+  id                String     @id @default(uuid())
+  bd_user_id        String                 // BD user assigned to this brand
+  brand_user_id     String                 // Brand user
+  assigned_at       DateTime   @default(now())
+  is_active         Boolean    @default(true)
+
+  @@unique([bd_user_id, brand_user_id])
+}
+
+// ═══════════════════════════════════════════════════
 // CAMPAIGN SYSTEM
+// Status Flow: PENDING_BD → BD_APPROVED / BD_REVISION → DRAFT → ACTIVE → COMPLETED / CANCELLED
 // ═══════════════════════════════════════════════════
 
 model Campaign {
@@ -76,7 +92,13 @@ model Campaign {
   sow_total         Int
   reward_type       String                 // FIXED, COMMISSION
   deadline          DateTime
-  status            String                 // DRAFT, ACTIVE, COMPLETED, CANCELLED
+  status            String                 // PENDING_BD, BD_APPROVED, BD_REVISION, DRAFT, ACTIVE, COMPLETED, CANCELLED
+  budget            Float                  @default(0)
+  brief_url         String?                // PDF brief attachment link
+  bd_reviewer_id    String?                // BD user who reviewed
+  bd_reviewed_at    DateTime?
+  bd_notes          String?                // BD review notes / feedback
+  bd_approved_at    DateTime?
   slot              Int                    @default(0)  // max participants
   created_at        DateTime               @default(now())
   
@@ -84,6 +106,27 @@ model Campaign {
   submissions       Submission[]
   orders            CreatorOrder[]
   analytics         CampaignAnalytics?
+  editLogs          CampaignEditLog[]
+}
+
+// ═══════════════════════════════════════════════════
+// CAMPAIGN EDIT LOG — Audit Trail
+// Tracks who edited what field on a campaign
+// ═══════════════════════════════════════════════════
+
+model CampaignEditLog {
+  id                String     @id @default(uuid())
+  campaign_id       String
+  editor_id         String                 // User who made the edit
+  editor_role       String                 // BRAND, BD, CM, ADMIN
+  field_name        String                 // Which field was changed
+  old_value         String?                // Previous value
+  new_value         String?                // New value
+  action            String                 // EDIT, APPROVE, REVISION, ASSIGN, CREATE
+  notes             String?
+  created_at        DateTime   @default(now())
+
+  campaign          Campaign   @relation(fields: [campaign_id], references: [id])
 }
 
 model CampaignParticipant {

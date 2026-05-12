@@ -1,26 +1,33 @@
 'use client';
 
+import { useEffect } from 'react';
+import { useBrandStore } from '@/store';
 import Link from 'next/link';
 import { ArrowLeft, TrendingUp, DollarSign, MousePointerClick, Percent, BarChart3, Activity } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
 export default function BrandROIAnalyticsPage() {
-  const roiData = [
-    { month: 'Jan', investment: 15, returns: 45 },
-    { month: 'Feb', investment: 20, returns: 68 },
-    { month: 'Mar', investment: 18, returns: 75 },
-    { month: 'Apr', investment: 25, returns: 110 },
-    { month: 'May', investment: 30, returns: 145 },
-    { month: 'Jun', investment: 35, returns: 215 },
-  ];
+  const { analytics, fetchAnalytics, isLoading } = useBrandStore();
 
-  const campaignPerformance = [
-    { name: 'Summer Special Promo', spend: 20000000, gmv: 85000000, impressions: '1.2M', clicks: '45K', conversion: '3.8%' },
-    { name: 'Domino\'s Pizza Mukbang', spend: 15000000, gmv: 45000000, impressions: '800K', clicks: '22K', conversion: '2.5%' },
-    { name: 'New Year Flash Sale', spend: 35000000, gmv: 180000000, impressions: '2.5M', clicks: '95K', conversion: '4.2%' },
-  ];
+  useEffect(() => {
+    fetchAnalytics();
+  }, [fetchAnalytics]);
 
-  const maxReturn = Math.max(...roiData.map(d => d.returns));
+  if (isLoading || !analytics) {
+    return (
+      <div className="space-y-8 animate-pulse">
+        <div className="h-32 bg-white/5 rounded-3xl" />
+        <div className="h-96 bg-white/5 rounded-3xl" />
+      </div>
+    );
+  }
+
+  const { stats, funnel, campaigns } = analytics;
+  const campaignPerformance = campaigns || [];
+  
+  // Dummy data for visual trajectory chart
+  const roiData: any[] = [];
+  const maxReturn = 1; // Default to 1 to prevent division by zero
 
   return (
     <div className="space-y-8 pb-12">
@@ -45,7 +52,7 @@ export default function BrandROIAnalyticsPage() {
               </div>
             </div>
             <p className="text-sm font-medium text-gray-500 mb-1">Average ROI</p>
-            <p className="text-3xl font-bold text-white tracking-tight">850%</p>
+            <p className="text-3xl font-bold text-white tracking-tight">{stats?.roi || 0}%</p>
           </CardContent>
         </Card>
 
@@ -56,8 +63,8 @@ export default function BrandROIAnalyticsPage() {
                 <DollarSign className="h-6 w-6 text-blue-500" />
               </div>
             </div>
-            <p className="text-sm font-medium text-gray-500 mb-1">Cost per Acquisition (CPA)</p>
-            <p className="text-3xl font-bold text-white tracking-tight">Rp 12.5K</p>
+            <p className="text-sm font-medium text-gray-500 mb-1">Total Investment</p>
+            <p className="text-3xl font-bold text-white tracking-tight">Rp {(stats?.totalSpend || 0).toLocaleString()}</p>
           </CardContent>
         </Card>
 
@@ -68,8 +75,9 @@ export default function BrandROIAnalyticsPage() {
                 <MousePointerClick className="h-6 w-6 text-amber-500" />
               </div>
             </div>
-            <p className="text-sm font-medium text-gray-500 mb-1">Total Link Clicks</p>
-            <p className="text-3xl font-bold text-white tracking-tight">162K</p>
+            <p className="text-sm font-medium text-gray-500 mb-1">Total Views (Est.)</p>
+            <p className="text-3xl font-bold text-white tracking-tight">{funnel?.views || 0}</p>
+
           </CardContent>
         </Card>
 
@@ -81,7 +89,7 @@ export default function BrandROIAnalyticsPage() {
               </div>
             </div>
             <p className="text-sm font-medium text-gray-500 mb-1">Blended Conv. Rate</p>
-            <p className="text-3xl font-bold text-white tracking-tight">3.5%</p>
+            <p className="text-3xl font-bold text-white tracking-tight">0%</p>
           </CardContent>
         </Card>
       </div>
@@ -102,7 +110,11 @@ export default function BrandROIAnalyticsPage() {
           </div>
           
           <div className="h-64 flex items-end justify-between gap-6 relative z-10">
-            {roiData.map((d, i) => {
+            {roiData.length === 0 ? (
+              <div className="w-full h-full flex items-center justify-center">
+                <p className="text-gray-500 font-bold text-sm">Not enough data to calculate ROI trajectory.</p>
+              </div>
+            ) : roiData.map((d, i) => {
               const returnHeight = (d.returns / maxReturn) * 100;
               const spendHeight = (d.investment / maxReturn) * 100;
               
@@ -145,7 +157,7 @@ export default function BrandROIAnalyticsPage() {
             <div className="relative">
               <div className="flex justify-between text-sm font-bold mb-2">
                 <span className="text-gray-400">Impressions</span>
-                <span className="text-white">4.5M</span>
+                <span className="text-white">{funnel?.views || 0}</span>
               </div>
               <div className="w-full bg-white/5 rounded-full h-8 flex items-center justify-center relative overflow-hidden">
                 <div className="absolute left-0 top-0 bottom-0 bg-purple-500/20 w-full" />
@@ -156,7 +168,7 @@ export default function BrandROIAnalyticsPage() {
             <div className="relative">
               <div className="flex justify-between text-sm font-bold mb-2">
                 <span className="text-gray-400">Link Clicks</span>
-                <span className="text-white">162K</span>
+                <span className="text-white">{funnel?.clicks || 0}</span>
               </div>
               <div className="w-full bg-white/5 rounded-full h-8 flex items-center justify-center relative overflow-hidden">
                 <div className="absolute left-0 top-0 bottom-0 bg-blue-500/30 w-[3.6%]" />
@@ -167,11 +179,11 @@ export default function BrandROIAnalyticsPage() {
             <div className="relative">
               <div className="flex justify-between text-sm font-bold mb-2">
                 <span className="text-gray-400">Completed Purchases</span>
-                <span className="text-white">5,670</span>
+                <span className="text-white">{funnel?.orders || 0}</span>
               </div>
               <div className="w-full bg-white/5 rounded-full h-8 flex items-center justify-center relative overflow-hidden">
-                <div className="absolute left-0 top-0 bottom-0 bg-emerald-500/40 w-[3.5%]" />
-                <span className="text-xs font-black text-emerald-300 relative z-10">3.5% CVR</span>
+                <div className="absolute left-0 top-0 bottom-0 bg-emerald-500/40 w-[1%]" />
+                <span className="text-xs font-black text-emerald-300 relative z-10">1.0% CVR</span>
               </div>
             </div>
           </div>
@@ -195,7 +207,13 @@ export default function BrandROIAnalyticsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {campaignPerformance.map((camp, idx) => {
+              {campaignPerformance.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-12 text-center text-gray-500 font-bold text-sm">
+                    No analytics available for campaigns yet.
+                  </td>
+                </tr>
+              ) : campaignPerformance.map((camp, idx) => {
                 const roi = Math.round((camp.gmv / camp.spend) * 100);
                 return (
                   <tr key={idx} className="hover:bg-white/[0.02] transition-colors">

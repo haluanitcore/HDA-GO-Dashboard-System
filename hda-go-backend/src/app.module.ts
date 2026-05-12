@@ -13,10 +13,12 @@ import { SubmissionsModule } from './modules/submissions/submissions.module';
 import { GmvModule } from './modules/gmv/gmv.module';
 import { LevelsModule } from './modules/levels/levels.module';
 import { CmModule } from './modules/cm/cm.module';
+import { BdModule } from './modules/bd/bd.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { LeaderboardModule } from './modules/leaderboard/leaderboard.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { RewardsModule } from './modules/rewards/rewards.module';
+import { BrandModule } from './modules/brand/brand.module';
 
 @Module({
   imports: [
@@ -37,10 +39,12 @@ import { RewardsModule } from './modules/rewards/rewards.module';
     GmvModule,
     LevelsModule,
     CmModule,
+    BdModule,
     NotificationsModule,
     LeaderboardModule,
     AnalyticsModule,
     RewardsModule,
+    BrandModule,
   ],
 })
 export class AppModule {}

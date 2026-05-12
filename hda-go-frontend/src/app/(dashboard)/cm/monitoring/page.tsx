@@ -22,24 +22,12 @@ export default function MonitoringPage() {
   }
 
   // Use fallback data if API returns empty to demonstrate UI
-  const mockGmvData = gmvMonitoring && gmvMonitoring.length > 0 ? gmvMonitoring : [
-    { month: 'Jan', value: 120000000 },
-    { month: 'Feb', value: 150000000 },
-    { month: 'Mar', value: 180000000 },
-    { month: 'Apr', value: 165000000 },
-    { month: 'May', value: 210000000 },
-  ];
+  const mockGmvData = gmvMonitoring && gmvMonitoring.length > 0 ? gmvMonitoring : [];
 
-  const mockLevelData = levelMonitoring && levelMonitoring.length > 0 ? levelMonitoring : [
-    { level: 'Level 1', count: 120 },
-    { level: 'Level 2', count: 85 },
-    { level: 'Level 3', count: 42 },
-    { level: 'Level 4', count: 15 },
-    { level: 'Level 5', count: 4 },
-  ];
+  const mockLevelData = levelMonitoring && levelMonitoring.length > 0 ? levelMonitoring : [];
 
-  const maxGmv = Math.max(...mockGmvData.map((d: any) => d.value));
-  const maxLevelCount = Math.max(...mockLevelData.map((d: any) => d.count));
+  const maxGmv = mockGmvData.length > 0 ? Math.max(...mockGmvData.map((d: any) => d.value)) : 1;
+  const maxLevelCount = mockLevelData.length > 0 ? Math.max(...mockLevelData.map((d: any) => d.count)) : 1;
 
   return (
     <div className="space-y-6 pb-12">
@@ -64,7 +52,7 @@ export default function MonitoringPage() {
               </div>
             </div>
             <p className="text-sm font-medium text-gray-500 mb-1">Total Portfolio GMV</p>
-            <p className="text-3xl font-bold text-white tracking-tight">Rp 825M</p>
+            <p className="text-3xl font-bold text-white tracking-tight">Rp 0</p>
           </CardContent>
         </Card>
         
@@ -76,7 +64,7 @@ export default function MonitoringPage() {
               </div>
             </div>
             <p className="text-sm font-medium text-gray-500 mb-1">Active Creators Monitored</p>
-            <p className="text-3xl font-bold text-white tracking-tight">266</p>
+            <p className="text-3xl font-bold text-white tracking-tight">0</p>
           </CardContent>
         </Card>
 
@@ -88,7 +76,7 @@ export default function MonitoringPage() {
               </div>
             </div>
             <p className="text-sm font-medium text-gray-500 mb-1">Overall Level Progress</p>
-            <p className="text-3xl font-bold text-white tracking-tight">+14% MoM</p>
+            <p className="text-3xl font-bold text-white tracking-tight">0% MoM</p>
           </CardContent>
         </Card>
       </div>
@@ -103,7 +91,11 @@ export default function MonitoringPage() {
             <h3 className="text-xl font-bold text-white">GMV Growth Trend</h3>
           </div>
           <div className="h-64 flex items-end justify-between gap-2">
-            {mockGmvData.map((d: any, idx: number) => {
+            {mockGmvData.length === 0 ? (
+              <div className="w-full h-full flex items-center justify-center">
+                <p className="text-gray-500 font-bold text-sm">No GMV data available.</p>
+              </div>
+            ) : mockGmvData.map((d: any, idx: number) => {
               const heightPct = (d.value / maxGmv) * 100;
               return (
                 <div key={idx} className="flex flex-col items-center flex-1 group">
@@ -132,7 +124,9 @@ export default function MonitoringPage() {
             <h3 className="text-xl font-bold text-white">Creator Level Distribution</h3>
           </div>
           <div className="space-y-6">
-            {mockLevelData.map((d: any, idx: number) => {
+            {mockLevelData.length === 0 ? (
+              <p className="text-gray-500 font-bold text-sm text-center py-12">No level distribution data available.</p>
+            ) : mockLevelData.map((d: any, idx: number) => {
               const widthPct = (d.count / maxLevelCount) * 100;
               return (
                 <div key={idx}>

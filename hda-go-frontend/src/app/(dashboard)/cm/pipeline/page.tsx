@@ -32,6 +32,42 @@ export default function PipelinePage() {
     return matchesFilter && matchesSearch;
   });
 
+  const handlePush = async (creatorId: string) => {
+    const campaignId = prompt('Enter Campaign ID to push to this creator:');
+    if (!campaignId) return;
+    
+    try {
+      // Assuming cmService.pushRecommendation exists in index.ts
+      const { cmService } = await import('@/services');
+      await cmService.pushRecommendation(creatorId, campaignId);
+      alert('Campaign pushed successfully!');
+    } catch (err: any) {
+      alert(`Failed to push: ${err.message}`);
+    }
+  };
+
+  const handleAutoPush = async () => {
+    try {
+      const { cmService } = await import('@/services');
+      const recommendations = await cmService.getSmartRecommendations();
+      if (!recommendations || recommendations.length === 0) {
+        alert('No smart recommendations available right now.');
+        return;
+      }
+      
+      let pushCount = 0;
+      for (const rec of recommendations) {
+        if (rec.suggestedCampaigns.length > 0) {
+          await cmService.pushRecommendation(rec.creator.id, rec.suggestedCampaigns[0].id);
+          pushCount++;
+        }
+      }
+      alert(`Successfully auto-pushed campaigns to ${pushCount} creators!`);
+    } catch (err: any) {
+      alert(`Auto-push failed: ${err.message}`);
+    }
+  };
+
   return (
     <div className="space-y-6 pb-12">
       {/* Header */}
@@ -45,6 +81,12 @@ export default function PipelinePage() {
             <p className="text-gray-500 font-medium mt-1">Manage and track all creators across your portfolio.</p>
           </div>
         </div>
+        <button 
+          onClick={handleAutoPush}
+          className="bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-500 hover:to-blue-300 text-white text-sm font-bold px-6 py-3 rounded-2xl transition-all shadow-lg shadow-blue-500/20"
+        >
+          Auto-Push Campaigns
+        </button>
       </div>
 
       {/* Tools / Filters */}
@@ -135,8 +177,14 @@ export default function PipelinePage() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
-                        <button onClick={() => alert('Opening creator actions...')} className="p-2 rounded-xl hover:bg-white/5 transition-colors text-gray-500 hover:text-white">
+                      <td className="px-6 py-4 flex gap-2">
+                        <button 
+                          onClick={() => handlePush(item.user_id || item.userId)} 
+                          className="px-3 py-1.5 rounded-xl bg-blue-500/10 text-blue-500 hover:bg-blue-500 hover:text-white transition-colors text-xs font-bold"
+                        >
+                          Push
+                        </button>
+                        <button className="p-2 rounded-xl hover:bg-white/5 transition-colors text-gray-500 hover:text-white">
                           <MoreVertical className="h-4 w-4" />
                         </button>
                       </td>

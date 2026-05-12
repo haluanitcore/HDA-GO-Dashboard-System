@@ -21,8 +21,8 @@ export default function BrandLayout({ children }: { children: React.ReactNode })
 
   if (!isAuthenticated || user?.role !== 'BRAND') {
     return (
-      <div className="h-screen w-screen flex items-center justify-center bg-[#0a0a0a]">
-        <Loader2 className="h-8 w-8 text-blue-600 animate-spin" />
+      <div className="h-screen w-screen flex items-center justify-center bg-[#0C0E10]">
+        <Loader2 className="h-8 w-8 text-[#F6D145] animate-spin" />
       </div>
     );
   }

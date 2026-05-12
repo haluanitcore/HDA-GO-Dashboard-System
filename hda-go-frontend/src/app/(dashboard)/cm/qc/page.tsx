@@ -29,7 +29,7 @@ export default function QCQueuePage() {
   const handleReview = async (id: string, status: 'APPROVED' | 'REVISION') => {
     setActioning(id);
     try {
-      await submissionService.review(id, { status, feedback: status === 'REVISION' ? 'Tolong perbaiki kualitas video' : 'Good job!' });
+      await submissionService.review(id, { status, qc_notes: status === 'REVISION' ? 'Tolong perbaiki kualitas video' : 'Good job!' });
       await fetchQueue();
     } catch (err) {
       console.error(err);

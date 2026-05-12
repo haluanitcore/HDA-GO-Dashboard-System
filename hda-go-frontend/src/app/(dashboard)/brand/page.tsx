@@ -1,37 +1,35 @@
 'use client';
 
+import { useEffect } from 'react';
+import { useBrandStore } from '@/store';
 import { Card, CardContent } from '@/components/ui/card';
 import { Target, TrendingUp, Users, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export default function BrandDashboard() {
-  // Mock data for Brand Dashboard MVP
-  const brandStats = {
-    totalSpend: 15000000,
-    generatedGmv: 125500000,
-    roi: 836, // percent
-    activeCreators: 12,
-  };
+  const { dashboard, fetchDashboard, isLoading } = useBrandStore();
 
-  const campaigns = [
-    {
-      id: 1,
-      title: 'Summer Flash Sale',
-      budget: 5000000,
-      gmv: 45000000,
-      sowTotal: 24,
-      sowCompleted: 18,
-      status: 'ACTIVE'
-    },
-    {
-      id: 2,
-      title: 'New Product Launch',
-      budget: 10000000,
-      gmv: 80500000,
-      sowTotal: 50,
-      sowCompleted: 50,
-      status: 'COMPLETED'
-    }
-  ];
+  useEffect(() => {
+    fetchDashboard();
+  }, [fetchDashboard]);
+
+  if (isLoading || !dashboard) {
+    return (
+      <div className="space-y-8 animate-pulse">
+        <div className="grid grid-cols-4 gap-6">
+          {[1, 2, 3, 4].map(i => <div key={i} className="h-32 bg-white/5 rounded-3xl" />)}
+        </div>
+        <div className="h-96 bg-white/5 rounded-3xl" />
+      </div>
+    );
+  }
+
+  const { stats, campaigns } = dashboard;
+  const brandStats = {
+    totalSpend: stats?.totalSpend || 0,
+    generatedGmv: stats?.generatedGmv || 0,
+    roi: stats?.roi || 0,
+    activeCreators: stats?.activeCreators || 0,
+  };
 
   return (
     <div className="space-y-8 pb-12">
@@ -47,25 +45,25 @@ export default function BrandDashboard() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                <Card className="glass-card rounded-2xl border-0 shadow-xl">
+        <Card className="glass-card rounded-2xl border-0 shadow-xl">
           <CardContent className="p-6">
             <p className="text-sm font-medium text-gray-500 mb-1">Total Investment</p>
-            <p className="text-3xl font-bold text-white tracking-tight">Rp 15M</p>
+            <p className="text-3xl font-bold text-white tracking-tight">Rp {brandStats.totalSpend.toLocaleString()}</p>
           </CardContent>
         </Card>
-                <Card className="glass-card rounded-2xl border-0 shadow-xl">
+        <Card className="glass-card rounded-2xl border-0 shadow-xl">
           <CardContent className="p-6">
             <p className="text-sm font-medium text-gray-500 mb-1">Generated GMV</p>
-            <p className="text-3xl font-bold text-emerald-500 tracking-tight">Rp 125.5M</p>
+            <p className="text-3xl font-bold text-emerald-500 tracking-tight">Rp {brandStats.generatedGmv.toLocaleString()}</p>
           </CardContent>
         </Card>
-                <Card className="glass-card rounded-2xl border-0 shadow-xl">
+        <Card className="glass-card rounded-2xl border-0 shadow-xl">
           <CardContent className="p-6">
             <p className="text-sm font-medium text-gray-500 mb-1">Overall ROI</p>
             <p className="text-3xl font-bold text-blue-500 tracking-tight">{brandStats.roi}%</p>
           </CardContent>
         </Card>
-                <Card className="glass-card rounded-2xl border-0 shadow-xl">
+        <Card className="glass-card rounded-2xl border-0 shadow-xl">
           <CardContent className="p-6">
             <p className="text-sm font-medium text-gray-500 mb-1">Active Creators</p>
             <p className="text-3xl font-bold text-white tracking-tight">{brandStats.activeCreators}</p>
@@ -77,7 +75,11 @@ export default function BrandDashboard() {
       <div className="space-y-6">
         <h2 className="text-xl font-bold text-white tracking-tight">Campaign Tracker</h2>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {campaigns.map((camp) => (
+          {(!campaigns || campaigns.length === 0) ? (
+            <div className="lg:col-span-2 glass-panel rounded-[32px] p-12 text-center">
+              <p className="text-gray-500 font-bold">No active campaigns</p>
+            </div>
+          ) : campaigns.map((camp) => (
             <Card key={camp.id} className="glass-card rounded-2xl border-0 relative overflow-hidden group">
               <CardContent className="p-6">
                 <div className="flex justify-between items-start mb-6">

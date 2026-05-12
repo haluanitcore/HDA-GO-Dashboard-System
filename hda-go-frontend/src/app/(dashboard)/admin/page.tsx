@@ -1,23 +1,31 @@
 'use client';
 
+import { useEffect } from 'react';
+import { useAnalyticsStore } from '@/store';
 import { Card, CardContent } from '@/components/ui/card';
 import { Users, Settings, ShieldAlert, Activity, Database, Server, RefreshCw } from 'lucide-react';
 
 export default function AdminPage() {
+  const { kpi, fetchKPI, runAggregation, isLoading } = useAnalyticsStore();
+
+  useEffect(() => {
+    fetchKPI();
+  }, [fetchKPI]);
+
   const statCards = [
-    { name: 'Total Registered Users', value: '1,284', icon: Users, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-    { name: 'System Uptime', value: '99.98%', icon: Activity, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-    { name: 'Active Sessions', value: '342', icon: Server, color: 'text-purple-500', bg: 'bg-purple-500/10' },
-    { name: 'Security Alerts', value: '0', icon: ShieldAlert, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+    { name: 'Total Registered Users', value: kpi?.total_creators || 0, icon: Users, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+    { name: 'System Uptime', value: '99.9%', icon: Activity, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+    { name: 'Total Campaigns', value: kpi?.total_campaigns || 0, icon: Server, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+    { name: 'Total GMV', value: `Rp ${(kpi?.total_gmv || 0).toLocaleString()}`, icon: ShieldAlert, color: 'text-amber-500', bg: 'bg-amber-500/10' },
   ];
 
-  const recentLogs = [
-    { user: 'admin@hdago.com', action: 'Updated system configuration', time: '2 mins ago', status: 'SUCCESS' },
-    { user: 'budi@hdago.com', action: 'Failed login attempt', time: '14 mins ago', status: 'WARNING' },
-    { user: 'exec@hdago.com', action: 'Generated quarterly report', time: '1 hour ago', status: 'SUCCESS' },
-    { user: 'system_auto', action: 'Database automated backup', time: '3 hours ago', status: 'SUCCESS' },
-    { user: 'sarah@hdago.com', action: 'Modified creator level (Maya)', time: '5 hours ago', status: 'SUCCESS' },
-  ];
+  const recentLogs: any[] = [];
+
+  const handleSync = async () => {
+    await runAggregation();
+    await fetchKPI();
+    alert('System Database Synced!');
+  };
 
   return (
     <div className="space-y-8 pb-12">
@@ -26,8 +34,12 @@ export default function AdminPage() {
           <h1 className="text-3xl font-black text-white tracking-tight">System Control Center</h1>
           <p className="text-gray-500 font-medium mt-1">Manage global platform settings, security, and users.</p>
         </div>
-        <button className="bg-white/10 hover:bg-white/20 text-white text-sm font-bold px-6 py-3 rounded-2xl transition-all border border-white/10 flex items-center gap-2">
-          <RefreshCw className="h-4 w-4" /> Sync Database
+        <button 
+          onClick={handleSync}
+          disabled={isLoading}
+          className="bg-white/10 hover:bg-white/20 text-white text-sm font-bold px-6 py-3 rounded-2xl transition-all border border-white/10 flex items-center gap-2 disabled:opacity-50"
+        >
+          <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} /> Sync Database
         </button>
       </div>
 
@@ -97,7 +109,13 @@ export default function AdminPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {recentLogs.map((log, idx) => (
+                {recentLogs.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="px-6 py-12 text-center text-gray-500 font-bold text-sm">
+                      No system logs available.
+                    </td>
+                  </tr>
+                ) : recentLogs.map((log, idx) => (
                   <tr key={idx} className="hover:bg-white/[0.02] transition-colors">
                     <td className="px-6 py-4">
                       <p className="text-sm font-bold text-white">{log.user}</p>

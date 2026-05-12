@@ -28,10 +28,8 @@ export default function BrandCampaignsPage() {
       setCampaigns(data && Array.isArray(data) ? data : []);
     } catch (error) {
       console.error(error);
-      // Fallback for visual continuity if backend is empty
-      setCampaigns([
-        { id: '1', title: 'Domino\'s Pizza Mukbang', status: 'ACTIVE', budget: 15000000, gmv: 45000000, sowCompleted: 3, sowTotal: 5 },
-      ]);
+      // Default to empty array if backend has no data yet
+      setCampaigns([]);
     } finally {
       setIsLoading(false);
     }
@@ -47,13 +45,13 @@ export default function BrandCampaignsPage() {
         title: newCampaign.title,
         category: newCampaign.category,
         min_level: Number(newCampaign.min_level),
-        brand_id: user?.userId || user?.id || 'brand-id-fallback', // Fetch from auth state
+        brand_id: user?.userId || user?.id || 'brand-id-fallback',
         sow_total: Number(newCampaign.sow),
         reward_type: 'FIXED',
-        deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // +30 days
-        slot: 10, // Default max 10 participants
-        status: 'PENDING'
-        // 'budget' removed because backend doesn't support it
+        deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        slot: 10,
+        status: 'PENDING_BD',
+        budget: Number(newCampaign.budget) || 0,
       });
       setIsModalOpen(false);
       setNewCampaign({ title: '', category: 'FNB', budget: '', sow: '', min_level: '0' });
@@ -81,7 +79,7 @@ export default function BrandCampaignsPage() {
         </div>
         <button 
           onClick={() => setIsModalOpen(true)}
-          className="bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold px-6 py-3 rounded-2xl transition-all shadow-lg shadow-blue-500/20 flex items-center gap-2"
+          className="btn-hda-primary text-sm px-6 py-3 rounded-2xl flex items-center gap-2"
         >
           <Plus className="h-4 w-4" /> Submit New Deal
         </button>
@@ -96,7 +94,7 @@ export default function BrandCampaignsPage() {
                 <div className="p-3 bg-white/5 rounded-xl">
                   <Target className="h-6 w-6 text-gray-400" />
                 </div>
-                <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest ${camp.status === 'ACTIVE' ? 'bg-blue-500/10 text-blue-500' : camp.status === 'COMPLETED' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'}`}>
+                <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest ${camp.status === 'ACTIVE' ? 'bg-[#416CB1]/10 text-[#416CB1]' : camp.status === 'COMPLETED' ? 'bg-emerald-500/10 text-emerald-500' : camp.status === 'PENDING_BD' ? 'bg-[#F6D145]/10 text-[#F6D145]' : camp.status === 'BD_REVISION' ? 'bg-[#E3903A]/10 text-[#E3903A]' : camp.status === 'BD_APPROVED' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-gray-500/10 text-gray-400'}`}>
                   {camp.status}
                 </span>
               </div>
@@ -111,7 +109,7 @@ export default function BrandCampaignsPage() {
                   </div>
                   <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
                     <div 
-                      className={`h-full transition-all duration-500 ${camp.sowCompleted === camp.sowTotal ? 'bg-emerald-500' : 'bg-blue-500'}`}
+                      className={`h-full transition-all duration-500 ${camp.sowCompleted === camp.sowTotal ? 'bg-emerald-500' : 'bg-[#416CB1]'}`}
                       style={{ width: `${(camp.sowCompleted / camp.sowTotal) * 100}%` }}
                     />
                   </div>
@@ -155,7 +153,7 @@ export default function BrandCampaignsPage() {
                   type="text" 
                   value={newCampaign.title}
                   onChange={e => setNewCampaign({...newCampaign, title: e.target.value})}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-colors"
+                  className="glass-input w-full rounded-xl px-4 py-3 text-white focus:outline-none"
                   placeholder="e.g. Summer Promo 2026"
                   required
                 />
@@ -216,7 +214,7 @@ export default function BrandCampaignsPage() {
 
               <div className="space-y-2">
                 <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Brief Attachment</label>
-                <div className="border-2 border-dashed border-white/10 rounded-xl p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:border-blue-500/50 hover:bg-white/5 transition-all">
+                <div className="border-2 border-dashed border-white/10 rounded-xl p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:border-[#F6D145]/30 hover:bg-white/[0.02] transition-all">
                   <Upload className="h-8 w-8 text-gray-500 mb-2" />
                   <p className="text-sm font-bold text-white">Upload PDF Brief</p>
                   <p className="text-xs text-gray-500 mt-1">Drag and drop or click to browse</p>
@@ -226,7 +224,7 @@ export default function BrandCampaignsPage() {
               <button 
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-blue-500/20 mt-4 flex items-center justify-center gap-2"
+                className="btn-hda-primary w-full py-4 rounded-xl mt-4 flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
                 {isSubmitting ? 'Submitting...' : 'Submit Campaign'}

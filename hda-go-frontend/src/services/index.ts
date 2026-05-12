@@ -18,6 +18,7 @@ export const campaignService = {
   join: (campaignId: string) => 
     api.post<any>('/campaigns/join', { campaign_id: campaignId }),
   create: (data: any) => api.post<any>('/campaigns', data),
+  publish: (id: string) => api.patch<any>(`/campaigns/${id}/publish`),
   getDetail: (id: string) => api.get<any>(`/campaigns/${id}`),
   getAll: (status?: string, category?: string) => {
     const params = new URLSearchParams();
@@ -34,7 +35,7 @@ export const submissionService = {
   getSowProgress: (campaignId: string) => 
     api.get<any>(`/submissions/sow/${campaignId}`),
   getQcQueue: () => api.get<any>('/submissions/qc-queue'),
-  review: (id: string, data: { status: 'APPROVED' | 'REVISION'; feedback?: string }) => 
+  review: (id: string, data: { status: 'APPROVED' | 'REVISION'; qc_notes?: string }) => 
     api.patch<any>(`/submissions/${id}/review`, data),
 };
 
@@ -75,12 +76,31 @@ export const cmService = {
   getLevelMonitoring: () => api.get<any>('/cm/level-monitoring'),
 };
 
+// ── BD (Business Development) Services ──
+export const bdService = {
+  getDashboard: () => api.get<any>('/bd/dashboard'),
+  getPending: () => api.get<any>('/bd/campaigns/pending'),
+  getApproved: () => api.get<any>('/bd/campaigns/approved'),
+  getRevision: () => api.get<any>('/bd/campaigns/revision'),
+  getCampaignDetail: (id: string) => api.get<any>(`/bd/campaigns/${id}`),
+  approve: (id: string, notes?: string) => 
+    api.patch<any>(`/bd/campaigns/${id}/approve`, { notes }),
+  requestRevision: (id: string, notes: string) => 
+    api.patch<any>(`/bd/campaigns/${id}/revision`, { notes }),
+  editCampaign: (id: string, data: any) =>
+    api.patch<any>(`/bd/campaigns/${id}/edit`, data),
+  getHistory: () => api.get<any>('/bd/campaigns/history'),
+  getAnalytics: () => api.get<any>('/bd/analytics'),
+  getAssignments: () => api.get<any>('/bd/assignments'),
+};
+
 // ── Analytics Services (Executive) ──
 export const analyticsService = {
   getKPI: () => api.get<any>('/analytics/kpi'),
   getMetricsHistory: (days = 30) => api.get<any>(`/analytics/metrics-history?days=${days}`),
   getCampaignAnalytics: () => api.get<any>('/analytics/campaigns'),
   getCreatorPerformance: (limit = 20) => api.get<any>(`/analytics/creators?limit=${limit}`),
+  runAggregation: () => api.get<any>('/analytics/run-aggregation'),
 };
 
 // ── Auth Services ──
@@ -90,3 +110,10 @@ export const authService = {
   register: (data: { name: string; email: string; password: string; role: string }) =>
     api.post<any>('/auth/register', data),
 };
+
+// ── Brand Services ──
+export const brandService = {
+  getDashboard: () => api.get<any>('/brand/dashboard'),
+  getAnalytics: () => api.get<any>('/brand/analytics'),
+};
+

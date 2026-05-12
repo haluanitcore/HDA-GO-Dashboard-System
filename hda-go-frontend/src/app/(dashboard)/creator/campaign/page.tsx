@@ -71,7 +71,9 @@ export default function CampaignHub() {
     try {
       await campaignService.join(id);
       await fetchData(); // refresh
-    } catch (err) {
+    } catch (err: any) {
+      const msg = err?.message || 'Failed to join campaign';
+      alert(msg);
       console.error(err);
     } finally {
       setJoining(null);

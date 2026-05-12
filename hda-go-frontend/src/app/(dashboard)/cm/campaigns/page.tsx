@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Target, Users, Send, Loader2, Search, X, CheckCircle2, Megaphone } from 'lucide-react';
+import { Target, Users, Send, Loader2, Search, X, CheckCircle2, Megaphone, Rocket } from 'lucide-react';
 import { campaignService, cmService } from '@/services';
 import { api } from '@/services/api';
 
@@ -16,6 +16,7 @@ export default function CMCampaignsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [pushMode, setPushMode] = useState<'select' | 'all'>('select');
   const [isPushingAll, setIsPushingAll] = useState(false);
+  const [publishingId, setPublishingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -82,6 +83,19 @@ export default function CMCampaignsPage() {
       setPushSuccess(prev => [...prev, creatorId]);
     } finally {
       setIsPushing(false);
+    }
+  };
+
+  const handlePublish = async (campaignId: string) => {
+    setPublishingId(campaignId);
+    try {
+      await campaignService.publish(campaignId);
+      await fetchData();
+    } catch (error) {
+      console.error('Publish failed:', error);
+      alert('Failed to publish campaign.');
+    } finally {
+      setPublishingId(null);
     }
   };
 
@@ -161,10 +175,21 @@ export default function CMCampaignsPage() {
                   </div>
                 </div>
                 
-                <div className="flex items-center gap-4 w-full md:w-auto">
+                <div className="flex items-center gap-3 w-full md:w-auto">
+                  {camp.status !== 'ACTIVE' && (
+                    <button 
+                      onClick={() => handlePublish(camp.id)}
+                      disabled={publishingId === camp.id}
+                      className="flex-1 md:flex-none bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold px-5 py-3 rounded-xl transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2"
+                    >
+                      {publishingId === camp.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />}
+                      {publishingId === camp.id ? 'Publishing...' : 'Publish'}
+                    </button>
+                  )}
                   <button 
                     onClick={() => setPushModal({ isOpen: true, campaignId: camp.id })}
-                    className="flex-1 md:flex-none bg-blue-600 hover:bg-blue-500 text-white font-bold px-6 py-3 rounded-xl transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2"
+                    disabled={camp.status !== 'ACTIVE'}
+                    className="flex-1 md:flex-none bg-blue-600 hover:bg-blue-500 disabled:opacity-30 disabled:cursor-not-allowed text-white font-bold px-5 py-3 rounded-xl transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2"
                   >
                     <Send className="h-4 w-4" /> Push to Creator
                   </button>

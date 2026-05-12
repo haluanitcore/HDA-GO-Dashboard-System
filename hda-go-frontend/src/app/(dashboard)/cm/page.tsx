@@ -193,7 +193,7 @@ export default function CMDashboard() {
           </table>
           <div className="p-4 border-t border-white/5 bg-white/[0.01] text-center">
              <Link href="/cm/pipeline" className="inline-block text-[10px] font-black text-gray-600 hover:text-white transition-colors tracking-widest uppercase">
-               SHOW ALL 248 CREATORS
+               SHOW ALL {pipeline ? pipeline.length : 0} CREATORS
              </Link>
           </div>
         </div>

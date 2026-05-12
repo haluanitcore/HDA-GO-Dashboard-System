@@ -1,54 +1,21 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { analyticsService } from '@/services';
+import { useEffect } from 'react';
+import { useAnalyticsStore } from '@/store';
 import { Card, CardContent } from '@/components/ui/card';
 import { Target, TrendingUp, DollarSign, Users, Award, Percent, Loader2, Calendar } from 'lucide-react';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 
 export default function KPIOverviewPage() {
-  const [kpi, setKpi] = useState<any>(null);
-  const [history, setHistory] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { kpi, history, fetchKPI, fetchMetricsHistory, isLoading } = useAnalyticsStore();
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    fetchKPI();
+    fetchMetricsHistory();
+  }, [fetchKPI, fetchMetricsHistory]);
 
-  const fetchData = async () => {
-    setIsLoading(true);
-    try {
-      const [kpiData, historyData] = await Promise.all([
-        analyticsService.getKPI().catch(() => null),
-        analyticsService.getMetricsHistory().catch(() => [])
-      ]);
-      const defaultKpi = {
-        total_gmv: 215000000,
-        total_orders: 1420,
-        active_creators: 45,
-        active_campaigns: 12,
-        conversion_rate: 3.2,
-        avg_order_value: 151400
-      };
-      setKpi(kpiData && Object.keys(kpiData).length > 0 ? { ...defaultKpi, ...kpiData } : defaultKpi);
-      setHistory(historyData && historyData.length > 0 ? historyData : [
-        { date: '2026-05-01', gmv: 4000000 },
-        { date: '2026-05-02', gmv: 5200000 },
-        { date: '2026-05-03', gmv: 4800000 },
-        { date: '2026-05-04', gmv: 6100000 },
-        { date: '2026-05-05', gmv: 7500000 },
-        { date: '2026-05-06', gmv: 6800000 },
-        { date: '2026-05-07', gmv: 8200000 },
-      ]);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  if (isLoading) {
+  if (isLoading || !kpi) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
         <Loader2 className="h-8 w-8 text-blue-500 animate-spin" />
@@ -56,7 +23,16 @@ export default function KPIOverviewPage() {
     );
   }
 
-  const maxHistoryGmv = Math.max(...history.map((h: any) => h.gmv));
+  const safeKpi = {
+    total_gmv: kpi.total_gmv || 0,
+    total_orders: kpi.total_orders || 0,
+    active_creators: kpi.active_creators || 0,
+    active_campaigns: kpi.active_campaigns || 0,
+    conversion_rate: kpi.conversion_rate || 0,
+    avg_order_value: kpi.avg_order_value || 0
+  };
+
+  const maxHistoryGmv = history.length > 0 ? Math.max(...history.map((h: any) => h.gmv)) : 1;
 
   return (
     <div className="space-y-8 pb-12">
@@ -82,7 +58,7 @@ export default function KPIOverviewPage() {
               <span className="text-xs font-bold text-emerald-500 bg-emerald-500/10 px-2.5 py-1 rounded-full uppercase tracking-widest">+18% vs Target</span>
             </div>
             <p className="text-sm font-medium text-gray-500 mb-1">Gross Merchandise Value</p>
-            <p className="text-3xl font-bold text-white tracking-tight">Rp {kpi.total_gmv.toLocaleString()}</p>
+            <p className="text-3xl font-bold text-white tracking-tight">Rp {safeKpi.total_gmv.toLocaleString()}</p>
           </CardContent>
         </Card>
 
@@ -92,10 +68,10 @@ export default function KPIOverviewPage() {
               <div className="p-3 bg-blue-500/10 rounded-xl">
                 <Percent className="h-6 w-6 text-blue-500" />
               </div>
-              <span className="text-xs font-bold text-emerald-500 bg-emerald-500/10 px-2.5 py-1 rounded-full uppercase tracking-widest">+0.4% MoM</span>
+              <span className="text-xs font-bold text-gray-500 bg-gray-500/10 px-2.5 py-1 rounded-full uppercase tracking-widest">0% MoM</span>
             </div>
             <p className="text-sm font-medium text-gray-500 mb-1">Average Conversion Rate</p>
-            <p className="text-3xl font-bold text-white tracking-tight">{kpi.conversion_rate}%</p>
+            <p className="text-3xl font-bold text-white tracking-tight">{safeKpi.conversion_rate}%</p>
           </CardContent>
         </Card>
 
@@ -108,7 +84,7 @@ export default function KPIOverviewPage() {
               <span className="text-xs font-bold text-amber-500 bg-amber-500/10 px-2.5 py-1 rounded-full uppercase tracking-widest">ON TRACK</span>
             </div>
             <p className="text-sm font-medium text-gray-500 mb-1">Campaign Fulfillment</p>
-            <p className="text-3xl font-bold text-white tracking-tight">92%</p>
+            <p className="text-3xl font-bold text-white tracking-tight">0%</p>
           </CardContent>
         </Card>
       </div>
@@ -121,7 +97,7 @@ export default function KPIOverviewPage() {
           </div>
           <div>
             <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Active Creators</p>
-            <p className="text-xl font-bold text-white">{kpi.active_creators}</p>
+            <p className="text-xl font-bold text-white">{safeKpi.active_creators}</p>
           </div>
         </div>
         <div className="glass-panel p-5 rounded-2xl flex items-center gap-4">
@@ -130,7 +106,7 @@ export default function KPIOverviewPage() {
           </div>
           <div>
             <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Total Orders</p>
-            <p className="text-xl font-bold text-white">{kpi.total_orders.toLocaleString()}</p>
+            <p className="text-xl font-bold text-white">{safeKpi.total_orders.toLocaleString()}</p>
           </div>
         </div>
         <div className="glass-panel p-5 rounded-2xl flex items-center gap-4">
@@ -139,7 +115,7 @@ export default function KPIOverviewPage() {
           </div>
           <div>
             <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Avg Order Value</p>
-            <p className="text-xl font-bold text-white">Rp {kpi.avg_order_value.toLocaleString()}</p>
+            <p className="text-xl font-bold text-white">Rp {safeKpi.avg_order_value.toLocaleString()}</p>
           </div>
         </div>
         <div className="glass-panel p-5 rounded-2xl flex items-center gap-4">
@@ -148,7 +124,7 @@ export default function KPIOverviewPage() {
           </div>
           <div>
             <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Active Campaigns</p>
-            <p className="text-xl font-bold text-white">{kpi.active_campaigns}</p>
+            <p className="text-xl font-bold text-white">{safeKpi.active_campaigns}</p>
           </div>
         </div>
       </div>
@@ -162,7 +138,11 @@ export default function KPIOverviewPage() {
         </div>
         
         <div className="h-64 flex items-end justify-between gap-4 relative z-10">
-          {history.map((h: any, i: number) => {
+          {history.length === 0 ? (
+            <div className="w-full h-full flex items-center justify-center">
+              <p className="text-gray-500 font-bold text-sm">No historical data available.</p>
+            </div>
+          ) : history.map((h: any, i: number) => {
             const heightPct = (h.gmv / maxHistoryGmv) * 100;
             return (
               <div key={i} className="flex-1 flex flex-col items-center justify-end gap-3 group">

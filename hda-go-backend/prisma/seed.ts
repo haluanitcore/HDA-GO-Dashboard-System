@@ -12,6 +12,8 @@ async function main() {
   console.log(`   Database: ${dbPath}`);
 
   // ── CLEAR EXISTING DATA ──
+  await prisma.campaignEditLog.deleteMany();
+  await prisma.brandBDAssignment.deleteMany();
   await prisma.notification.deleteMany();
   await prisma.creatorMonthlyStats.deleteMany();
   await prisma.campaignAnalytics.deleteMany();
@@ -42,8 +44,35 @@ async function main() {
   const cm2 = await prisma.user.create({
     data: { name: 'Budi CM', email: 'budi@hdago.com', password, role: 'CM' },
   });
+
+  // ── BD Users ──
+  const bd1 = await prisma.user.create({
+    data: { name: 'Rina BD', email: 'rina@hdago.com', password, role: 'BD' },
+  });
+  const bd2 = await prisma.user.create({
+    data: { name: 'Arief BD', email: 'arief@hdago.com', password, role: 'BD' },
+  });
+
+  // ── Brand Users ──
   const brand1 = await prisma.user.create({
     data: { name: 'Dominos Pizza', email: 'dominos@brand.com', password, role: 'BRAND' },
+  });
+  const brand2 = await prisma.user.create({
+    data: { name: 'Hotel Paradise', email: 'hotelparadise@brand.com', password, role: 'BRAND' },
+  });
+  const brand3 = await prisma.user.create({
+    data: { name: 'GlowUp Beauty', email: 'glowup@brand.com', password, role: 'BRAND' },
+  });
+
+  // ── BD-Brand Assignments (BD assigned per brand) ──
+  await prisma.brandBDAssignment.create({
+    data: { bd_user_id: bd1.id, brand_user_id: brand1.id },
+  });
+  await prisma.brandBDAssignment.create({
+    data: { bd_user_id: bd1.id, brand_user_id: brand2.id },
+  });
+  await prisma.brandBDAssignment.create({
+    data: { bd_user_id: bd2.id, brand_user_id: brand3.id },
   });
 
   const creatorUsers: any[] = [];
@@ -75,23 +104,68 @@ async function main() {
   }
 
   // ══════════════════════════════════════
-  // CAMPAIGNS
+  // CAMPAIGNS — With BD Workflow statuses
   // ══════════════════════════════════════
   const campaigns: any[] = [];
-  for (const cd of [
-    { title: 'Summer Sale Mega Promo', category: 'FNB', min_level: 0, sow_total: 4, reward_type: 'COMMISSION', deadline: '2026-06-15', status: 'ACTIVE', slot: 20 },
-    { title: 'Hotel Paradise Bali Review', category: 'HOTEL', min_level: 2, sow_total: 3, reward_type: 'FIXED', deadline: '2026-06-01', status: 'ACTIVE', slot: 10 },
-    { title: 'Dominos Pizza New Menu', category: 'FNB', min_level: 1, sow_total: 4, reward_type: 'COMMISSION', deadline: '2026-05-30', status: 'ACTIVE', slot: 15 },
-    { title: 'TikTok LIVE Shopping', category: 'LIVE', min_level: 3, sow_total: 2, reward_type: 'COMMISSION', deadline: '2026-06-10', status: 'ACTIVE', slot: 5 },
-    { title: 'Beauty Glow Up Challenge', category: 'BEAUTY', min_level: 0, sow_total: 3, reward_type: 'FIXED', deadline: '2026-07-01', status: 'ACTIVE', slot: 30 },
-    { title: 'Smart Gadget Review 2026', category: 'TECH', min_level: 4, sow_total: 2, reward_type: 'FIXED', deadline: '2026-06-20', status: 'ACTIVE', slot: 5 },
-    { title: 'Hidden Gems Bandung', category: 'TTD', min_level: 1, sow_total: 5, reward_type: 'COMMISSION', deadline: '2026-06-25', status: 'DRAFT', slot: 12 },
-  ]) {
-    campaigns.push(await prisma.campaign.create({ data: { ...cd, brand_id: brand1.id, deadline: new Date(cd.deadline) } }));
+  const campaignData = [
+    // ACTIVE — fully through BD pipeline
+    { title: 'Summer Sale Mega Promo', category: 'FNB', min_level: 0, sow_total: 4, reward_type: 'COMMISSION', deadline: '2026-06-15', status: 'ACTIVE', slot: 20, budget: 15000000, brand: brand1.id, bd_reviewer_id: bd1.id, bd_approved_at: new Date() },
+    { title: 'Hotel Paradise Bali Review', category: 'HOTEL', min_level: 2, sow_total: 3, reward_type: 'FIXED', deadline: '2026-06-01', status: 'ACTIVE', slot: 10, budget: 25000000, brand: brand2.id, bd_reviewer_id: bd1.id, bd_approved_at: new Date() },
+    // BD_APPROVED — approved, waiting CM to publish
+    { title: 'Dominos Pizza New Menu', category: 'FNB', min_level: 1, sow_total: 4, reward_type: 'COMMISSION', deadline: '2026-05-30', status: 'BD_APPROVED', slot: 15, budget: 10000000, brand: brand1.id, bd_reviewer_id: bd1.id, bd_approved_at: new Date() },
+    // PENDING_BD — waiting for BD review
+    { title: 'TikTok LIVE Shopping Ramadan', category: 'LIVE', min_level: 3, sow_total: 2, reward_type: 'COMMISSION', deadline: '2026-06-10', status: 'PENDING_BD', slot: 5, budget: 30000000, brand: brand1.id },
+    { title: 'Beauty Glow Up Challenge', category: 'BEAUTY', min_level: 0, sow_total: 3, reward_type: 'FIXED', deadline: '2026-07-01', status: 'PENDING_BD', slot: 30, budget: 8000000, brand: brand3.id },
+    { title: 'Smart Gadget Review 2026', category: 'TECH', min_level: 4, sow_total: 2, reward_type: 'FIXED', deadline: '2026-06-20', status: 'PENDING_BD', slot: 5, budget: 20000000, brand: brand2.id },
+    // BD_REVISION — needs revision from brand
+    { title: 'Hidden Gems Bandung', category: 'TTD', min_level: 1, sow_total: 5, reward_type: 'COMMISSION', deadline: '2026-06-25', status: 'BD_REVISION', slot: 12, budget: 5000000, brand: brand2.id, bd_reviewer_id: bd1.id, bd_notes: 'Budget terlalu rendah untuk 5 SOW. Tolong naikkan budget minimal Rp 12 juta.' },
+  ];
+
+  for (const cd of campaignData) {
+    campaigns.push(await prisma.campaign.create({
+      data: {
+        title: cd.title, category: cd.category, min_level: cd.min_level, sow_total: cd.sow_total,
+        reward_type: cd.reward_type, deadline: new Date(cd.deadline), status: cd.status, slot: cd.slot,
+        budget: cd.budget, brand_id: cd.brand,
+        bd_reviewer_id: cd.bd_reviewer_id || null,
+        bd_approved_at: cd.bd_approved_at || null,
+        bd_notes: cd.bd_notes || null,
+        bd_reviewed_at: cd.bd_reviewer_id ? new Date() : null,
+      },
+    }));
   }
 
-  for (const [ci, cai] of [[0,0],[0,1],[0,2],[0,4],[1,0],[1,2],[1,4],[2,0],[2,4],[3,0]]) {
-    await prisma.campaignParticipant.create({ data: { campaign_id: campaigns[cai].id, creator_id: creatorUsers[ci].id, status: 'JOINED' } });
+  // ── Campaign Edit Logs (audit trail demo data) ──
+  await prisma.campaignEditLog.create({
+    data: {
+      campaign_id: campaigns[0].id, editor_id: brand1.id, editor_role: 'BRAND',
+      field_name: 'campaign', old_value: null, new_value: campaigns[0].title,
+      action: 'CREATE', notes: 'Campaign submitted by Brand',
+    },
+  });
+  await prisma.campaignEditLog.create({
+    data: {
+      campaign_id: campaigns[0].id, editor_id: bd1.id, editor_role: 'BD',
+      field_name: 'budget', old_value: '12000000', new_value: '15000000',
+      action: 'EDIT', notes: 'Budget adjusted to meet SOW requirements',
+    },
+  });
+  await prisma.campaignEditLog.create({
+    data: {
+      campaign_id: campaigns[0].id, editor_id: bd1.id, editor_role: 'BD',
+      field_name: 'status', old_value: 'PENDING_BD', new_value: 'BD_APPROVED',
+      action: 'APPROVE', notes: 'Approved — good fit for our creator pool',
+    },
+  });
+
+  // ── Campaign Participants (only for ACTIVE / BD_APPROVED campaigns) ──
+  const activeOrApproved = campaigns.filter(c => ['ACTIVE', 'BD_APPROVED'].includes(c.status));
+  for (const [ci, cai] of [[0,0],[0,1],[1,0],[1,1],[2,0],[3,0]]) {
+    if (activeOrApproved[cai]) {
+      try {
+        await prisma.campaignParticipant.create({ data: { campaign_id: activeOrApproved[cai].id, creator_id: creatorUsers[ci].id, status: 'JOINED' } });
+      } catch { /* skip duplicates */ }
+    }
   }
 
   // ── Submissions ──
@@ -115,6 +189,10 @@ async function main() {
     { user_id: creatorUsers[0].id, title: '✅ VT Approved!', message: 'VT Summer Sale disetujui.', type: 'QC', read_status: true },
     { user_id: creatorUsers[0].id, title: '💰 GMV Recorded!', message: '85 order. GMV +Rp 4.250.000.', type: 'SYSTEM', read_status: false },
     { user_id: cm1.id, title: '⚠️ Dormant Alert', message: 'Farel Gamer belum aktif.', type: 'SYSTEM', read_status: false },
+    { user_id: cm1.id, title: '📋 Campaign Baru dari BD', message: 'Campaign "Dominos Pizza New Menu" telah di-approve oleh Rina BD.', type: 'CAMPAIGN', read_status: false },
+    { user_id: bd1.id, title: '📥 Campaign Baru Masuk', message: 'Dominos Pizza mengirimkan "TikTok LIVE Shopping Ramadan". Silakan review.', type: 'CAMPAIGN', read_status: false },
+    { user_id: bd1.id, title: '📥 Campaign Baru Masuk', message: 'Hotel Paradise mengirimkan "Smart Gadget Review 2026". Silakan review.', type: 'CAMPAIGN', read_status: false },
+    { user_id: brand2.id, title: '🔄 Revisi Diperlukan', message: 'Campaign "Hidden Gems Bandung" memerlukan revisi: Budget terlalu rendah.', type: 'CAMPAIGN', read_status: false },
   ]) {
     await prisma.notification.create({ data: n });
   }
@@ -125,7 +203,8 @@ async function main() {
   console.log('📧 Login credentials (password: password123):');
   console.log('   Creator: alex@creator.com');
   console.log('   CM:      sarah@hdago.com');
-  console.log('   Brand:   dominos@brand.com');
+  console.log('   BD:      rina@hdago.com / arief@hdago.com');
+  console.log('   Brand:   dominos@brand.com / hotelparadise@brand.com / glowup@brand.com');
   console.log('   Admin:   admin@hdago.com');
   console.log('   Exec:    exec@hdago.com');
 }
