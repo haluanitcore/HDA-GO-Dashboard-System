@@ -14,6 +14,8 @@ export default function BrandLayout({ children }: { children: React.ReactNode })
   useEffect(() => {
     if (!isAuthenticated) {
       router.push('/login');
+    } else if (user?.role !== 'BRAND') {
+      router.push(`/${user!.role.toLowerCase()}`);
     } else if (user && user.role !== 'BRAND') {
       router.push(`/${user.role.toLowerCase()}`);
     }

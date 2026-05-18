@@ -23,6 +23,7 @@ export default function BrandROIAnalyticsPage() {
   }
 
   const { stats, funnel, campaigns } = analytics;
+  const campaignPerformance: any[] = campaigns || [];
   const campaignPerformance = campaigns || [];
   
   // Dummy data for visual trajectory chart
@@ -213,6 +214,7 @@ export default function BrandROIAnalyticsPage() {
                     No analytics available for campaigns yet.
                   </td>
                 </tr>
+              ) : campaignPerformance.map((camp, idx) => {
               ) : campaignPerformance.map((camp: any, idx: number) => {
                 const roi = Math.round((camp.gmv / camp.spend) * 100);
                 return (

@@ -79,6 +79,7 @@ export default function BrandDashboard() {
             <div className="lg:col-span-2 glass-panel rounded-[32px] p-12 text-center">
               <p className="text-gray-500 font-bold">No active campaigns</p>
             </div>
+          ) : (campaigns as any[]).map((camp) => (
           ) : campaigns.map((camp) => (
             <Card key={camp.id} className="glass-card rounded-2xl border-0 relative overflow-hidden group">
               <CardContent className="p-6">

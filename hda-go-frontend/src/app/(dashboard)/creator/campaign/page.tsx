@@ -128,6 +128,9 @@ export default function CampaignHub() {
                       <span className="text-purple-300 font-medium">Direkomendasikan oleh CM kamu</span>
                     </div>
                   </div>
+                  {camp.status === 'JOINED' ? (
+                    <div className="w-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-sm font-bold py-3 rounded-xl flex items-center justify-center">
+                      <CheckCircle2 className="h-4 w-4 mr-2" /> Joined Successfully
                   {camp.alreadyJoined ? (
                     <div className="w-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-sm font-bold py-3 rounded-xl flex items-center justify-center">
                       <CheckCircle2 className="h-4 w-4 mr-2" /> Sudah Bergabung

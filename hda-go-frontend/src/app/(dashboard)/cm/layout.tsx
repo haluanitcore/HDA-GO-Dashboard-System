@@ -14,6 +14,8 @@ export default function CMLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!isAuthenticated) {
       router.push('/login');
+    } else if (user?.role !== 'CM') {
+      router.push(`/${user!.role.toLowerCase()}`);
     } else if (user && user.role !== 'CM') {
       router.push(`/${user.role.toLowerCase()}`);
     }

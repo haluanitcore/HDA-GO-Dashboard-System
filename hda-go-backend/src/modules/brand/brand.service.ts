@@ -19,6 +19,7 @@ export class BrandService {
       where: { brand_id: brandId },
       include: {
         participants: true,
+        orders: true,
         analytics: true,
       },
     });
@@ -29,6 +30,8 @@ export class BrandService {
       .filter(c => ['BD_APPROVED', 'ACTIVE', 'COMPLETED'].includes(c.status))
       .reduce((sum, c) => sum + c.budget, 0);
 
+    // Calculate GMV from orders instead of non-existent generated_gmv field
+    const generatedGmv = activeCampaigns.reduce((sum, c) => sum + c.orders.reduce((orderSum, o) => orderSum + o.gmv_amount, 0), 0);
     const generatedGmv = activeCampaigns.reduce((sum, c) => sum + (c.analytics?.total_gmv || 0), 0);
     
     let roi = 0;
@@ -57,6 +60,14 @@ export class BrandService {
   async getAnalytics(brandId: string) {
     const allCampaigns = await this.prisma.campaign.findMany({
       where: { brand_id: brandId },
+      include: {
+        orders: true,
+      },
+    });
+
+    const totalSpend = allCampaigns.reduce((sum, c) => sum + c.budget, 0);
+    // Calculate GMV from orders instead of non-existent generated_gmv field
+    const generatedGmv = allCampaigns.reduce((sum, c) => sum + c.orders.reduce((orderSum, o) => orderSum + o.gmv_amount, 0), 0);
       include: { analytics: true },
     });
 
