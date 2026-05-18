@@ -12,11 +12,9 @@ export default function CreatorLayout({ children }: { children: React.ReactNode 
   const router = useRouter();
 
   useEffect(() => {
-    // Check if user is authenticated and is a CREATOR
     if (!isAuthenticated) {
       router.push('/login');
-    } else if (user && user.role !== 'CREATOR') {
-      // Redirect to their respective dashboard
+    } else if (user?.role !== 'CREATOR') {
       router.push(`/${user!.role.toLowerCase()}`);
     }
   }, [isAuthenticated, user, router]);
