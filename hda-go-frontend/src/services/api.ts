@@ -17,7 +17,7 @@ class ApiClient {
     return localStorage.getItem('accessToken');
   }
 
-  private async request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
+  private async request<T>(endpoint: string, options: RequestOptions = {}, isRetry = false): Promise<T> {
     const token = this.getToken();
 
     const res = await fetch(`${API_BASE}${endpoint}`, {
@@ -30,14 +30,16 @@ class ApiClient {
       body: options.body ? JSON.stringify(options.body) : undefined,
     });
 
-    if (res.status === 401) {
-      // Try refresh token
+    if (res.status === 401 && !isRetry) {
+      // Try refresh token once — isRetry=true prevents infinite recursion
       const refreshed = await this.refreshToken();
       if (refreshed) {
-        return this.request(endpoint, options); // Retry
+        return this.request(endpoint, options, true); // Retry once only
       }
-      // Redirect to login
+      // Token refresh failed — clear storage and redirect
       if (typeof window !== 'undefined') {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
         window.location.href = '/login';
       }
     }

@@ -213,7 +213,7 @@ export default function BrandROIAnalyticsPage() {
                     No analytics available for campaigns yet.
                   </td>
                 </tr>
-              ) : campaignPerformance.map((camp, idx) => {
+              ) : campaignPerformance.map((camp: any, idx: number) => {
                 const roi = Math.round((camp.gmv / camp.spend) * 100);
                 return (
                   <tr key={idx} className="hover:bg-white/[0.02] transition-colors">

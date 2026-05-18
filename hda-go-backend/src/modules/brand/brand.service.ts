@@ -19,6 +19,7 @@ export class BrandService {
       where: { brand_id: brandId },
       include: {
         participants: true,
+        analytics: true,
       },
     });
 
@@ -28,7 +29,7 @@ export class BrandService {
       .filter(c => ['BD_APPROVED', 'ACTIVE', 'COMPLETED'].includes(c.status))
       .reduce((sum, c) => sum + c.budget, 0);
 
-    const generatedGmv = activeCampaigns.reduce((sum, c) => sum + (c.generated_gmv || 0), 0);
+    const generatedGmv = activeCampaigns.reduce((sum, c) => sum + (c.analytics?.total_gmv || 0), 0);
     
     let roi = 0;
     if (totalSpend > 0) {
@@ -56,10 +57,11 @@ export class BrandService {
   async getAnalytics(brandId: string) {
     const allCampaigns = await this.prisma.campaign.findMany({
       where: { brand_id: brandId },
+      include: { analytics: true },
     });
 
     const totalSpend = allCampaigns.reduce((sum, c) => sum + c.budget, 0);
-    const generatedGmv = allCampaigns.reduce((sum, c) => sum + (c.generated_gmv || 0), 0);
+    const generatedGmv = allCampaigns.reduce((sum, c) => sum + (c.analytics?.total_gmv || 0), 0);
     const roi = totalSpend > 0 ? Math.round((generatedGmv / totalSpend) * 100) : 0;
     
     // Calculate simple funnel based on aggregated GMV assuming 1% conversion

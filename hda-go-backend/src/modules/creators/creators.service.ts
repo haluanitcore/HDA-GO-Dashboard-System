@@ -83,7 +83,7 @@ export class CreatorsService {
         list: campaigns,
       },
       submissions: {
-        pending: submissions.filter((s) => s.status === 'PENDING').length,
+        pending: submissions.filter((s) => ['DRAFT', 'QC_REVIEW', 'REVISION'].includes(s.status)).length,
         approved: submissions.filter((s) => s.status === 'APPROVED').length,
         list: submissions,
       },

@@ -8,11 +8,16 @@ async function bootstrap() {
   // Global prefix: all routes start with /api
   app.setGlobalPrefix('api');
 
-  // Enable CORS for frontend (Next.js on port 3000)
+  // Enable CORS for frontend — reads from env or defaults to localhost:3000
+  const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:3000')
+    .split(',')
+    .map((o) => o.trim());
+
   app.enableCors({
-    origin: ['http://localhost:3000'],
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    origin: allowedOrigins,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
+    allowedHeaders: 'Content-Type,Authorization',
   });
 
   // Global validation pipe (auto-validates DTOs)

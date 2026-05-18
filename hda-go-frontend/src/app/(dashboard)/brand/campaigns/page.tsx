@@ -45,7 +45,7 @@ export default function BrandCampaignsPage() {
         title: newCampaign.title,
         category: newCampaign.category,
         min_level: Number(newCampaign.min_level),
-        brand_id: user?.userId || user?.id || 'brand-id-fallback',
+        brand_id: user?.id || 'brand-id-fallback',
         sow_total: Number(newCampaign.sow),
         reward_type: 'FIXED',
         deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),

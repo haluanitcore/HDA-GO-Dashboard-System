@@ -128,9 +128,9 @@ export default function CampaignHub() {
                       <span className="text-purple-300 font-medium">Direkomendasikan oleh CM kamu</span>
                     </div>
                   </div>
-                  {camp.status === 'JOINED' ? (
+                  {camp.alreadyJoined ? (
                     <div className="w-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-sm font-bold py-3 rounded-xl flex items-center justify-center">
-                      <CheckCircle2 className="h-4 w-4 mr-2" /> Joined Successfully
+                      <CheckCircle2 className="h-4 w-4 mr-2" /> Sudah Bergabung
                     </div>
                   ) : (
                     <button 
@@ -199,14 +199,18 @@ export default function CampaignHub() {
                 </div>
               </div>
 
-              {camp.status === 'JOINED' ? (
+              {camp.alreadyJoined ? (
                 <div className="w-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-sm font-bold py-3 rounded-xl flex items-center justify-center">
-                  <CheckCircle2 className="h-4 w-4 mr-2" /> Joined Successfully
+                  <CheckCircle2 className="h-4 w-4 mr-2" /> Sudah Bergabung
+                </div>
+              ) : camp.slotFull ? (
+                <div className="w-full bg-gray-500/10 border border-gray-500/20 text-gray-500 text-sm font-bold py-3 rounded-xl flex items-center justify-center">
+                  Slot Penuh
                 </div>
               ) : (
                 <button 
                   onClick={() => handleJoin(camp.id)}
-                  disabled={joining === camp.id}
+                  disabled={joining === camp.id || camp.locked}
                   className="w-full bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold py-3 rounded-xl transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center disabled:opacity-50"
                 >
                   {joining === camp.id ? 'Joining...' : 'Join Campaign'} <ArrowRight className="h-4 w-4 ml-2" />
