@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { useCreatorStore } from '@/store';
+import Link from 'next/link';
 import { 
   Card, 
   CardContent, 
@@ -51,7 +52,7 @@ export default function CreatorOverview() {
   return (
     <div className="space-y-8 pb-12">
       {/* Welcome & Level Progress Header */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[32px] p-8 shadow-2xl shadow-blue-500/20">
+      <div className="relative overflow-hidden bg-gradient-to-br from-blue-600/80 to-indigo-700/80 backdrop-blur-xl rounded-[32px] p-8 shadow-2xl shadow-blue-500/20 border border-white/10">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-20 -mt-20 blur-3xl" />
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
           <div className="space-y-2">
@@ -76,7 +77,7 @@ export default function CreatorOverview() {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {statCards.map((stat) => (
-          <Card key={stat.name} className="bg-[#121212] border-white/5 hover:border-white/10 transition-all group">
+          <Card key={stat.name} className="glass-card rounded-2xl border-0">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <div className={`p-2.5 rounded-xl ${stat.bg}`}>
@@ -98,9 +99,9 @@ export default function CreatorOverview() {
         <div className="lg:col-span-2 space-y-6">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold text-white tracking-tight">Active Campaigns</h2>
-            <button className="text-blue-500 text-sm font-semibold flex items-center hover:underline">
+            <Link href="/creator/campaign" className="text-blue-500 text-sm font-semibold flex items-center hover:underline">
               View all <ChevronRight className="h-4 w-4 ml-1" />
-            </button>
+            </Link>
           </div>
           
           <div className="grid grid-cols-1 gap-4">
@@ -108,7 +109,7 @@ export default function CreatorOverview() {
               campaigns.list.map((item: any) => {
                 const camp = item.campaign;
                 return (
-                  <div key={camp.id} className="bg-[#121212] border border-white/5 rounded-2xl p-5 flex items-center justify-between hover:bg-white/[0.02] transition-all group cursor-pointer">
+                  <div key={camp.id} className="glass-card rounded-2xl p-5 flex items-center justify-between group cursor-pointer">
                     <div className="flex items-center gap-4">
                       <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-gray-800 to-gray-900 border border-white/5 flex items-center justify-center">
                         <ShoppingBag className="h-6 w-6 text-gray-400" />
@@ -132,12 +133,12 @@ export default function CreatorOverview() {
                 );
               })
             ) : (
-              <div className="bg-[#121212] border border-dashed border-white/10 rounded-2xl p-12 text-center">
+              <div className="glass-card rounded-2xl p-12 text-center border-dashed">
                 <Calendar className="h-12 w-12 text-gray-700 mx-auto mb-4" />
                 <p className="text-gray-400 font-medium">No active campaigns. Join one to start earning!</p>
-                <button className="mt-4 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold px-6 py-2.5 rounded-full transition-all">
+                <Link href="/creator/campaign" className="mt-4 inline-block bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold px-6 py-2.5 rounded-full transition-all">
                   Browse Campaigns
-                </button>
+                </Link>
               </div>
             )}
           </div>
@@ -147,7 +148,7 @@ export default function CreatorOverview() {
         <div className="space-y-6">
           <h2 className="text-xl font-bold text-white tracking-tight">Tasks & SOW</h2>
           
-          <div className="bg-[#121212] border border-white/5 rounded-[32px] overflow-hidden shadow-xl">
+          <div className="glass-panel rounded-[32px] overflow-hidden shadow-xl">
             <div className="p-6 space-y-6">
               {dashboard.sowProgress && dashboard.sowProgress.length > 0 ? (
                 dashboard.sowProgress.map((sow: any, idx: number) => (
@@ -183,13 +184,13 @@ export default function CreatorOverview() {
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-amber-500/20 to-orange-600/20 border border-amber-500/20 rounded-[32px] p-6 relative overflow-hidden group">
+          <div className="bg-gradient-to-br from-amber-500/10 to-orange-600/10 border border-amber-500/15 backdrop-blur-xl rounded-[32px] p-6 relative overflow-hidden group">
              <div className="absolute top-0 right-0 p-4">
                <Zap className="h-12 w-12 text-amber-500/20" />
              </div>
              <h3 className="text-lg font-black text-white tracking-tight mb-2">Boost Your Reach</h3>
              <p className="text-sm text-gray-400 font-medium mb-4">Maintain your consistency to trigger the level engine multiplier.</p>
-             <button className="w-full bg-amber-500 hover:bg-amber-400 text-black text-xs font-black py-3 rounded-2xl transition-all tracking-widest uppercase">
+             <button onClick={() => alert('Redirecting to TikTok/Shopee Live integration...')} className="w-full bg-amber-500 hover:bg-amber-400 text-black text-xs font-black py-3 rounded-2xl transition-all tracking-widest uppercase">
                Go To Live
              </button>
           </div>

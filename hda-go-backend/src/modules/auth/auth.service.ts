@@ -151,6 +151,7 @@ export class AuthService {
       CREATOR: '/creator/overview',
       CM: '/cm',
       BRAND: '/brand',
+      BD: '/bd',
       ADMIN: '/admin',
       EXECUTIVE: '/executive',
     };

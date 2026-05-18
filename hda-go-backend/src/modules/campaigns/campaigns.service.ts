@@ -1,17 +1,21 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { EventsGateway } from '../notifications/events.gateway';
 import { CreateCampaignDto, JoinCampaignDto } from './dto/campaign.dto';
 
 @Injectable()
 export class CampaignsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private eventsGateway: EventsGateway,
+  ) {}
 
   // ══════════════════════════════════════════════
-  // 15. CAMPAIGN CREATION FLOW
-  // Brand/Staff → Create Campaign → Input (Category, Min Level, SOW, Reward, Deadline, Slot)
+  // 14. CAMPAIGN CREATION FLOW
+  // Brand/Staff → Create Campaign → Status: PENDING_BD → BD Review
   // ══════════════════════════════════════════════
   async create(dto: CreateCampaignDto) {
-    return this.prisma.campaign.create({
+    const campaign = await this.prisma.campaign.create({
       data: {
         title: dto.title,
         category: dto.category,
@@ -21,9 +25,62 @@ export class CampaignsService {
         reward_type: dto.reward_type,
         deadline: new Date(dto.deadline),
         slot: dto.slot,
-        status: dto.status || 'DRAFT',
+        budget: dto.budget || 0,
+        brief_url: dto.brief_url || null,
+        status: dto.status || 'PENDING_BD',
       },
     });
+
+    // Create audit trail entry
+    await this.prisma.campaignEditLog.create({
+      data: {
+        campaign_id: campaign.id,
+        editor_id: dto.brand_id,
+        editor_role: 'BRAND',
+        field_name: 'campaign',
+        old_value: null,
+        new_value: campaign.title,
+        action: 'CREATE',
+        notes: 'Campaign submitted by Brand',
+      },
+    });
+
+    // Notify assigned BD users (real-time + persistent)
+    if (campaign.status === 'PENDING_BD') {
+      const brand = await this.prisma.user.findUnique({
+        where: { id: dto.brand_id },
+        select: { name: true },
+      });
+
+      const bdAssignments = await this.prisma.brandBDAssignment.findMany({
+        where: { brand_user_id: dto.brand_id, is_active: true },
+        select: { bd_user_id: true },
+      });
+
+      const bdUserIds = bdAssignments.map(a => a.bd_user_id);
+
+      // Persistent notification
+      for (const bdId of bdUserIds) {
+        await this.prisma.notification.create({
+          data: {
+            user_id: bdId,
+            title: '📥 Campaign Baru Masuk',
+            message: `${brand?.name || 'Brand'} mengirimkan campaign "${campaign.title}". Silakan review.`,
+            type: 'CAMPAIGN',
+            read_status: false,
+          },
+        });
+      }
+
+      // Real-time WebSocket notification
+      this.eventsGateway.emitBDNewCampaign(bdUserIds, {
+        campaignId: campaign.id,
+        title: campaign.title,
+        brandName: brand?.name || 'Brand',
+      });
+    }
+
+    return campaign;
   }
 
   // ══════════════════════════════════════════════
@@ -31,6 +88,15 @@ export class CampaignsService {
   // Campaign Saved → Publish → Notification Broadcast → Visible in Campaign Hub
   // ══════════════════════════════════════════════
   async publish(campaignId: string) {
+    // Validate: campaign must be BD_APPROVED before publishing
+    const existing = await this.prisma.campaign.findUnique({ where: { id: campaignId } });
+    if (!existing) throw new NotFoundException('Campaign not found');
+    if (existing.status !== 'BD_APPROVED') {
+      throw new BadRequestException(
+        `Campaign harus di-approve BD terlebih dahulu. Status saat ini: "${existing.status}"`,
+      );
+    }
+
     const campaign = await this.prisma.campaign.update({
       where: { id: campaignId },
       data: { status: 'ACTIVE' },
@@ -182,10 +248,15 @@ export class CampaignsService {
   // Frontend fetches by: category, min_level, status, deadline
   // Categories: HOTEL, FNB, TTD, LIVE, BEAUTY, TECH
   // ══════════════════════════════════════════════
-  async findAll(filters?: { status?: string; category?: string }) {
+  async findAll(filters?: { status?: string; category?: string }, user?: any) {
     const where: any = {};
     if (filters?.status) where.status = filters.status;
     if (filters?.category) where.category = filters.category;
+    
+    // If user is a BRAND, they can only see their own campaigns
+    if (user && user.role === 'BRAND') {
+      where.brand_id = user.userId;
+    }
 
     return this.prisma.campaign.findMany({
       where,

@@ -15,24 +15,24 @@ export default function BrandLayout({ children }: { children: React.ReactNode })
     if (!isAuthenticated) {
       router.push('/login');
     } else if (user?.role !== 'BRAND') {
-      router.push(`/${user.role.toLowerCase()}`);
+      router.push(`/${user!.role.toLowerCase()}`);
     }
   }, [isAuthenticated, user, router]);
 
   if (!isAuthenticated || user?.role !== 'BRAND') {
     return (
-      <div className="h-screen w-screen flex items-center justify-center bg-[#0a0a0a]">
-        <Loader2 className="h-8 w-8 text-blue-600 animate-spin" />
+      <div className="h-screen w-screen flex items-center justify-center bg-[#0C0E10]">
+        <Loader2 className="h-8 w-8 text-[#F6D145] animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen bg-[#0a0a0a]">
+    <div className="flex min-h-screen glass-bg">
       <Sidebar />
       <div className="flex-1 flex flex-col">
         <Navbar />
-        <main className="flex-1 p-8 overflow-y-auto">
+        <main className="flex-1 p-4 md:p-8 overflow-y-auto w-full relative z-10">
           {children}
         </main>
       </div>

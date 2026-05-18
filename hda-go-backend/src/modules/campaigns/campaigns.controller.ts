@@ -47,8 +47,8 @@ export class CampaignsController {
 
   // GET /campaigns?status=ACTIVE&category=HOTEL — List campaigns
   @Get()
-  findAll(@Query('status') status?: string, @Query('category') category?: string) {
-    return this.campaignsService.findAll({ status, category });
+  findAll(@Req() req: any, @Query('status') status?: string, @Query('category') category?: string) {
+    return this.campaignsService.findAll({ status, category }, req.user);
   }
 
   // GET /campaigns/:id — Campaign detail
