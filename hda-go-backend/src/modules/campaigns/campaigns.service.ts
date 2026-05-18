@@ -137,7 +137,7 @@ export class CampaignsService {
 
     if (!creator) throw new NotFoundException('Creator not found');
 
-    const whereClause: any = { status: 'ACTIVE' };
+    const whereClause: any = { status: { in: ['ACTIVE', 'BD_APPROVED'] } };
     if (category) whereClause.category = category;
 
     const campaigns = await this.prisma.campaign.findMany({
@@ -178,7 +178,9 @@ export class CampaignsService {
     });
 
     if (!campaign) throw new NotFoundException('Campaign not found');
-    if (campaign.status !== 'ACTIVE') throw new BadRequestException('Campaign is not active');
+    if (!['ACTIVE', 'BD_APPROVED'].includes(campaign.status)) {
+      throw new BadRequestException(`Campaign belum bisa diikuti. Status: "${campaign.status}"`);
+    }
 
     // Check slot availability
     if (campaign.slot > 0 && campaign._count.participants >= campaign.slot) {
@@ -256,6 +258,7 @@ export class CampaignsService {
     // If user is a BRAND, they can only see their own campaigns
     if (user && user.role === 'BRAND') {
       where.brand_id = user.userId;
+      where.brand_id = user.userId || user.id;
     }
 
     return this.prisma.campaign.findMany({

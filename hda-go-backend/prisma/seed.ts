@@ -8,10 +8,11 @@ const adapter = new PrismaBetterSqlite3({ url: dbPath });
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  console.log('🌱 Seeding HDA Go database...');
+  console.log('🌱 Seeding HDA Go database (EMPTY STATE)...');
   console.log(`   Database: ${dbPath}`);
 
   // ── CLEAR EXISTING DATA ──
+  // ── CLEAR ALL EXISTING DATA ──
   await prisma.campaignEditLog.deleteMany();
   await prisma.brandBDAssignment.deleteMany();
   await prisma.notification.deleteMany();
@@ -27,15 +28,18 @@ async function main() {
   await prisma.campaign.deleteMany();
   await prisma.user.deleteMany();
 
+  console.log('   ✅ All tables cleared.');
+
   const password = await bcrypt.hash('password123', 12);
 
   // ══════════════════════════════════════
-  // USERS — Multi-role
+  // USERS — One per role, zero data
   // ══════════════════════════════════════
-  const admin = await prisma.user.create({
+  await prisma.user.create({
     data: { name: 'Admin HDA', email: 'admin@hdago.com', password, role: 'ADMIN' },
   });
-  const executive = await prisma.user.create({
+
+  await prisma.user.create({
     data: { name: 'CEO HDA Go', email: 'exec@hdago.com', password, role: 'EXECUTIVE' },
   });
   const cm1 = await prisma.user.create({
@@ -179,16 +183,38 @@ async function main() {
   const sub1 = await prisma.submission.create({ data: { campaign_id: campaigns[0].id, creator_id: creatorUsers[0].id, tiktok_url: 'https://tiktok.com/@alex/video/123', status: 'APPROVED', reviewed_at: new Date() } });
   await prisma.submissionDeliverable.create({ data: { submission_id: sub1.id, total_sow: 4, completed_sow: 2, remaining_sow: 2 } });
 
-  const sub2 = await prisma.submission.create({ data: { campaign_id: campaigns[2].id, creator_id: creatorUsers[0].id, tiktok_url: 'https://tiktok.com/@alex/video/456', status: 'QC_REVIEW' } });
-  await prisma.submissionDeliverable.create({ data: { submission_id: sub2.id, total_sow: 4, completed_sow: 0, remaining_sow: 4 } });
+  await prisma.user.create({
+    data: { name: 'Sarah CM', email: 'sarah@hdago.com', password, role: 'CM' },
+  });
 
-  const sub3 = await prisma.submission.create({ data: { campaign_id: campaigns[0].id, creator_id: creatorUsers[1].id, tiktok_url: 'https://tiktok.com/@maya/video/789', status: 'POSTED', reviewed_at: new Date(), posted_at: new Date() } });
-  await prisma.submissionDeliverable.create({ data: { submission_id: sub3.id, total_sow: 4, completed_sow: 3, remaining_sow: 1 } });
+  await prisma.user.create({
+    data: { name: 'Rina BD', email: 'rina@hdago.com', password, role: 'BD' },
+  });
 
-  // ── Orders ──
-  await prisma.creatorOrder.create({ data: { creator_id: creatorUsers[0].id, campaign_id: campaigns[0].id, order_count: 85, gmv_amount: 4250000 } });
-  await prisma.creatorOrder.create({ data: { creator_id: creatorUsers[0].id, campaign_id: campaigns[2].id, order_count: 120, gmv_amount: 6000000 } });
-  await prisma.creatorOrder.create({ data: { creator_id: creatorUsers[1].id, campaign_id: campaigns[0].id, order_count: 60, gmv_amount: 3000000 } });
+  const brandUser = await prisma.user.create({
+    data: { name: 'Brand User', email: 'brand@hdago.com', password, role: 'BRAND' },
+  });
+
+  const creatorUser = await prisma.user.create({
+    data: { name: 'Creator User', email: 'creator@hdago.com', password, role: 'CREATOR' },
+  });
+
+  // ── Creator Profile (empty stats) ──
+  await prisma.creator.create({
+    data: {
+      user_id: creatorUser.id,
+      creator_level: 0,
+      gmv_total: 0,
+      gmv_monthly: 0,
+      total_orders: 0,
+      total_campaigns: 0,
+      total_posts: 0,
+      streak_days: 0,
+      live_participation: 0,
+      posting_consistency: 0,
+      cm_id: null,
+    },
+  });
 
   // ── Notifications ──
   for (const n of [
@@ -203,9 +229,21 @@ async function main() {
   ]) {
     await prisma.notification.create({ data: n });
   }
+  // ── Creator Progress (starts at level 0) ──
+  await prisma.creatorProgress.create({
+    data: {
+      creator_id: creatorUser.id,
+      current_level: 0,
+      target_level: 1,
+      progress_percentage: 0,
+      gmv_progress: 0,
+      campaign_progress: 0,
+      order_progress: 0,
+    },
+  });
 
   console.log('');
-  console.log('✅ Seed completed!');
+  console.log('✅ Empty seed completed!');
   console.log('');
   console.log('📧 Login credentials (password: password123):');
   console.log('   Creator: alex@creator.com');
@@ -214,6 +252,16 @@ async function main() {
   console.log('   Brand:   dominos@brand.com / hotelparadise@brand.com / glowup@brand.com');
   console.log('   Admin:   admin@hdago.com');
   console.log('   Exec:    exec@hdago.com');
+  console.log('   Creator:   creator@hdago.com');
+  console.log('   CM:        sarah@hdago.com');
+  console.log('   BD:        rina@hdago.com');
+  console.log('   Brand:     brand@hdago.com');
+  console.log('   Admin:     admin@hdago.com');
+  console.log('   Executive: exec@hdago.com');
+  console.log('');
+  console.log('⚠️  All campaign, submission, GMV, and notification data is EMPTY.');
 }
 
-main().catch((e) => { console.error(e); process.exit(1); }).finally(() => prisma.$disconnect());
+main()
+  .catch((e) => { console.error(e); process.exit(1); })
+  .finally(() => prisma.$disconnect());

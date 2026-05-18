@@ -16,6 +16,8 @@ export default function BDLayout({ children }: { children: React.ReactNode }) {
       router.push('/login');
     } else if (user?.role !== 'BD' && user?.role !== 'ADMIN') {
       router.push(`/${user!.role.toLowerCase()}`);
+    } else if (user && user.role !== 'BD' && user.role !== 'ADMIN') {
+      router.push(`/${user.role.toLowerCase()}`);
     }
   }, [isAuthenticated, user, router]);
 

@@ -55,7 +55,9 @@ export type SocketEvent =
   | 'creator:levelup'
   | 'campaign:push'
   | 'reward:claim'
-  | 'notification';
+  | 'notification'
+  | 'bd:new-campaign'
+  | 'bd:campaign-approved';
 
 export interface SocketEventData {
   type: SocketEvent;

@@ -20,6 +20,7 @@ export class BrandService {
       include: {
         participants: true,
         orders: true,
+        analytics: true,
       },
     });
 
@@ -31,6 +32,7 @@ export class BrandService {
 
     // Calculate GMV from orders instead of non-existent generated_gmv field
     const generatedGmv = activeCampaigns.reduce((sum, c) => sum + c.orders.reduce((orderSum, o) => orderSum + o.gmv_amount, 0), 0);
+    const generatedGmv = activeCampaigns.reduce((sum, c) => sum + (c.analytics?.total_gmv || 0), 0);
     
     let roi = 0;
     if (totalSpend > 0) {
@@ -66,6 +68,11 @@ export class BrandService {
     const totalSpend = allCampaigns.reduce((sum, c) => sum + c.budget, 0);
     // Calculate GMV from orders instead of non-existent generated_gmv field
     const generatedGmv = allCampaigns.reduce((sum, c) => sum + c.orders.reduce((orderSum, o) => orderSum + o.gmv_amount, 0), 0);
+      include: { analytics: true },
+    });
+
+    const totalSpend = allCampaigns.reduce((sum, c) => sum + c.budget, 0);
+    const generatedGmv = allCampaigns.reduce((sum, c) => sum + (c.analytics?.total_gmv || 0), 0);
     const roi = totalSpend > 0 ? Math.round((generatedGmv / totalSpend) * 100) : 0;
     
     // Calculate simple funnel based on aggregated GMV assuming 1% conversion

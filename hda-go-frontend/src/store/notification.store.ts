@@ -85,6 +85,8 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       'campaign:push',
       'reward:claim',
       'notification',
+      'bd:new-campaign',
+      'bd:campaign-approved',
     ] as const;
 
     events.forEach((event) => {
