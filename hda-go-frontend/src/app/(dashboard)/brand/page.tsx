@@ -80,7 +80,6 @@ export default function BrandDashboard() {
               <p className="text-gray-500 font-bold">No active campaigns</p>
             </div>
           ) : (campaigns as any[]).map((camp) => (
-          ) : campaigns.map((camp) => (
             <Card key={camp.id} className="glass-card rounded-2xl border-0 relative overflow-hidden group">
               <CardContent className="p-6">
                 <div className="flex justify-between items-start mb-6">
