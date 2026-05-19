@@ -18,8 +18,14 @@ model User {
   role          String          // CREATOR, CM, BRAND, ADMIN, EXECUTIVE
   created_at    DateTime        @default(now())
   
+  // Settings & Profile
+  avatar_url    String?
+  bio           String?
+  phone         String?
+  
   creator       Creator?
   notifications Notification[]
+  preferences   UserPreferences?
 }
 
 // ═══════════════════════════════════════════════════
@@ -286,4 +292,22 @@ model PlatformMetrics {
   total_orders      Int        @default(0)
   total_submissions Int        @default(0)
   calculated_at     DateTime   @default(now())
+}
+
+// ═══════════════════════════════════════════════════
+// USER PREFERENCES (Settings)
+// ═══════════════════════════════════════════════════
+
+model UserPreferences {
+  id                   String   @id @default(uuid())
+  user_id              String   @unique
+  notif_submission     Boolean  @default(true)
+  notif_campaign       Boolean  @default(true)
+  notif_levelup        Boolean  @default(true)
+  notif_recommendation Boolean  @default(true)
+  default_sort         String? 
+  show_inactive        Boolean  @default(true)
+  created_at           DateTime @default(now())
+  updated_at           DateTime @updatedAt
+  user                 User     @relation(fields: [user_id], references: [id])
 }

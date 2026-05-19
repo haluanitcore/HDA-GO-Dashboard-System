@@ -21,6 +21,7 @@ import { LeaderboardModule } from './modules/leaderboard/leaderboard.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { RewardsModule } from './modules/rewards/rewards.module';
 import { BrandModule } from './modules/brand/brand.module';
+import { SettingsModule } from './modules/settings/settings.module';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { BrandModule } from './modules/brand/brand.module';
     AnalyticsModule,
     RewardsModule,
     BrandModule,
+    SettingsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

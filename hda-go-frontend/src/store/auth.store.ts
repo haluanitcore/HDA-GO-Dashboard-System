@@ -10,14 +10,19 @@ interface User {
   name: string;
   email: string;
   role: string;
+  avatar_url?: string;
+  bio?: string;
+  phone?: string;
 }
 
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isInitialized: boolean;
   error: string | null;
 
+  setUser: (user: User) => void;
   login: (email: string, password: string) => Promise<string>; // returns redirectUrl
   register: (data: { name: string; email: string; password: string; role: string }) => Promise<string>;
   logout: () => void;
@@ -28,7 +33,13 @@ export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isAuthenticated: false,
   isLoading: false,
+  isInitialized: false,
   error: null,
+
+  setUser: (user) => {
+    localStorage.setItem('user', JSON.stringify(user));
+    set({ user });
+  },
 
   login: async (email, password) => {
     set({ isLoading: true, error: null });
@@ -71,7 +82,9 @@ export const useAuthStore = create<AuthState>((set) => ({
     const userStr = localStorage.getItem('user');
     const token = localStorage.getItem('accessToken');
     if (userStr && token) {
-      set({ user: JSON.parse(userStr), isAuthenticated: true });
+      set({ user: JSON.parse(userStr), isAuthenticated: true, isInitialized: true });
+    } else {
+      set({ isInitialized: true });
     }
   },
 }));
