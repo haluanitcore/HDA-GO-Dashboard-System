@@ -35,12 +35,14 @@ export function Sidebar() {
       return [
         { name: 'System Control', href: '/admin', icon: ShieldCheck },
         { name: 'User Management', href: '/admin/users', icon: Users },
+        { name: 'CM Management', href: '/admin/cm-management', icon: Users },
         { name: 'Configuration', href: '/admin/settings', icon: Settings },
       ];
     }
     if (user?.role === 'CM') {
       return [
         { name: 'Dashboard', href: '/cm', icon: LayoutDashboard },
+        { name: 'My Creators', href: '/cm/creators', icon: Users },
         { name: 'Pipeline', href: '/cm/pipeline', icon: Users },
         { name: 'Campaigns', href: '/cm/campaigns', icon: Target },
         { name: 'Monitoring', href: '/cm/monitoring', icon: TrendingUp },

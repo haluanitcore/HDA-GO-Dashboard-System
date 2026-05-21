@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LevelsService } from '../levels/levels.service';
+import * as Tesseract from 'tesseract.js';
 
 @Injectable()
 export class GmvService {
@@ -10,23 +11,174 @@ export class GmvService {
   ) {}
 
   // ══════════════════════════════════════════════
-  // 23. GMV & ORDER TRACKING FLOW
-  // Campaign Performance Data Masuk → Orders Recorded → GMV Aggregated
-  // → Creator Monthly Stats Updated → CM Dashboard Updated → Brand Analytics Updated
-  // → Level Engine Recalculate → Progress Updated
+  // 1. OCR SCREENSHOT PARSING
+  // ══════════════════════════════════════════════
+  async parseScreenshot(fileBuffer: Buffer) {
+    try {
+      const { data: { text } } = await Tesseract.recognize(fileBuffer, 'ind+eng');
+      
+      // Simple Regex patterns to extract GMV and Orders
+      const gmvMatch = text.match(/Rp[\s]?([\d.,]+)/i);
+      const ordersMatch = text.match(/(\d+)[\s]?(pesanan|order|orders)/i);
+
+      let gmvAmount = 0;
+      let orderCount = 0;
+
+      if (gmvMatch) {
+        gmvAmount = parseFloat(gmvMatch[1].replace(/[.,]/g, ''));
+      }
+      if (ordersMatch) {
+        orderCount = parseInt(ordersMatch[1], 10);
+      }
+
+      return {
+        success: gmvAmount > 0 || orderCount > 0,
+        text_preview: text.substring(0, 100) + '...',
+        gmvAmount,
+        orderCount,
+        periodDate: new Date().toISOString().split('T')[0], // Default to today
+      };
+    } catch (err) {
+      console.error('OCR Error:', err);
+      return { success: false, error: 'Failed to read image' };
+    }
+  }
+
+  // ══════════════════════════════════════════════
+  // 2. CREATOR SELF-REPORT GMV
+  // ══════════════════════════════════════════════
+  async submitSelfReport(creatorId: string, dto: any) {
+    // Determine Verification Deadline (Next business day 09:00 if weekend, else 24h)
+    const now = new Date();
+    const day = now.getDay();
+    const deadline = new Date(now);
+
+    if (day === 5 && now.getHours() >= 17) { // Friday evening
+      deadline.setDate(deadline.getDate() + 3);
+      deadline.setHours(9, 0, 0, 0);
+    } else if (day === 6) { // Saturday
+      deadline.setDate(deadline.getDate() + 2);
+      deadline.setHours(9, 0, 0, 0);
+    } else if (day === 0) { // Sunday
+      deadline.setDate(deadline.getDate() + 1);
+      deadline.setHours(9, 0, 0, 0);
+    } else { // Mon-Thu or Friday morning
+      deadline.setHours(deadline.getHours() + 24);
+    }
+
+    const order = await this.prisma.creatorOrder.create({
+      data: {
+        creator_id: creatorId,
+        campaign_id: dto.campaignId,
+        order_count: dto.orderCount,
+        gmv_amount: dto.gmvAmount,
+        source: 'SELF_REPORT',
+        status: 'PENDING_VERIFICATION',
+        period_date: new Date(dto.periodDate),
+        notes: dto.notes,
+        verification_deadline: deadline,
+      },
+    });
+
+    // Notify CM
+    const creator = await this.prisma.creator.findUnique({ where: { user_id: creatorId }, select: { cm_id: true } });
+    if (creator?.cm_id) {
+      await this.prisma.notification.create({
+        data: {
+          user_id: creator.cm_id,
+          title: '📝 Verifikasi GMV',
+          message: `Creator melaporkan GMV Rp ${dto.gmvAmount}. Batas waktu: ${deadline.toLocaleString()}`,
+          type: 'QC',
+        },
+      });
+    }
+
+    return order;
+  }
+
+  // ══════════════════════════════════════════════
+  // 3. CM VERIFY GMV
+  // ══════════════════════════════════════════════
+  async verifyGmv(recordId: string, cmId: string, dto: { action: string, adjustedAmount?: number, rejectReason?: string }) {
+    const record = await this.prisma.creatorOrder.findUnique({ where: { id: recordId } });
+    if (!record) throw new NotFoundException('GMV Record not found');
+    if (record.status !== 'PENDING_VERIFICATION') throw new BadRequestException('Record is already processed');
+
+    let newStatus = 'VERIFIED';
+    let finalGmv = record.gmv_amount;
+
+    if (dto.action === 'REJECT') {
+      newStatus = 'REJECTED';
+      await this.prisma.creatorOrder.update({
+        where: { id: recordId },
+        data: { status: newStatus, reject_reason: dto.rejectReason, verified_by: cmId, verified_at: new Date() }
+      });
+      return { success: true, status: newStatus };
+    }
+
+    if (dto.action === 'ADJUST' && dto.adjustedAmount !== undefined) {
+      newStatus = 'ADJUSTED';
+      finalGmv = dto.adjustedAmount;
+    }
+
+    // Process approval
+    const updated = await this.prisma.creatorOrder.update({
+      where: { id: recordId },
+      data: {
+        status: newStatus,
+        adjusted_amount: newStatus === 'ADJUSTED' ? finalGmv : null,
+        verified_by: cmId,
+        verified_at: new Date()
+      }
+    });
+
+    // ── Update creator aggregate stats ──
+    await this.prisma.creator.update({
+      where: { user_id: record.creator_id },
+      data: {
+        gmv_total: { increment: finalGmv },
+        gmv_monthly: { increment: finalGmv },
+        total_orders: { increment: record.order_count },
+      },
+    });
+
+    await this.prisma.creatorProgress.update({
+      where: { creator_id: record.creator_id },
+      data: {
+        gmv_progress: { increment: finalGmv },
+        order_progress: { increment: record.order_count },
+      },
+    });
+
+    // ── Check if all SOW is completed to trigger level engine ──
+    const deliveries = await this.prisma.submissionDeliverable.findMany({
+      where: { submission: { campaign_id: record.campaign_id, creator_id: record.creator_id } }
+    });
+    
+    const isSowFinished = deliveries.every(d => d.remaining_sow === 0);
+    
+    if (isSowFinished) {
+      await this.levelsService.evaluateLevel(record.creator_id);
+    }
+
+    return updated;
+  }
+
+  // ══════════════════════════════════════════════
+  // OLD API / CM DIRECT RECORD (LEGACY COMPAT)
   // ══════════════════════════════════════════════
   async recordOrder(creatorId: string, campaignId: string, orderCount: number, gmvAmount: number) {
-    // ── Step 1: Record Order ──
     const order = await this.prisma.creatorOrder.create({
       data: {
         creator_id: creatorId,
         campaign_id: campaignId,
         order_count: orderCount,
         gmv_amount: gmvAmount,
+        source: 'CM_INPUT',
+        status: 'VERIFIED',
       },
     });
 
-    // ── Step 2: Update creator aggregate stats ──
     await this.prisma.creator.update({
       where: { user_id: creatorId },
       data: {
@@ -36,7 +188,6 @@ export class GmvService {
       },
     });
 
-    // ── Step 3: Update creator progress GMV ──
     await this.prisma.creatorProgress.update({
       where: { creator_id: creatorId },
       data: {
@@ -45,25 +196,9 @@ export class GmvService {
       },
     });
 
-    // ── Step 4: Auto-trigger Level Engine Recalculate ──
-    // Level Engine evaluates: GMV + Orders + Campaigns + Posting + LIVE
     const levelResult = await this.levelsService.evaluateLevel(creatorId);
 
-    // ── Step 5: Notify creator about GMV recorded ──
-    await this.prisma.notification.create({
-      data: {
-        user_id: creatorId,
-        title: '💰 GMV Recorded!',
-        message: `${orderCount} order baru tercatat. GMV +Rp ${gmvAmount.toLocaleString('id-ID')}.`,
-        type: 'SYSTEM',
-        read_status: false,
-      },
-    });
-
-    return {
-      order,
-      levelEvaluation: levelResult,
-    };
+    return { order, levelEvaluation: levelResult };
   }
 
   // ── GET GMV SUMMARY BY CREATOR ──
@@ -102,5 +237,17 @@ export class GmvService {
     const totalOrders = orders.reduce((sum, o) => sum + o.order_count, 0);
 
     return { totalGMV, totalOrders, transactionCount: orders.length };
+  }
+
+  // ── GET PENDING GMV (CM) ──
+  async getPendingGmv() {
+    return this.prisma.creatorOrder.findMany({
+      where: { status: 'PENDING_VERIFICATION' },
+      include: {
+        creator: { include: { user: { select: { name: true } } } },
+        campaign: { select: { title: true } },
+      },
+      orderBy: { recorded_at: 'asc' },
+    });
   }
 }

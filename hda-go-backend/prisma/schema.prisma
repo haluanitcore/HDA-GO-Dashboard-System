@@ -44,7 +44,32 @@ model Creator {
   participants      CampaignParticipant[]
   submissions       Submission[]
   orders            CreatorOrder[]
+  rewards           CreatorReward[]
   monthlyStats      CreatorMonthlyStats[]
+
+  // Biodata Section 1 - Identitas
+  phone_number       String?
+  gender             String?       // MALE, FEMALE
+  birth_date         DateTime?
+  domicile           String?
+  
+  // Biodata Section 2 - Konten
+  tiktok_username    String?
+  tiktok_url         String?
+  tiktok_followers   Int?          @default(0)
+  avg_views          Int?          @default(0)
+  niche              String?       // Stored as JSON string: '["FNB","FASHION"]'
+  affiliate_exp      String?       // BARU, PERNAH, AKTIF
+  
+  // Biodata Section 3 - Kontrak
+  sow_per_month      Int?          @default(0)
+  gmv_target_monthly Float?        @default(0)
+  start_date         DateTime?
+  cm_notes           String?
+
+  // Status
+  onboarding_status  String        @default("ACTIVE") // ACTIVE, INACTIVE
+  onboarded_at       DateTime?
 }
 
 // ═══════════════════════════════════════════════════
@@ -61,6 +86,20 @@ model CreatorProgress {
   campaign_progress   Int      @default(0)
   order_progress      Int      @default(0)
   updated_at          DateTime @updatedAt
+}
+
+// ═══════════════════════════════════════════════════
+// CREATOR ASSIGNMENT LOG
+// ═══════════════════════════════════════════════════
+
+model CreatorAssignmentLog {
+  id           String   @id @default(uuid())
+  creator_id   String
+  from_cm_id   String?
+  to_cm_id     String
+  reason       String?
+  transferred_by String  // CM yang melakukan transfer
+  transferred_at DateTime @default(now())
 }
 
 // ═══════════════════════════════════════════════════
@@ -105,6 +144,7 @@ model Campaign {
   participants      CampaignParticipant[]
   submissions       Submission[]
   orders            CreatorOrder[]
+  rewards           CreatorReward[]
   analytics         CampaignAnalytics?
   editLogs          CampaignEditLog[]
 }
@@ -180,10 +220,47 @@ model CreatorOrder {
   campaign_id       String
   order_count       Int        @default(0)
   gmv_amount        Float      @default(0)
+
+  // ── NEW FIELDS ──
+  source            String     @default("SELF_REPORT")
+  status            String     @default("PENDING_VERIFICATION")
+  proof_url         String?
+  period_date       DateTime?
+  notes             String?
+
+  // Verifikasi
+  verified_by       String?
+  verified_at       DateTime?
+  adjusted_amount   Float?
+  reject_reason     String?
+
+  // Override Admin
+  override_by       String?
+  override_reason   String?
+
+  // Deadline verifikasi
+  verification_deadline DateTime?
+
   recorded_at       DateTime   @default(now())
 
   creator           Creator    @relation(fields: [creator_id], references: [user_id])
   campaign          Campaign   @relation(fields: [campaign_id], references: [id])
+}
+
+model CreatorReward {
+  id            String       @id @default(uuid())
+  creator_id    String
+  campaign_id   String
+  reward_type   String       // FIXED | COMMISSION
+  base_amount   Float        // Fee flat atau % GMV
+  gmv_total     Float        // Total GMV yang jadi basis hitung
+  reward_amount Float        // Angka final yang dibayarkan
+  status        String       @default("PENDING") // PENDING, APPROVED, PAID, DISPUTED
+  calculated_at DateTime     @default(now())
+  paid_at       DateTime?
+
+  creator       Creator      @relation(fields: [creator_id], references: [user_id])
+  campaign      Campaign     @relation(fields: [campaign_id], references: [id])
 }
 
 // ═══════════════════════════════════════════════════

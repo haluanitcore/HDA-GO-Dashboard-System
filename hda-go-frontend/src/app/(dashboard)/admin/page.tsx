@@ -1,16 +1,60 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAnalyticsStore } from '@/store';
 import { Card, CardContent } from '@/components/ui/card';
-import { Users, Settings, ShieldAlert, Activity, Database, Server, RefreshCw } from 'lucide-react';
+import { Users, Settings, ShieldAlert, Activity, Database, Server, RefreshCw, BarChart3, Plus, Loader2, Send } from 'lucide-react';
+import { api } from '@/services/api';
 
 export default function AdminPage() {
   const { kpi, fetchKPI, runAggregation, isLoading } = useAnalyticsStore();
 
+  // Admin Record GMV State
+  const [isGmvModalOpen, setIsGmvModalOpen] = useState(false);
+  const [creators, setCreators] = useState<any[]>([]);
+  const [campaigns, setCampaigns] = useState<any[]>([]);
+  const [recordData, setRecordData] = useState({ creator_id: '', campaign_id: '', order_count: '', gmv_amount: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   useEffect(() => {
     fetchKPI();
+    fetchOptions();
   }, [fetchKPI]);
+
+  const fetchOptions = async () => {
+    try {
+      const [crRes, caRes] = await Promise.all([
+        api.get('/creators').catch(() => ({ data: [] })),
+        api.get('/campaigns').catch(() => ({ data: [] }))
+      ]);
+      setCreators((crRes as any) || []);
+      setCampaigns((caRes as any) || []);
+    } catch (err) {
+      console.error('Error fetching options', err);
+    }
+  };
+
+  const handleRecordGmv = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      await api.post('/gmv/record', {
+        creator_id: recordData.creator_id,
+        campaign_id: recordData.campaign_id,
+        order_count: parseInt(recordData.order_count, 10),
+        gmv_amount: parseFloat(recordData.gmv_amount)
+      });
+      alert('GMV berhasil diaudit/ditambahkan secara manual oleh Admin!');
+      setIsGmvModalOpen(false);
+      setRecordData({ creator_id: '', campaign_id: '', order_count: '', gmv_amount: '' });
+      fetchKPI(); // Refresh KPI
+    } catch (err) {
+      console.error(err);
+      alert('Gagal mencatat GMV');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const statCards = [
     { name: 'Total Registered Users', value: kpi?.total_creators || 0, icon: Users, color: 'text-blue-500', bg: 'bg-blue-500/10' },
@@ -92,6 +136,18 @@ export default function AdminPage() {
                 <p className="text-xs text-gray-500">Edit tier requirements & system variables</p>
               </div>
             </button>
+            <button 
+              onClick={() => setIsGmvModalOpen(true)}
+              className="glass-panel p-5 rounded-2xl flex items-center gap-4 hover:bg-white/[0.05] transition-colors group text-left border-amber-500/30"
+            >
+              <div className="p-3 bg-amber-500/10 rounded-xl text-amber-500 group-hover:bg-amber-500/20 transition-colors">
+                <BarChart3 className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="font-bold text-white">GMV Audit & Override</p>
+                <p className="text-xs text-gray-500">Manually record or correct GMV figures</p>
+              </div>
+            </button>
           </div>
         </div>
 
@@ -143,6 +199,79 @@ export default function AdminPage() {
           </div>
         </div>
       </div>
+
+      {/* Admin GMV Override Modal */}
+      {isGmvModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <Card className="bg-[#121212] border-amber-500/30 w-full max-w-lg shadow-[0_0_50px_rgba(245,158,11,0.1)] relative">
+            <button 
+              onClick={() => setIsGmvModalOpen(false)}
+              className="absolute top-4 right-4 text-gray-500 hover:text-white"
+            >
+              ✕
+            </button>
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2.5 bg-amber-500/10 rounded-xl">
+                  <ShieldAlert className="h-5 w-5 text-amber-500" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-white">Admin GMV Override</h2>
+                  <p className="text-gray-400 text-xs mt-0.5">Force record GMV / Orders bypassing normal CM flow</p>
+                </div>
+              </div>
+
+              <form onSubmit={handleRecordGmv} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-500 uppercase">Creator</label>
+                  <select 
+                    required 
+                    value={recordData.creator_id} 
+                    onChange={e => setRecordData({...recordData, creator_id: e.target.value})}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:ring-2 focus:ring-amber-500/50"
+                  >
+                    <option value="" disabled className="bg-[#121212]">Select Creator...</option>
+                    {creators.map(c => (
+                      <option key={c.user_id} value={c.user_id} className="bg-[#121212]">{c.user?.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-500 uppercase">Campaign</label>
+                  <select 
+                    required 
+                    value={recordData.campaign_id} 
+                    onChange={e => setRecordData({...recordData, campaign_id: e.target.value})}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:ring-2 focus:ring-amber-500/50"
+                  >
+                    <option value="" disabled className="bg-[#121212]">Select Campaign...</option>
+                    {campaigns.map(c => (
+                      <option key={c.id} value={c.id} className="bg-[#121212]">{c.title}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-gray-500 uppercase">Orders / Conversions</label>
+                    <input type="number" required min="0" value={recordData.order_count} onChange={e => setRecordData({...recordData, order_count: e.target.value})} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:ring-2 focus:ring-amber-500/50" placeholder="e.g. 50" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-gray-500 uppercase">Total GMV (Rp)</label>
+                    <input type="number" required min="0" value={recordData.gmv_amount} onChange={e => setRecordData({...recordData, gmv_amount: e.target.value})} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:ring-2 focus:ring-amber-500/50" placeholder="e.g. 5000000" />
+                  </div>
+                </div>
+
+                <button type="submit" disabled={isSubmitting} className="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-3.5 rounded-xl mt-4 flex items-center justify-center disabled:opacity-50 transition-colors shadow-lg shadow-amber-500/20">
+                  {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <ShieldAlert className="h-4 w-4 mr-2" />}
+                  Execute GMV Override
+                </button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

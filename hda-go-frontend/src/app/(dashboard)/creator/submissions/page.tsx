@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { submissionService, campaignService } from '@/services';
 import { Card, CardContent } from '@/components/ui/card';
-import { Video, Clock, CheckCircle2, AlertCircle, Send, Loader2, ExternalLink, Plus } from 'lucide-react';
+import { Video, Clock, CheckCircle2, AlertCircle, Send, Loader2, ExternalLink, Plus, BarChart3, UploadCloud } from 'lucide-react';
+import { api } from '@/services/api';
 
 export default function SubmissionsPage() {
   const [mySubmissions, setMySubmissions] = useState<any[]>([]);
@@ -17,6 +18,13 @@ export default function SubmissionsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  // GMV Report State
+  const [reportingSub, setReportingSub] = useState<any>(null);
+  const [ocrFile, setOcrFile] = useState<File | null>(null);
+  const [ocrLoading, setOcrLoading] = useState(false);
+  const [gmvData, setGmvData] = useState({ orderCount: '', gmvAmount: '', periodDate: new Date().toISOString().split('T')[0], notes: '' });
+  const [gmvSubmitting, setGmvSubmitting] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -86,6 +94,66 @@ export default function SubmissionsPage() {
       setError(err.message || 'Gagal submit, coba lagi.');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleOcrUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setOcrFile(file);
+    setOcrLoading(true);
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+      const token = localStorage.getItem('accessToken');
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api'}/gmv/ocr-parse`, {
+        method: 'POST',
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: formData,
+      });
+      const data = await response.json();
+      
+      if (data?.success) {
+        setGmvData(prev => ({
+          ...prev,
+          orderCount: data.orderCount?.toString() || '',
+          gmvAmount: data.gmvAmount?.toString() || '',
+          periodDate: data.periodDate || prev.periodDate,
+        }));
+      } else {
+        alert('Gagal membaca gambar otomatis. Silakan isi manual.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Gagal proses OCR. Silakan isi manual.');
+    } finally {
+      setOcrLoading(false);
+    }
+  };
+
+  const handleGmvSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setGmvSubmitting(true);
+    try {
+      await api.post('/gmv/self-report', {
+        campaignId: reportingSub.campaign_id,
+        orderCount: parseInt(gmvData.orderCount, 10),
+        gmvAmount: parseFloat(gmvData.gmvAmount),
+        periodDate: gmvData.periodDate,
+        notes: gmvData.notes,
+      });
+      alert('Laporan performa berhasil dikirim ke CM untuk diverifikasi!');
+      setReportingSub(null);
+      setOcrFile(null);
+      setGmvData({ orderCount: '', gmvAmount: '', periodDate: new Date().toISOString().split('T')[0], notes: '' });
+    } catch (err) {
+      console.error(err);
+      alert('Gagal mengirim laporan performa.');
+    } finally {
+      setGmvSubmitting(false);
     }
   };
 
@@ -297,20 +365,108 @@ export default function SubmissionsPage() {
                         <p className="text-[10px] font-medium text-gray-600 mt-2">
                           {new Date(sub.submitted_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
                         </p>
-                        {sub.deliverable && (
-                          <p className="text-[10px] text-gray-500 mt-1">
-                            SOW: {sub.deliverable.completed_sow}/{sub.deliverable.total_sow}
-                          </p>
-                        )}
+                          {sub.deliverable && (
+                            <p className="text-[10px] text-gray-500 mt-1">
+                              SOW: {sub.deliverable.completed_sow}/{sub.deliverable.total_sow}
+                            </p>
+                          )}
+                        </div>
                       </div>
+
+                      {/* GMV Reporting Button for Approved/Posted/Completed */}
+                      {['APPROVED', 'POSTED', 'COMPLETED'].includes(sub.status) && (
+                        <div className="mt-4 pt-4 border-t border-white/5 flex justify-end">
+                          <button
+                            onClick={() => setReportingSub(sub)}
+                            className="bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 text-xs font-bold py-2 px-4 rounded-lg flex items-center transition-colors border border-blue-500/20"
+                          >
+                            <BarChart3 className="h-3 w-3 mr-1.5" />
+                            Laporkan Performa (GMV)
+                          </button>
+                        </div>
+                      )}
                     </div>
-                  </div>
                 );
               })}
             </div>
           )}
         </div>
       </div>
+
+      {/* GMV Reporting Modal */}
+      {reportingSub && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <Card className="bg-[#121212] border-white/10 w-full max-w-lg shadow-2xl relative">
+            <button 
+              onClick={() => { setReportingSub(null); setOcrFile(null); }}
+              className="absolute top-4 right-4 text-gray-500 hover:text-white"
+            >
+              ✕
+            </button>
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2.5 bg-blue-500/10 rounded-xl">
+                  <BarChart3 className="h-5 w-5 text-blue-500" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-white">Laporkan Performa</h2>
+                  <p className="text-gray-400 text-xs mt-0.5">{reportingSub.campaign?.title}</p>
+                </div>
+              </div>
+
+              <form onSubmit={handleGmvSubmit} className="space-y-4">
+                {/* File Upload OCR */}
+                <div className="border-2 border-dashed border-white/10 hover:border-blue-500/50 rounded-2xl p-6 text-center transition-colors relative cursor-pointer bg-white/5">
+                  <input type="file" accept="image/*" onChange={handleOcrUpload} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
+                  <UploadCloud className="h-8 w-8 text-blue-400 mx-auto mb-2" />
+                  <p className="text-sm font-bold text-white">Upload Screenshot TikTok Affiliate</p>
+                  <p className="text-xs text-gray-500 mt-1">AI akan membaca gambar dan mengisi angka otomatis</p>
+                  
+                  {ocrLoading && (
+                    <div className="absolute inset-0 bg-[#121212]/90 flex items-center justify-center rounded-2xl backdrop-blur-sm">
+                      <div className="text-center">
+                        <Loader2 className="h-6 w-6 text-blue-500 animate-spin mx-auto mb-2" />
+                        <p className="text-xs text-blue-400 font-medium">🤖 AI sedang membaca gambar...</p>
+                      </div>
+                    </div>
+                  )}
+                  {ocrFile && !ocrLoading && (
+                    <div className="absolute inset-x-0 bottom-2 text-[10px] text-emerald-400 font-bold bg-[#121212]/80 inline-block px-2 py-0.5 rounded mx-auto w-max">
+                      ✓ File siap: {ocrFile.name}
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-gray-500 uppercase">Total Orders</label>
+                    <input type="number" required value={gmvData.orderCount} onChange={e => setGmvData({...gmvData, orderCount: e.target.value})} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:ring-2 focus:ring-blue-500/50" placeholder="Contoh: 127" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-gray-500 uppercase">Total GMV (Rp)</label>
+                    <input type="number" required value={gmvData.gmvAmount} onChange={e => setGmvData({...gmvData, gmvAmount: e.target.value})} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:ring-2 focus:ring-blue-500/50" placeholder="Contoh: 4826000" />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-500 uppercase">Periode Tanggal</label>
+                  <input type="date" required value={gmvData.periodDate} onChange={e => setGmvData({...gmvData, periodDate: e.target.value})} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:ring-2 focus:ring-blue-500/50" />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-500 uppercase">Catatan (Opsional)</label>
+                  <input type="text" value={gmvData.notes} onChange={e => setGmvData({...gmvData, notes: e.target.value})} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:ring-2 focus:ring-blue-500/50" placeholder="Contoh: Ini akumulasi hari ke-2" />
+                </div>
+
+                <button type="submit" disabled={gmvSubmitting} className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 rounded-xl mt-4 flex items-center justify-center disabled:opacity-50">
+                  {gmvSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
+                  Kirim Laporan GMV
+                </button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

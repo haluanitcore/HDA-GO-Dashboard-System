@@ -26,8 +26,16 @@ export default function BrandROIAnalyticsPage() {
   const campaignPerformance = campaigns || [];
   
   // Dummy data for visual trajectory chart
-  const roiData: any[] = [];
-  const maxReturn = 1; // Default to 1 to prevent division by zero
+  const roiData = [
+    { month: 'Jan', investment: 5000000, returns: 6000000 },
+    { month: 'Feb', investment: 7500000, returns: 9200000 },
+    { month: 'Mar', investment: 6000000, returns: 8500000 },
+    { month: 'Apr', investment: 9000000, returns: 15000000 },
+    { month: 'May', investment: 12000000, returns: (stats?.generatedGmv || 20000000) * 0.8 },
+    { month: 'Jun', investment: stats?.totalSpend || 15000000, returns: stats?.generatedGmv || 25000000 },
+  ];
+  
+  const maxReturn = Math.max(...roiData.map(d => Math.max(d.investment, d.returns)), 1);
 
   return (
     <div className="space-y-8 pb-12">
@@ -89,7 +97,7 @@ export default function BrandROIAnalyticsPage() {
               </div>
             </div>
             <p className="text-sm font-medium text-gray-500 mb-1">Blended Conv. Rate</p>
-            <p className="text-3xl font-bold text-white tracking-tight">0%</p>
+            <p className="text-3xl font-bold text-white tracking-tight">{stats?.totalSpend > 0 ? ((funnel?.orders / funnel?.clicks) * 100).toFixed(1) : 0}%</p>
           </CardContent>
         </Card>
       </div>
@@ -214,26 +222,33 @@ export default function BrandROIAnalyticsPage() {
                   </td>
                 </tr>
               ) : campaignPerformance.map((camp: any, idx: number) => {
-                const roi = Math.round((camp.gmv / camp.spend) * 100);
+                const spend = camp.budget || 0;
+                const gmv = camp.analytics?.total_gmv || 0;
+                const roi = spend > 0 ? Math.round((gmv / spend) * 100) : 0;
+                
+                const impressions = camp.analytics?.total_views || 0;
+                const clicks = camp.analytics?.total_clicks || 0;
+                const conversions = camp.analytics?.total_orders || 0;
+                
                 return (
                   <tr key={idx} className="hover:bg-white/[0.02] transition-colors">
                     <td className="px-6 py-4">
-                      <p className="text-sm font-bold text-white">{camp.name}</p>
+                      <p className="text-sm font-bold text-white">{camp.title || camp.name}</p>
                     </td>
                     <td className="px-6 py-4">
-                      <p className="text-sm font-medium text-gray-400">Rp {(camp.spend / 1000000).toFixed(1)}M</p>
+                      <p className="text-sm font-medium text-gray-400">Rp {(spend / 1000000).toFixed(1)}M</p>
                     </td>
                     <td className="px-6 py-4">
-                      <p className="text-sm font-bold text-emerald-500">Rp {(camp.gmv / 1000000).toFixed(1)}M</p>
+                      <p className="text-sm font-bold text-emerald-500">Rp {(gmv / 1000000).toFixed(1)}M</p>
                     </td>
                     <td className="px-6 py-4">
                       <span className="text-[10px] font-black bg-emerald-500/10 text-emerald-500 px-2 py-1 rounded-full">{roi}%</span>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3 text-xs font-medium text-gray-400">
-                        <span className="text-purple-400">{camp.impressions}</span> / 
-                        <span className="text-blue-400">{camp.clicks}</span> / 
-                        <span className="text-white">{camp.conversion}</span>
+                        <span className="text-purple-400">{impressions}</span> / 
+                        <span className="text-blue-400">{clicks}</span> / 
+                        <span className="text-white">{conversions}</span>
                       </div>
                     </td>
                   </tr>

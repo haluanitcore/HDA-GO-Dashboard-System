@@ -43,7 +43,11 @@ async function main() {
   });
 
   await prisma.user.create({
-    data: { name: 'Sarah CM', email: 'sarah@hdago.com', password, role: 'CM' },
+    data: { name: 'Sarah CM', email: 'cm1@hdago.com', password: await bcrypt.hash('hdago123', 12), role: 'CM' },
+  });
+
+  await prisma.user.create({
+    data: { name: 'Budi CM', email: 'cm2@hdago.com', password: await bcrypt.hash('hdago123', 12), role: 'CM' },
   });
 
   await prisma.user.create({

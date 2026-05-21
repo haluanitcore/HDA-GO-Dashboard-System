@@ -1,17 +1,61 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useCMStore } from '@/store';
 import Link from 'next/link';
-import { ArrowLeft, Loader2, TrendingUp, Users, Target, Activity } from 'lucide-react';
+import { ArrowLeft, Loader2, TrendingUp, Users, Target, Activity, Plus, Send } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { api } from '@/services/api';
 
 export default function MonitoringPage() {
   const { gmvMonitoring, levelMonitoring, fetchMonitoring, isLoading } = useCMStore();
+  
+  // Record GMV State
+  const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
+  const [creators, setCreators] = useState<any[]>([]);
+  const [campaigns, setCampaigns] = useState<any[]>([]);
+  const [recordData, setRecordData] = useState({ creator_id: '', campaign_id: '', order_count: '', gmv_amount: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     fetchMonitoring();
+    fetchOptions();
   }, [fetchMonitoring]);
+
+  const fetchOptions = async () => {
+    try {
+      const [crRes, caRes] = await Promise.all([
+        api.get('/creators').catch(() => ({ data: [] })),
+        api.get('/campaigns').catch(() => ({ data: [] }))
+      ]);
+      setCreators((crRes as any) || []);
+      setCampaigns((caRes as any) || []);
+    } catch (err) {
+      console.error('Error fetching options', err);
+    }
+  };
+
+  const handleRecordGmv = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      await api.post('/gmv/record', {
+        creator_id: recordData.creator_id,
+        campaign_id: recordData.campaign_id,
+        order_count: parseInt(recordData.order_count, 10),
+        gmv_amount: parseFloat(recordData.gmv_amount)
+      });
+      alert('GMV berhasil dicatat secara manual!');
+      setIsRecordModalOpen(false);
+      setRecordData({ creator_id: '', campaign_id: '', order_count: '', gmv_amount: '' });
+      fetchMonitoring();
+    } catch (err) {
+      console.error(err);
+      alert('Gagal mencatat GMV');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -32,14 +76,22 @@ export default function MonitoringPage() {
   return (
     <div className="space-y-6 pb-12">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link href="/cm" className="p-2 hover:bg-white/5 rounded-xl transition-colors">
-          <ArrowLeft className="h-5 w-5 text-gray-400" />
-        </Link>
-        <div>
-          <h1 className="text-3xl font-black text-white tracking-tight">Performance Monitoring</h1>
-          <p className="text-gray-500 font-medium mt-1">Track GMV growth and level distribution across your creator portfolio.</p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Link href="/cm" className="p-2 hover:bg-white/5 rounded-xl transition-colors">
+            <ArrowLeft className="h-5 w-5 text-gray-400" />
+          </Link>
+          <div>
+            <h1 className="text-3xl font-black text-white tracking-tight">Performance Monitoring</h1>
+            <p className="text-gray-500 font-medium mt-1">Track GMV growth and level distribution across your creator portfolio.</p>
+          </div>
         </div>
+        <button 
+          onClick={() => setIsRecordModalOpen(true)}
+          className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 px-5 rounded-xl transition-all shadow-lg flex items-center gap-2"
+        >
+          <Plus className="h-4 w-4" /> Record GMV Manual
+        </button>
       </div>
 
       {/* KPI Cards */}
@@ -147,6 +199,79 @@ export default function MonitoringPage() {
         </div>
 
       </div>
+
+      {/* Manual Record GMV Modal */}
+      {isRecordModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <Card className="bg-[#121212] border-white/10 w-full max-w-lg shadow-2xl relative">
+            <button 
+              onClick={() => setIsRecordModalOpen(false)}
+              className="absolute top-4 right-4 text-gray-500 hover:text-white"
+            >
+              ✕
+            </button>
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2.5 bg-blue-500/10 rounded-xl">
+                  <Activity className="h-5 w-5 text-blue-500" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-white">Record GMV Manual</h2>
+                  <p className="text-gray-400 text-xs mt-0.5">Input data performa apabila terjadi kendala OCR</p>
+                </div>
+              </div>
+
+              <form onSubmit={handleRecordGmv} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-500 uppercase">Creator</label>
+                  <select 
+                    required 
+                    value={recordData.creator_id} 
+                    onChange={e => setRecordData({...recordData, creator_id: e.target.value})}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:ring-2 focus:ring-blue-500/50"
+                  >
+                    <option value="" disabled className="bg-[#121212]">Pilih Creator...</option>
+                    {creators.map(c => (
+                      <option key={c.user_id} value={c.user_id} className="bg-[#121212]">{c.user?.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-500 uppercase">Campaign</label>
+                  <select 
+                    required 
+                    value={recordData.campaign_id} 
+                    onChange={e => setRecordData({...recordData, campaign_id: e.target.value})}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:ring-2 focus:ring-blue-500/50"
+                  >
+                    <option value="" disabled className="bg-[#121212]">Pilih Campaign...</option>
+                    {campaigns.map(c => (
+                      <option key={c.id} value={c.id} className="bg-[#121212]">{c.title}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-gray-500 uppercase">Total Orders</label>
+                    <input type="number" required min="0" value={recordData.order_count} onChange={e => setRecordData({...recordData, order_count: e.target.value})} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:ring-2 focus:ring-blue-500/50" placeholder="Contoh: 15" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-gray-500 uppercase">Total GMV (Rp)</label>
+                    <input type="number" required min="0" value={recordData.gmv_amount} onChange={e => setRecordData({...recordData, gmv_amount: e.target.value})} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:ring-2 focus:ring-blue-500/50" placeholder="Contoh: 1500000" />
+                  </div>
+                </div>
+
+                <button type="submit" disabled={isSubmitting} className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 rounded-xl mt-4 flex items-center justify-center disabled:opacity-50">
+                  {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
+                  Simpan GMV
+                </button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
