@@ -26,6 +26,23 @@ export class CmService {
   ) {}
 
   // ──────────────────────────────────────────────
+  // GET CM LIST — Daftar semua CM + GDrive URL mereka (Untuk dropdown Creator)
+  // ──────────────────────────────────────────────
+  async getCmList() {
+    const cmUsers = await this.prisma.user.findMany({
+      where: { role: 'CM' },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        gdrive_url: true,
+      },
+      orderBy: { name: 'asc' },
+    });
+    return cmUsers;
+  }
+
+  // ──────────────────────────────────────────────
   // 26. CM DASHBOARD — Full Aggregated View
   // ──────────────────────────────────────────────
   async getDashboard(cmUserId: string) {

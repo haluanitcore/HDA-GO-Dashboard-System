@@ -17,6 +17,7 @@ export class SettingsService {
         avatar_url: true,
         bio: true,
         phone: true,
+        gdrive_url: true,
         created_at: true,
         creator: {
           select: {
@@ -25,6 +26,11 @@ export class SettingsService {
             niche: true,
             domicile: true,
             gender: true,
+            start_date: true,
+            end_date: true,
+            sow_per_month: true,
+            gmv_target_monthly: true,
+            cm_notes: true,
           }
         }
       }
@@ -34,13 +40,14 @@ export class SettingsService {
     return user;
   }
 
-  async updateProfile(userId: string, data: { name?: string; bio?: string; phone?: string; avatar_url?: string }) {
+  async updateProfile(userId: string, data: { name?: string; bio?: string; phone?: string; avatar_url?: string; gdrive_url?: string }) {
     // Build update object — only include fields that were sent
     const updateData: any = {};
     if (data.name !== undefined) updateData.name = data.name;
     if (data.bio !== undefined) updateData.bio = data.bio || null;
     if (data.phone !== undefined) updateData.phone = data.phone || null;
     if (data.avatar_url !== undefined) updateData.avatar_url = data.avatar_url || null;
+    if (data.gdrive_url !== undefined) updateData.gdrive_url = data.gdrive_url || null;
 
     const updated = await this.prisma.user.update({
       where: { id: userId },
@@ -53,6 +60,7 @@ export class SettingsService {
         avatar_url: true,
         bio: true,
         phone: true,
+        gdrive_url: true,
       }
     });
 

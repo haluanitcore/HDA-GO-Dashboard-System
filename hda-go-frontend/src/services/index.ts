@@ -67,6 +67,7 @@ export const rewardService = {
 // ── CM Services ──
 export const cmService = {
   getDashboard: () => api.get<any>('/cm/dashboard'),
+  getCmList: () => api.get<any>('/cm/list'),
   getPipeline: (status?: string) => 
     api.get<any>(`/cm/pipeline${status ? `?status=${status}` : ''}`),
   pushRecommendation: (creatorId: string, campaignId: string) =>

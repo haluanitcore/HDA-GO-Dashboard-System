@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { submissionService } from '@/services';
 import { api } from '@/services/api';
 import { Card, CardContent } from '@/components/ui/card';
-import { CheckCircle2, XCircle, Clock, Video, Loader2, BarChart3, TrendingUp } from 'lucide-react';
+import { CheckCircle2, XCircle, Clock, Video, Loader2, BarChart3, TrendingUp, FolderOpen, ExternalLink } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 export default function QCQueuePage() {
@@ -143,14 +143,25 @@ export default function QCQueuePage() {
                      <div className="text-[10px] font-bold text-gray-500 mt-1 uppercase tracking-tighter">SOW Progress: {item.deliverable?.completed_sow}/{item.deliverable?.total_sow}</div>
                   </td>
                   <td className="px-6 py-4">
-                    <a 
-                      href={item.tiktok_url} 
-                      target="_blank" 
-                      rel="noreferrer" 
-                      className="inline-flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 px-3 py-1.5 rounded-lg text-xs font-medium text-blue-400 transition-colors"
-                    >
-                      <Video className="h-3 w-3" /> View Video
-                    </a>
+                    {(() => {
+                      const isGdrive = item.tiktok_url?.includes('drive.google.com');
+                      return (
+                        <a 
+                          href={item.tiktok_url} 
+                          target="_blank" 
+                          rel="noreferrer" 
+                          className={`inline-flex items-center gap-2 border px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                            isGdrive
+                              ? 'bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/20 text-emerald-400'
+                              : 'bg-white/5 hover:bg-white/10 border-white/10 text-blue-400'
+                          }`}
+                        >
+                          {isGdrive
+                            ? <><FolderOpen className="h-3 w-3" /> Buka Google Drive<ExternalLink className="h-3 w-3 ml-1" /></>
+                            : <><Video className="h-3 w-3" /> View Video</>}
+                        </a>
+                      );
+                    })()}
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">

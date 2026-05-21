@@ -22,6 +22,7 @@ model User {
   avatar_url    String?
   bio           String?
   phone         String?
+  gdrive_url    String?         // Tautan Folder Google Drive (Khusus CM)
   
   creator       Creator?
   notifications Notification[]
@@ -71,6 +72,7 @@ model Creator {
   sow_per_month      Int?          @default(0)
   gmv_target_monthly Float?        @default(0)
   start_date         DateTime?
+  end_date           DateTime?     // Tanggal Akhir Kerja Sama / Masa Berakhir Kontrak
   cm_notes           String?
 
   // Status Onboarding

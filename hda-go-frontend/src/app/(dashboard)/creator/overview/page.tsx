@@ -58,6 +58,39 @@ export default function CreatorOverview() {
           <div className="space-y-2">
             <h1 className="text-3xl font-black text-white tracking-tight">Level {profile?.creator_level || 0}</h1>
             <p className="text-blue-100/80 font-medium">You're doing great! Keep up the momentum.</p>
+            {profile?.end_date && (
+              <div className="flex items-center gap-2 pt-1">
+                <span className="text-xs font-bold text-blue-100/50 uppercase tracking-wider">Masa Kemitraan:</span>
+                {(() => {
+                  const today = new Date();
+                  today.setHours(0, 0, 0, 0);
+                  const end = new Date(profile.end_date);
+                  end.setHours(0, 0, 0, 0);
+                  const diffTime = end.getTime() - today.getTime();
+                  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                  
+                  if (diffDays < 0) {
+                    return (
+                      <span className="text-[10px] font-black text-red-400 bg-red-950/60 border border-red-500/25 px-3 py-1 rounded-full uppercase tracking-widest flex items-center gap-1 shadow-lg shadow-red-950/20">
+                        ● Kontrak Habis ({Math.abs(diffDays)} hari lalu)
+                      </span>
+                    );
+                  } else if (diffDays <= 30) {
+                    return (
+                      <span className="text-[10px] font-black text-amber-400 bg-amber-950/60 border border-amber-500/25 px-3 py-1 rounded-full uppercase tracking-widest flex items-center gap-1 shadow-lg shadow-amber-950/20 animate-pulse">
+                        ⚠️ Segera Berakhir ({diffDays} hari lagi)
+                      </span>
+                    );
+                  } else {
+                    return (
+                      <span className="text-[10px] font-black text-emerald-400 bg-emerald-950/60 border border-emerald-500/25 px-3 py-1 rounded-full uppercase tracking-widest flex items-center gap-1 shadow-lg shadow-emerald-950/20">
+                        ✓ Kontrak Aktif ({diffDays} hari lagi)
+                      </span>
+                    );
+                  }
+                })()}
+              </div>
+            )}
           </div>
           <div className="w-full md:w-72 space-y-3">
             <div className="flex justify-between text-xs font-bold text-white/90 uppercase tracking-widest">

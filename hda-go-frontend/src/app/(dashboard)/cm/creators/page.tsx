@@ -123,6 +123,7 @@ export default function CMCreatorsPage() {
                 <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">Creator</th>
                 <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">Niche & Info</th>
                 <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">GMV Target</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">Masa Kontrak</th>
                 <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest text-right">Aksi</th>
               </tr>
             </thead>
@@ -169,6 +170,33 @@ export default function CMCreatorsPage() {
                       <p className="text-sm font-bold text-emerald-400">Rp {((creator.gmv_target_monthly || 0)/1000000).toFixed(1)}M</p>
                       <p className="text-xs text-gray-500 font-medium">Target per Bulan</p>
                     </div>
+                  </td>
+                  <td className="px-6 py-5">
+                    {creator.end_date ? (
+                      <div className="space-y-1">
+                        {(() => {
+                          const today = new Date();
+                          today.setHours(0, 0, 0, 0);
+                          const end = new Date(creator.end_date);
+                          end.setHours(0, 0, 0, 0);
+                          const diffTime = end.getTime() - today.getTime();
+                          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                          
+                          if (diffDays < 0) {
+                            return <span className="text-[10px] font-black text-red-400 bg-red-950/40 px-2 py-0.5 rounded border border-red-900/30">❌ Habis ({Math.abs(diffDays)} h)</span>;
+                          } else if (diffDays <= 30) {
+                            return <span className="text-[10px] font-black text-amber-400 bg-amber-950/40 px-2 py-0.5 rounded border border-amber-900/30 animate-pulse">⚠️ {diffDays} hari</span>;
+                          } else {
+                            return <span className="text-[10px] font-black text-emerald-400 bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-900/30">✓ {diffDays} hari</span>;
+                          }
+                        })()}
+                        <p className="text-[10px] text-gray-500 font-medium">
+                          s.d. {new Date(creator.end_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </p>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-gray-600">-</span>
+                    )}
                   </td>
                   <td className="px-6 py-5 text-right">
                     <Link 

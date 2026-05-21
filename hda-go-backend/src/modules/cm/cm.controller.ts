@@ -17,6 +17,13 @@ export class CmController {
     return this.cmService.getDashboard(req.user.userId);
   }
 
+  // GET /cm/list — Daftar semua CM beserta GDrive URL mereka (bisa diakses Creator)
+  @Get('list')
+  @Roles(Role.CREATOR, Role.CM, Role.ADMIN)
+  getCmList() {
+    return this.cmService.getCmList();
+  }
+
   // GET /cm/pipeline?status=DORMANT — Creators by status
   @Get('pipeline')
   @Roles(Role.CM, Role.ADMIN)

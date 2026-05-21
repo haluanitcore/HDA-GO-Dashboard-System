@@ -133,6 +133,48 @@ export default function CreatorDetailPage() {
                     <p className="text-sm font-bold text-white">{new Date(creator.onboarded_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
                   </div>
                 </div>
+                {creator.end_date && (
+                  <div className="flex items-start gap-3 border-t border-white/5 pt-4">
+                    <Calendar className="w-4 h-4 text-gray-500 mt-0.5" />
+                    <div>
+                      <p className="text-xs text-gray-500 font-medium">Masa Kontrak Kerja Sama</p>
+                      {(() => {
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        const end = new Date(creator.end_date);
+                        end.setHours(0, 0, 0, 0);
+                        const diffTime = end.getTime() - today.getTime();
+                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                        
+                        if (diffDays < 0) {
+                          return (
+                            <p className="text-sm font-bold text-red-500 mt-0.5">
+                              ❌ Habis (Berakhir {Math.abs(diffDays)} hari lalu)
+                            </p>
+                          );
+                        } else if (diffDays <= 30) {
+                          return (
+                            <p className="text-sm font-bold text-amber-500 mt-0.5">
+                              ⚠️ Segera Berakhir ({diffDays} hari lagi)
+                            </p>
+                          );
+                        } else {
+                          return (
+                            <p className="text-sm font-bold text-emerald-500 mt-0.5">
+                              ✅ Aktif ({diffDays} hari lagi)
+                            </p>
+                          );
+                        }
+                      })()}
+                      <p className="text-[10px] text-gray-500 mt-1">
+                        Mulai: {creator.start_date ? new Date(creator.start_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
+                      </p>
+                      <p className="text-[10px] text-gray-500">
+                        Akhir: {new Date(creator.end_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

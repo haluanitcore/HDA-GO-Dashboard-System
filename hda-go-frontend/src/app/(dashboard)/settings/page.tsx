@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '@/store';
 import { settingsService } from '@/services';
-import { User, Lock, Bell, Activity, Save, Loader2, Image as ImageIcon, Eye, EyeOff, CheckCircle2, XCircle } from 'lucide-react';
+import { User, Lock, Bell, Activity, Save, Loader2, Image as ImageIcon, Eye, EyeOff, CheckCircle2, XCircle, FolderOpen, ExternalLink, ShieldCheck, Calendar, Target, ShoppingBag } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import toast from 'react-hot-toast';
 
@@ -23,7 +23,9 @@ export default function SettingsPage() {
     bio: '',
     phone: '',
     avatar_url: '',
+    gdrive_url: '',
   });
+  const [creatorData, setCreatorData] = useState<any>(null);
   const [profileDirty, setProfileDirty] = useState(false);
 
   // Password Form
@@ -67,7 +69,9 @@ export default function SettingsPage() {
         bio: res.bio || '',
         phone: res.phone || '',
         avatar_url: res.avatar_url || '',
+        gdrive_url: res.gdrive_url || '',
       });
+      setCreatorData(res.creator || null);
       setProfileDirty(false);
     } catch (error) {
       console.error('Failed to load profile', error);
@@ -78,7 +82,9 @@ export default function SettingsPage() {
           bio: (user as any).bio || '',
           phone: (user as any).phone || '',
           avatar_url: (user as any).avatar_url || '',
+          gdrive_url: (user as any).gdrive_url || '',
         });
+        setCreatorData((user as any).creator || null);
       }
       toast.error('Gagal memuat profil dari server, menampilkan data lokal');
     } finally {
@@ -102,6 +108,7 @@ export default function SettingsPage() {
         bio: profileData.bio.trim(),
         phone: profileData.phone.trim(),
         avatar_url: profileData.avatar_url.trim(),
+        gdrive_url: profileData.gdrive_url.trim(),
       });
       // Update global auth store so sidebar & navbar reflect the new name
       if (user) {
@@ -111,6 +118,7 @@ export default function SettingsPage() {
           bio: res.bio || profileData.bio,
           phone: res.phone || profileData.phone,
           avatar_url: res.avatar_url || profileData.avatar_url,
+          gdrive_url: res.gdrive_url || profileData.gdrive_url,
         };
         setUser(updatedUser as any);
       }
@@ -309,6 +317,7 @@ export default function SettingsPage() {
                     />
                   </div>
 
+                   {/* Bio */}
                   <div>
                     <label className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 block">Bio Singkat</label>
                     <textarea
@@ -320,6 +329,141 @@ export default function SettingsPage() {
                     />
                     <p className="text-[10px] text-gray-600 mt-1 text-right">{profileData.bio.length}/160</p>
                   </div>
+
+                  {/* ── Detail Kontrak Kerja Sama (CREATOR ONLY) ── */}
+                  {user?.role === 'CREATOR' && creatorData && (
+                    <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mt-6 space-y-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="p-1.5 bg-[#416CB1]/10 rounded-lg">
+                          <ShieldCheck className="h-4 w-4 text-[#F6D145]" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-white">Detail Kemitraan & Kontrak</p>
+                          <p className="text-[10px] text-gray-500">Masa kontrak dan komitmen bulanan Anda yang diatur oleh Campaign Manager (CM).</p>
+                        </div>
+                      </div>
+
+                      {/* Status Hari & Tanggal */}
+                      {(() => {
+                        const getContractStatus = (endDateStr: string) => {
+                          if (!endDateStr) return { text: 'Belum diatur', colorClass: 'text-gray-500', bgClass: 'bg-white/5 border-white/5', iconColor: 'text-gray-500' };
+                          const today = new Date();
+                          today.setHours(0, 0, 0, 0);
+                          const end = new Date(endDateStr);
+                          end.setHours(0, 0, 0, 0);
+                          const diffTime = end.getTime() - today.getTime();
+                          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                          
+                          if (diffDays < 0) {
+                            return {
+                              text: `Kontrak Habis (Berakhir ${Math.abs(diffDays)} hari lalu)`,
+                              colorClass: 'text-red-500',
+                              bgClass: 'bg-red-500/10 border-red-500/20',
+                              iconColor: 'text-red-400'
+                            };
+                          } else if (diffDays <= 30) {
+                            return {
+                              text: `Kontrak Segera Berakhir (${diffDays} hari lagi)`,
+                              colorClass: 'text-amber-500',
+                              bgClass: 'bg-amber-500/10 border-amber-500/20',
+                              iconColor: 'text-amber-400'
+                            };
+                          } else {
+                            return {
+                              text: `Kontrak Aktif (${diffDays} hari lagi)`,
+                              colorClass: 'text-emerald-500',
+                              bgClass: 'bg-emerald-500/10 border-emerald-500/20',
+                              iconColor: 'text-emerald-400'
+                            };
+                          }
+                        };
+
+                        const status = getContractStatus(creatorData.end_date);
+                        return (
+                          <div className={`p-4 rounded-xl border ${status.bgClass} flex flex-col md:flex-row md:items-center justify-between gap-4`}>
+                            <div className="space-y-1">
+                              <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">Status Masa Aktif</p>
+                              <p className={`text-base font-black ${status.colorClass}`}>{status.text}</p>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4 text-xs">
+                              <div>
+                                <span className="text-gray-500 font-bold uppercase tracking-widest block mb-0.5">Mulai</span>
+                                <span className="text-white font-medium">
+                                  {creatorData.start_date ? new Date(creatorData.start_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-gray-500 font-bold uppercase tracking-widest block mb-0.5">Selesai</span>
+                                <span className="text-white font-medium">
+                                  {creatorData.end_date ? new Date(creatorData.end_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {/* Target Komitmen */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-white/[0.02] p-4 rounded-xl border border-white/5 space-y-1">
+                          <div className="flex items-center gap-1.5 text-xs text-gray-500 font-bold uppercase tracking-widest">
+                            <Target className="h-3.5 w-3.5 text-blue-400" /> Target SOW / Bulan
+                          </div>
+                          <p className="text-lg font-black text-white">{creatorData.sow_per_month || 0} Video Post</p>
+                        </div>
+                        <div className="bg-white/[0.02] p-4 rounded-xl border border-white/5 space-y-1">
+                          <div className="flex items-center gap-1.5 text-xs text-gray-500 font-bold uppercase tracking-widest">
+                            <ShoppingBag className="h-3.5 w-3.5 text-emerald-400" /> Target GMV / Bulan
+                          </div>
+                          <p className="text-lg font-black text-emerald-400">Rp {(creatorData.gmv_target_monthly || 0).toLocaleString('id-ID')}</p>
+                        </div>
+                      </div>
+
+                      {/* Catatan CM */}
+                      {creatorData.cm_notes && (
+                        <div className="bg-white/[0.02] p-4 rounded-xl border border-white/5 space-y-1.5">
+                          <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Pesan & Catatan CM Anda</p>
+                          <p className="text-xs text-gray-400 font-medium italic leading-relaxed">"{creatorData.cm_notes}"</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* ── Google Drive Folder (CM ONLY) ── */}
+                  {user?.role === 'CM' && (
+                    <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-5 space-y-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="p-1.5 bg-emerald-500/10 rounded-lg">
+                          <FolderOpen className="h-4 w-4 text-emerald-400" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-white">Folder Google Drive Campaign</p>
+                          <p className="text-[10px] text-gray-500">Khusus Campaign Manager — Creator akan diarahkan ke folder ini saat mengunggah video.</p>
+                        </div>
+                      </div>
+                      <input
+                        type="url"
+                        value={profileData.gdrive_url}
+                        onChange={e => handleProfileChange('gdrive_url', e.target.value)}
+                        className="w-full bg-white/5 border border-emerald-500/20 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-emerald-400 transition-colors placeholder:text-gray-600"
+                        placeholder="https://drive.google.com/drive/folders/..."
+                      />
+                      <p className="text-[10px] text-gray-500">
+                        Pastikan folder di-set <span className="text-emerald-400 font-bold">"Anyone with the link can edit/upload"</span> agar creator bisa mengunggah video.
+                      </p>
+                      {profileData.gdrive_url && (
+                        <a
+                          href={profileData.gdrive_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex items-center gap-2 text-xs text-emerald-400 hover:text-emerald-300 font-bold transition-colors"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                          Buka Folder Drive Saya
+                        </a>
+                      )}
+                    </div>
+                  )}
 
                   <div className="pt-2 flex items-center gap-3">
                     <button

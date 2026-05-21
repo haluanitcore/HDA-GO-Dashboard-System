@@ -28,7 +28,7 @@ export default function OnboardCreatorPage() {
     // Step 2
     tiktok_username: '', tiktok_url: '', tiktok_followers: '', avg_views: '', niche: [] as string[], affiliate_exp: 'BARU',
     // Step 3
-    sow_per_month: '', gmv_target_monthly: '', start_date: new Date().toISOString().split('T')[0], cm_notes: ''
+    sow_per_month: '', gmv_target_monthly: '', start_date: new Date().toISOString().split('T')[0], end_date: '', cm_notes: ''
   });
 
   const handleChange = (e: any) => {
@@ -261,9 +261,13 @@ export default function OnboardCreatorPage() {
                     <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Target GMV / Bulan (Rp) *</label>
                     <input required type="number" name="gmv_target_monthly" value={formData.gmv_target_monthly} onChange={handleChange} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Contoh: 10000000" />
                   </div>
-                  <div className="col-span-2 space-y-2">
+                  <div className="space-y-2">
                     <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Tanggal Mulai Aktif *</label>
                     <input required type="date" name="start_date" value={formData.start_date} onChange={handleChange} className="w-full bg-[#111] border border-white/10 rounded-xl px-4 py-[11px] text-white focus:outline-none focus:ring-2 focus:ring-blue-500 style-color-scheme-dark" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Tanggal Akhir Kerja Sama (Masa Kontrak) *</label>
+                    <input required type="date" name="end_date" value={formData.end_date} onChange={handleChange} className="w-full bg-[#111] border border-white/10 rounded-xl px-4 py-[11px] text-white focus:outline-none focus:ring-2 focus:ring-blue-500 style-color-scheme-dark" />
                   </div>
                   <div className="col-span-2 space-y-2">
                     <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Catatan Internal CM (Opsional)</label>

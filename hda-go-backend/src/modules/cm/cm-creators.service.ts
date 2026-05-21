@@ -38,6 +38,7 @@ export class CmCreatorsService {
           sow_per_month: dto.sow_per_month || 0,
           gmv_target_monthly: dto.gmv_target_monthly || 0,
           start_date: dto.start_date ? new Date(dto.start_date) : new Date(),
+          end_date: dto.end_date ? new Date(dto.end_date) : null,
           cm_notes: dto.cm_notes,
           onboarding_status: 'ACTIVE',
           onboarded_at: new Date(),
@@ -77,9 +78,10 @@ export class CmCreatorsService {
     if (!creator) throw new NotFoundException('Creator not found');
     const updates: any = {};
     const fields = ['phone_number','gender','birth_date','domicile','tiktok_username','tiktok_url',
-      'tiktok_followers','avg_views','affiliate_exp','sow_per_month','gmv_target_monthly','cm_notes'];
+      'tiktok_followers','avg_views','affiliate_exp','sow_per_month','gmv_target_monthly','end_date','cm_notes'];
     for (const f of fields) { if (dto[f] !== undefined) updates[f] = dto[f]; }
     if (dto.birth_date) updates.birth_date = new Date(dto.birth_date);
+    if (dto.end_date) updates.end_date = new Date(dto.end_date);
     if (dto.niche) updates.niche = Array.isArray(dto.niche) ? JSON.stringify(dto.niche) : dto.niche;
     const updated = await this.prisma.creator.update({ where: { user_id: creatorId }, data: updates });
     if (dto.name) await this.prisma.user.update({ where: { id: creatorId }, data: { name: dto.name } });

@@ -183,18 +183,6 @@ async function main() {
   const sub1 = await prisma.submission.create({ data: { campaign_id: campaigns[0].id, creator_id: creatorUsers[0].id, tiktok_url: 'https://tiktok.com/@alex/video/123', status: 'APPROVED', reviewed_at: new Date() } });
   await prisma.submissionDeliverable.create({ data: { submission_id: sub1.id, total_sow: 4, completed_sow: 2, remaining_sow: 2 } });
 
-  await prisma.user.create({
-    data: { name: 'Sarah CM', email: 'cm1@hdago.com', password: await bcrypt.hash('hdago123', 12), role: 'CM' },
-  });
-
-  await prisma.user.create({
-    data: { name: 'Budi CM', email: 'cm2@hdago.com', password: await bcrypt.hash('hdago123', 12), role: 'CM' },
-  });
-
-  await prisma.user.create({
-    data: { name: 'Rina BD', email: 'rina@hdago.com', password, role: 'BD' },
-  });
-
   const brandUser = await prisma.user.create({
     data: { name: 'Brand User', email: 'brand@hdago.com', password, role: 'BRAND' },
   });

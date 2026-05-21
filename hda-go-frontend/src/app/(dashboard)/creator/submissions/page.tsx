@@ -1,19 +1,21 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { submissionService, campaignService } from '@/services';
+import { submissionService, campaignService, cmService } from '@/services';
 import { Card, CardContent } from '@/components/ui/card';
-import { Video, Clock, CheckCircle2, AlertCircle, Send, Loader2, ExternalLink, Plus, BarChart3, UploadCloud } from 'lucide-react';
+import { Video, Clock, CheckCircle2, AlertCircle, Send, Loader2, ExternalLink, Plus, BarChart3, UploadCloud, FolderOpen, ChevronDown } from 'lucide-react';
 import { api } from '@/services/api';
 
 export default function SubmissionsPage() {
   const [mySubmissions, setMySubmissions] = useState<any[]>([]);
   const [joinedCampaigns, setJoinedCampaigns] = useState<any[]>([]);
+  const [cmList, setCmList] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Form State
   const [selectedCampaign, setSelectedCampaign] = useState('');
-  const [tiktokUrl, setTiktokUrl] = useState('');
+  const [selectedCm, setSelectedCm] = useState('');
+  const [videoUrl, setVideoUrl] = useState('');
   const [totalSow, setTotalSow] = useState('1');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -33,25 +35,27 @@ export default function SubmissionsPage() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      // Fetch submissions and campaign hub in parallel
-      const [subs, hubData] = await Promise.all([
+      const [subs, hubData, cms] = await Promise.all([
         submissionService.getMine().catch(() => []),
         campaignService.getHub().catch(() => []),
+        cmService.getCmList().catch(() => []),
       ]);
 
       setMySubmissions(Array.isArray(subs) ? subs : []);
 
-      // ✅ Fix: joined campaigns are identified by alreadyJoined flag from hub API
       const joined = Array.isArray(hubData)
         ? hubData.filter((c: any) => c.alreadyJoined === true)
         : [];
       setJoinedCampaigns(joined);
+      setCmList(Array.isArray(cms) ? cms : []);
     } catch (err) {
       console.error(err);
     } finally {
       setIsLoading(false);
     }
   };
+
+  const selectedCmData = cmList.find(cm => cm.id === selectedCm);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,12 +66,16 @@ export default function SubmissionsPage() {
       setError('Pilih campaign terlebih dahulu');
       return;
     }
-    if (!tiktokUrl) {
-      setError('Masukkan URL TikTok video kamu');
+    if (!selectedCm) {
+      setError('Pilih Campaign Manager (CM) terlebih dahulu');
       return;
     }
-    if (!tiktokUrl.includes('tiktok.com')) {
-      setError('URL harus dari TikTok (tiktok.com)');
+    if (!videoUrl) {
+      setError('Masukkan link video Google Drive kamu');
+      return;
+    }
+    if (!videoUrl.startsWith('http')) {
+      setError('URL video tidak valid, pastikan dimulai dengan https://');
       return;
     }
 
@@ -82,13 +90,14 @@ export default function SubmissionsPage() {
       const camp = joinedCampaigns.find(c => c.id === selectedCampaign);
       await submissionService.submit({
         campaign_id: selectedCampaign,
-        tiktok_url: tiktokUrl,
+        tiktok_url: videoUrl, // Field tetap tiktok_url di backend, diisi dengan GDrive link
         total_sow: camp?.sow_total || sowNum,
       });
       setSuccess('✅ Video berhasil disubmit! Menunggu QC review dari CM.');
-      setTiktokUrl('');
+      setVideoUrl('');
       setTotalSow('1');
       setSelectedCampaign('');
+      setSelectedCm('');
       await fetchData();
     } catch (err: any) {
       setError(err.message || 'Gagal submit, coba lagi.');
@@ -182,7 +191,7 @@ export default function SubmissionsPage() {
     <div className="space-y-8 pb-12 max-w-5xl">
       <div>
         <h1 className="text-3xl font-black text-white tracking-tight">Deliverables Submission</h1>
-        <p className="text-gray-500 font-medium mt-1">Submit konten TikTok kamu dan pantau status persetujuan CM.</p>
+        <p className="text-gray-500 font-medium mt-1">Submit video campaign kamu melalui Google Drive CM dan pantau status persetujuan.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -243,39 +252,70 @@ export default function SubmissionsPage() {
                   </select>
                 </div>
 
-                {/* TikTok URL */}
+                {/* CM Dropdown */}
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                    TikTok Video URL
+                    Campaign Manager (CM)
+                  </label>
+                  <select
+                    value={selectedCm}
+                    onChange={(e) => setSelectedCm(e.target.value)}
+                    disabled={joinedCampaigns.length === 0}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 appearance-none disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <option value="" disabled className="bg-[#121212]">Pilih CM kamu...</option>
+                    {cmList.map(cm => (
+                      <option key={cm.id} value={cm.id} className="bg-[#121212]">
+                        {cm.name} {!cm.gdrive_url ? '(Folder belum diatur)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* GDrive Redirect Button — Muncul hanya jika CM dipilih dan punya GDrive URL */}
+                {selectedCmData && (
+                  <div className={`rounded-xl p-4 border ${selectedCmData.gdrive_url ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-amber-500/5 border-amber-500/20'}`}>
+                    {selectedCmData.gdrive_url ? (
+                      <>
+                        <p className="text-xs text-gray-400 mb-2.5">
+                          📁 Unggah video kamu ke folder Google Drive milik <span className="text-white font-bold">{selectedCmData.name}</span>, lalu salin link berkasnya ke bawah.
+                        </p>
+                        <a
+                          href={selectedCmData.gdrive_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex items-center justify-center gap-2 w-full bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 text-xs font-bold py-2.5 px-4 rounded-lg transition-all border border-emerald-500/30"
+                        >
+                          <FolderOpen className="h-3.5 w-3.5" />
+                          Buka Google Drive {selectedCmData.name}
+                          <ExternalLink className="h-3 w-3 ml-auto" />
+                        </a>
+                      </>
+                    ) : (
+                      <p className="text-xs text-amber-400 font-medium">
+                        ⚠️ CM <span className="font-bold">{selectedCmData.name}</span> belum mengatur folder Google Drive-nya. Hubungi CM Anda untuk mengisi tautan drive di menu Settings mereka.
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Video URL Input (Google Drive link) */}
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                    Link Video Google Drive
                   </label>
                   <input
                     type="url"
-                    value={tiktokUrl}
-                    onChange={(e) => setTiktokUrl(e.target.value)}
-                    placeholder="https://www.tiktok.com/@username/video/..."
+                    value={videoUrl}
+                    onChange={(e) => setVideoUrl(e.target.value)}
+                    placeholder="https://drive.google.com/file/d/..."
                     disabled={joinedCampaigns.length === 0}
                     className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 disabled:opacity-40 disabled:cursor-not-allowed"
                   />
                   <p className="text-[10px] text-gray-600 ml-1">
-                    Pastikan video sudah terpublik di TikTok sebelum submit.
+                    Setelah upload ke Drive CM, klik kanan file → "Bagikan" → salin link-nya ke sini.
                   </p>
                 </div>
-
-                {/* Total SOW (only shown if campaign not selected yet) */}
-                {!selectedCampaign && (
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                      Jumlah Konten (SOW)
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={totalSow}
-                      onChange={(e) => setTotalSow(e.target.value)}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                    />
-                  </div>
-                )}
 
                 {/* Selected campaign info */}
                 {selectedCampaign && (() => {
@@ -319,13 +359,15 @@ export default function SubmissionsPage() {
             <div className="bg-[#121212] border border-dashed border-white/10 rounded-3xl p-12 text-center">
               <Video className="h-12 w-12 text-gray-700 mx-auto mb-4" />
               <p className="text-gray-400 font-medium">Belum ada submission.</p>
-              <p className="text-gray-600 text-sm mt-1">Submit konten TikTok pertama kamu dari form di samping.</p>
+              <p className="text-gray-600 text-sm mt-1">Submit video campaign kamu dari form di samping.</p>
             </div>
           ) : (
             <div className="space-y-3">
               {mySubmissions.map((sub: any) => {
                 const cfg = statusConfig[sub.status] || statusConfig['DRAFT'];
                 const Icon = cfg.Icon;
+                // Deteksi apakah ini Google Drive link atau TikTok
+                const isGdrive = sub.tiktok_url?.includes('drive.google.com');
 
                 return (
                   <div
@@ -345,10 +387,13 @@ export default function SubmissionsPage() {
                             href={sub.tiktok_url}
                             target="_blank"
                             rel="noreferrer"
-                            className="text-xs text-blue-400 hover:text-blue-300 hover:underline mt-1.5 flex items-center gap-1 truncate max-w-[280px]"
+                            className="text-xs text-emerald-400 hover:text-emerald-300 hover:underline mt-1.5 flex items-center gap-1 truncate max-w-[280px]"
                           >
-                            <ExternalLink className="h-3 w-3 flex-shrink-0" />
-                            {sub.tiktok_url}
+                            {isGdrive
+                              ? <FolderOpen className="h-3 w-3 flex-shrink-0" />
+                              : <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                            }
+                            {isGdrive ? 'Lihat Video di Google Drive' : sub.tiktok_url}
                           </a>
                           {sub.qc_notes && (
                             <p className="text-[11px] text-gray-500 mt-1.5 italic">
