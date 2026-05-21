@@ -117,3 +117,11 @@ export const brandService = {
   getAnalytics: () => api.get<any>('/brand/analytics'),
 };
 
+// ── Settings Services ──
+export const settingsService = {
+  getProfile: () => api.get<any>('/settings/profile'),
+  updateProfile: (data: any) => api.patch<any>('/settings/profile', data),
+  updatePassword: (data: any) => api.patch<any>('/settings/password', data),
+  updateNotifications: (data: any) => api.patch<any>('/settings/notifications', data),
+};
+

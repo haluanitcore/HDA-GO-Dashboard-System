@@ -257,6 +257,7 @@ export class CampaignsService {
     
     // If user is a BRAND, they can only see their own campaigns
     if (user && user.role === 'BRAND') {
+      where.brand_id = user.userId;
       where.brand_id = user.userId || user.id;
     }
 

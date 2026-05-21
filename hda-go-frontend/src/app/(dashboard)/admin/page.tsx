@@ -58,6 +58,7 @@ export default function AdminPage() {
 
   const statCards = [
     { name: 'Total Registered Users', value: kpi?.total_creators || 0, icon: Users, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+    { name: 'System Uptime', value: '99.9%', icon: Activity, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
     { name: 'Active Campaigns', value: kpi?.active_campaigns || 0, icon: Activity, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
     { name: 'Total Campaigns', value: kpi?.total_campaigns || 0, icon: Server, color: 'text-purple-500', bg: 'bg-purple-500/10' },
     { name: 'Total GMV', value: `Rp ${(kpi?.total_gmv || 0).toLocaleString()}`, icon: ShieldAlert, color: 'text-amber-500', bg: 'bg-amber-500/10' },

@@ -7,19 +7,17 @@ import { Sidebar } from '@/components/shared/Sidebar';
 import { Navbar } from '@/components/shared/Navbar';
 import { Loader2 } from 'lucide-react';
 
-export default function CMLayout({ children }: { children: React.ReactNode }) {
-  const { user, isAuthenticated } = useAuthStore();
+export default function SettingsLayout({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isInitialized } = useAuthStore();
   const router = useRouter();
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (isInitialized && !isAuthenticated) {
       router.push('/login');
-    } else if (user?.role !== 'CM') {
-      router.push(`/${user!.role.toLowerCase()}`);
     }
-  }, [isAuthenticated, user, router]);
+  }, [isAuthenticated, isInitialized, router]);
 
-  if (!isAuthenticated || user?.role !== 'CM') {
+  if (!isInitialized || !isAuthenticated) {
     return (
       <div className="h-screen w-screen flex items-center justify-center bg-[#0C0E10]">
         <Loader2 className="h-8 w-8 text-[#F6D145] animate-spin" />

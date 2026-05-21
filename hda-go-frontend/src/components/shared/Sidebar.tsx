@@ -143,7 +143,7 @@ export function Sidebar() {
           <div className="absolute top-0 left-0 w-full h-px hda-accent-line opacity-50" />
           <div className="flex items-center gap-3 relative z-10">
             <Avatar className="h-10 w-10 border border-[#416CB1]/20">
-              <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name}`} />
+              <AvatarImage src={user?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name}`} />
               <AvatarFallback className="bg-[#416CB1]/20 text-[#F6D145] font-bold">{user?.name?.[0]}</AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">

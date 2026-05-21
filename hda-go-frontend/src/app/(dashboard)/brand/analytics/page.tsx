@@ -23,7 +23,7 @@ export default function BrandROIAnalyticsPage() {
   }
 
   const { stats, funnel, campaigns } = analytics;
-  const campaignPerformance = campaigns || [];
+  const campaignPerformance: any[] = campaigns || [];
   
   // Dummy data for visual trajectory chart
   const roiData = [

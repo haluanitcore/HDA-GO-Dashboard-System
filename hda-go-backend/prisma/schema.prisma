@@ -18,8 +18,14 @@ model User {
   role          String          // CREATOR, CM, BRAND, ADMIN, EXECUTIVE
   created_at    DateTime        @default(now())
   
+  // Settings & Profile
+  avatar_url    String?
+  bio           String?
+  phone         String?
+  
   creator       Creator?
   notifications Notification[]
+  preferences   UserPreferences?
 }
 
 // ═══════════════════════════════════════════════════
@@ -52,22 +58,22 @@ model Creator {
   gender             String?       // MALE, FEMALE
   birth_date         DateTime?
   domicile           String?
-  
+
   // Biodata Section 2 - Konten
   tiktok_username    String?
   tiktok_url         String?
   tiktok_followers   Int?          @default(0)
   avg_views          Int?          @default(0)
-  niche              String?       // Stored as JSON string: '["FNB","FASHION"]'
+  niche              String?       // JSON: '["FNB","FASHION"]'
   affiliate_exp      String?       // BARU, PERNAH, AKTIF
-  
+
   // Biodata Section 3 - Kontrak
   sow_per_month      Int?          @default(0)
   gmv_target_monthly Float?        @default(0)
   start_date         DateTime?
   cm_notes           String?
 
-  // Status
+  // Status Onboarding
   onboarding_status  String        @default("ACTIVE") // ACTIVE, INACTIVE
   onboarded_at       DateTime?
 }
@@ -89,16 +95,16 @@ model CreatorProgress {
 }
 
 // ═══════════════════════════════════════════════════
-// CREATOR ASSIGNMENT LOG
+// CREATOR ASSIGNMENT LOG — Transfer audit trail
 // ═══════════════════════════════════════════════════
 
 model CreatorAssignmentLog {
-  id           String   @id @default(uuid())
-  creator_id   String
-  from_cm_id   String?
-  to_cm_id     String
-  reason       String?
-  transferred_by String  // CM yang melakukan transfer
+  id             String   @id @default(uuid())
+  creator_id     String
+  from_cm_id     String?
+  to_cm_id       String
+  reason         String?
+  transferred_by String
   transferred_at DateTime @default(now())
 }
 
@@ -325,4 +331,22 @@ model PlatformMetrics {
   total_orders      Int        @default(0)
   total_submissions Int        @default(0)
   calculated_at     DateTime   @default(now())
+}
+
+// ═══════════════════════════════════════════════════
+// USER PREFERENCES (Settings)
+// ═══════════════════════════════════════════════════
+
+model UserPreferences {
+  id                   String   @id @default(uuid())
+  user_id              String   @unique
+  notif_submission     Boolean  @default(true)
+  notif_campaign       Boolean  @default(true)
+  notif_levelup        Boolean  @default(true)
+  notif_recommendation Boolean  @default(true)
+  default_sort         String? 
+  show_inactive        Boolean  @default(true)
+  created_at           DateTime @default(now())
+  updated_at           DateTime @updatedAt
+  user                 User     @relation(fields: [user_id], references: [id])
 }
