@@ -25,7 +25,7 @@ jobs:
             npm install
             npx prisma db push
             npm run build
-            pm2 restart hda-go-backend || pm2 start dist/main.js --name "hda-go-backend"
+            pm2 restart hda-go-backend || pm2 start dist/src/main.js --name "hda-go-backend"
             
             # 2. Update & Build NextJS Frontend
             cd /var/www/hda-go/hda-go-frontend
