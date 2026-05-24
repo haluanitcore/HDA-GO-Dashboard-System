@@ -10,6 +10,8 @@ async function bootstrap() {
 
   // Enable CORS for frontend — reads from env or defaults to localhost:3000
   const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:3000')
+    .replace(/"/g, '') // Strip quotes if any
+    .replace(/'/g, '') // Strip single quotes if any
     .split(',')
     .map((o) => o.trim());
 
