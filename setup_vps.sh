@@ -24,7 +24,7 @@ echo -e "\e[0m"
 # ------------------------------------------------------------------------------
 # 1. INPUT USER CONFIGURATION
 # ------------------------------------------------------------------------------
-read -p "🎯 Enter your domain name (e.g., hdago.com): " DOMAIN
+read -p "🎯 Enter your domain name (e.g., dashboardhdago.com): " DOMAIN
 if [ -z "$DOMAIN" ]; then
   echo -e "\e[31m[ERROR] Domain name cannot be empty!\e[0m"
   exit 1

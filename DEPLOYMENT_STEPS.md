@@ -1,22 +1,23 @@
 # PANDUAN LIVE DEPLOYMENT - HDA GO ECOSYSTEM (HOSTINGER VPS)
 
-Panduan ini berisi panduan praktis dan langkah-langkah konkret yang harus Anda ikuti untuk membuat website **HDA GO Ecosystem** Anda *Go Live* dengan domain Anda sendiri di VPS Hostinger yang baru Anda beli.
+Panduan ini berisi panduan praktis dan langkah-langkah konkret yang harus Anda ikuti untuk membuat website **HDA GO Ecosystem** Anda *Go Live* menggunakan domain Anda: **dashboardhdago.com** di VPS Hostinger.
 
 ---
 
 ## 🖥️ Informasi Server Anda (Berdasarkan Dashboard Hostinger)
 *   **Operating System**: Ubuntu 24.04 LTS (KVM 4)
 *   **IP VPS Publik**: `212.85.26.131`
-*   **Akses SSH**: `ssh root@212.85.26.131`
+*   **Akses Utama (SSH)**: `ssh root@212.85.26.131`
+*   **Domain Utama**: `dashboardhdago.com`
 
 ---
 
 ## 🚀 Langkah-Langkah Menuju Go Live (Dari Nol s.d Online)
 
 ### 📌 LANGKAH 1: Arahkan Domain ke IP VPS (DNS Setup)
-Sebelum mengonfigurasi server, Anda harus mengarahkan domain Anda (misal: `domainanda.com`) ke IP VPS agar Nginx & SSL Let's Encrypt dapat terhubung dengan benar.
+Sebelum mengonfigurasi server, Anda harus mengarahkan domain Anda (`dashboardhdago.com`) ke IP VPS agar Nginx & SSL Let's Encrypt dapat terhubung dengan benar.
 
-1.  Masuk ke **Dashboard Hostinger** ➡️ Klik menu **Domain** ➡️ Pilih domain Anda.
+1.  Masuk ke **Dashboard Hostinger** ➡️ Klik menu **Domain** ➡️ Pilih **dashboardhdago.com**.
 2.  Buka menu **DNS Zone / DNS Manager**.
 3.  Ubah atau tambahkan 2 buah **A Record** berikut:
     *   **Record 1**:
@@ -63,7 +64,7 @@ sudo bash setup_vps.sh
 
 ### 📝 Apa Saja yang Dilakukan Skrip Otomatisasi Tersebut?
 Ketika Anda menjalankan perintah di atas, skrip akan meminta 2 input sederhana:
-1.  **Domain Name**: Ketik nama domain Anda (Contoh: `domainanda.com` - *tanpa http/https*).
+1.  **Domain Name**: Ketik nama domain Anda: **dashboardhdago.com**
 2.  **Email Address**: Ketik alamat email Anda (digunakan untuk notifikasi perpanjangan SSL otomatis gratis Let's Encrypt).
 
 Setelah itu, **skrip akan mengotomatiskan seluruh hal berikut**:
@@ -74,7 +75,7 @@ Setelah itu, **skrip akan mengotomatiskan seluruh hal berikut**:
 *   Mengompilasi aplikasi NestJS backend dan menjalankannya menggunakan **Process Manager PM2** di latar belakang.
 *   Mengompilasi aplikasi NextJS frontend dan menjalankannya menggunakan **PM2** (Port 3000).
 *   Mengonfigurasi server proxy Nginx untuk mengalihkan rute HTTPS domain Anda ke Next.js, Backend API, dan rute WebSockets secara mulus.
-*   Memasang sertifikat SSL gratis Let's Encrypt yang bersertifikasi tepercaya secara otomatis.
+*   Memasang sertifikat SSL gratis Let's Encrypt yang bersertifikasi tepercaya secara otomatis untuk `dashboardhdago.com` dan `www.dashboardhdago.com`.
 
 ---
 
@@ -94,8 +95,8 @@ Agar setiap kali Anda melakukan `git push origin main` dari komputer lokal aplik
 ---
 
 ## 🔍 Cara Memantau & Membuka Website Setelah Sukses
-*   **Website Utama**: `https://domainanda.com`
-*   **API Endpoint**: `https://domainanda.com/api`
+*   🌐 **Website Utama**: `https://dashboardhdago.com`
+*   👤 **API Endpoint**: `https://dashboardhdago.com/api`
 *   **Melihat status proses server di VPS**:
     ```bash
     pm2 status
