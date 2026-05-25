@@ -49,15 +49,8 @@ export class SubmissionsService {
       },
     });
 
-    // 3. Create deliverable tracking
-    await this.prisma.submissionDeliverable.create({
-      data: {
-        submission_id: submission.id,
-        total_sow: totalSow,
-        completed_sow: 0,
-        remaining_sow: totalSow,
-      },
-    });
+    // 3. Create/sync deliverables
+    await this.syncDeliverables(creatorId, dto.campaign_id);
 
     // 4. Increment creator post count
     await this.prisma.creator.update({
@@ -131,7 +124,7 @@ export class SubmissionsService {
 
       // If GDrive upload failed or not available, use local file URL
       if (!fileUrl) {
-        fileUrl = `/uploads/${file.filename}`;
+        fileUrl = `/api/uploads/${file.filename}`;
         this.logger.warn(`⚠️ GDrive unavailable — file stored locally: ${fileUrl}`);
       }
 
@@ -174,7 +167,7 @@ export class SubmissionsService {
       await this.prisma.submission.update({
         where: { id: submissionId },
         data: {
-          tiktok_url: `/uploads/${file.filename}`,
+          tiktok_url: `/api/uploads/${file.filename}`,
           status: 'QC_REVIEW',
         },
       });
@@ -209,21 +202,9 @@ export class SubmissionsService {
     });
 
     // SOW TRACKING FLOW
+    await this.syncDeliverables(submission.creator_id, submission.campaign_id);
+
     if (dto.status === 'APPROVED') {
-      const deliverable = await this.prisma.submissionDeliverable.findUnique({
-        where: { submission_id: submissionId },
-      });
-
-      if (deliverable && deliverable.remaining_sow > 0) {
-        await this.prisma.submissionDeliverable.update({
-          where: { submission_id: submissionId },
-          data: {
-            completed_sow: { increment: 1 },
-            remaining_sow: { decrement: 1 },
-          },
-        });
-      }
-
       // Notify creator about approval
       await this.prisma.notification.create({
         data: {
@@ -253,18 +234,22 @@ export class SubmissionsService {
 
   // ── Mark as POSTED (content goes live) ──
   async markAsPosted(submissionId: string) {
-    return this.prisma.submission.update({
+    const updated = await this.prisma.submission.update({
       where: { id: submissionId },
       data: { status: 'POSTED', posted_at: new Date() },
     });
+    await this.syncDeliverables(updated.creator_id, updated.campaign_id);
+    return updated;
   }
 
   // ── Mark as COMPLETED ──
   async markAsCompleted(submissionId: string) {
-    return this.prisma.submission.update({
+    const updated = await this.prisma.submission.update({
       where: { id: submissionId },
       data: { status: 'COMPLETED', completed_at: new Date() },
     });
+    await this.syncDeliverables(updated.creator_id, updated.campaign_id);
+    return updated;
   }
 
   // ── GET SUBMISSIONS BY CREATOR ──
@@ -291,6 +276,39 @@ export class SubmissionsService {
       },
       orderBy: { submitted_at: 'desc' },
     });
+  }
+
+  // ── SYNC DELIVERABLES ACROSS SIBLINGS ──
+  private async syncDeliverables(creatorId: string, campaignId: string) {
+    const totalSow = (await this.prisma.campaign.findUnique({
+      where: { id: campaignId },
+      select: { sow_total: true },
+    }))?.sow_total || 1;
+
+    const siblingSubmissions = await this.prisma.submission.findMany({
+      where: { creator_id: creatorId, campaign_id: campaignId },
+      select: { id: true, status: true },
+    });
+
+    const approvedCount = siblingSubmissions.filter(s =>
+      ['APPROVED', 'POSTED', 'COMPLETED'].includes(s.status)
+    ).length;
+
+    for (const sib of siblingSubmissions) {
+      await this.prisma.submissionDeliverable.upsert({
+        where: { submission_id: sib.id },
+        create: {
+          submission_id: sib.id,
+          total_sow: totalSow,
+          completed_sow: approvedCount,
+          remaining_sow: Math.max(0, totalSow - approvedCount),
+        },
+        update: {
+          completed_sow: approvedCount,
+          remaining_sow: Math.max(0, totalSow - approvedCount),
+        },
+      });
+    }
   }
 
   // ── GET ALL PENDING QC (for CM dashboard) ──

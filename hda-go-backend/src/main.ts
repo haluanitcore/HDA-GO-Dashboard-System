@@ -1,12 +1,17 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
+import * as express from 'express';
+import * as path from 'path';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   // Global prefix: all routes start with /api
   app.setGlobalPrefix('api');
+
+  // Serve static files from tmp_uploads at /api/uploads route
+  app.use('/api/uploads', express.static(path.join(process.cwd(), 'tmp_uploads')));
 
   // Enable CORS for frontend — reads from env or defaults to localhost:3000
   const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:3000')
