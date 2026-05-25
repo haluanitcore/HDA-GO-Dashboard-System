@@ -1,17 +1,26 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { CreateSubmissionDto, ReviewSubmissionDto } from './dto/submission.dto';
+import { GDriveService } from '../gdrive/gdrive.service';
+import { CreateSubmissionUploadDto, ReviewSubmissionDto } from './dto/submission.dto';
+import * as fs from 'fs';
 
 @Injectable()
 export class SubmissionsService {
-  constructor(private prisma: PrismaService) {}
+  private readonly logger = new Logger(SubmissionsService.name);
+
+  constructor(
+    private prisma: PrismaService,
+    private gdriveService: GDriveService,
+  ) {}
 
   // ══════════════════════════════════════════════
-  // 20. SUBMISSION WORKFLOW
-  // Creator Create Content → Submit VT Link → Record Created → QC Queue Updated
+  // SUBMISSION WORKFLOW — Direct File Upload
+  // Creator Upload File → Save to VPS → Upload to GDrive CM → Auto-Delete from VPS
   // ══════════════════════════════════════════════
-  async create(creatorId: string, dto: CreateSubmissionDto) {
-    // Verify creator is participant of this campaign
+  async createWithUpload(creatorId: string, file: Express.Multer.File, dto: CreateSubmissionUploadDto) {
+    const totalSow = parseInt(dto.total_sow, 10) || 1;
+
+    // 1. Verify creator is participant of this campaign
     const participant = await this.prisma.campaignParticipant.findUnique({
       where: {
         campaign_id_creator_id: {
@@ -22,57 +31,158 @@ export class SubmissionsService {
     });
 
     if (!participant) {
+      // Clean up uploaded file
+      if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
       throw new BadRequestException('Kamu belum bergabung di campaign ini');
     }
 
+    // 2. Create submission record (status: UPLOADING)
     const submission = await this.prisma.submission.create({
       data: {
         campaign_id: dto.campaign_id,
         creator_id: creatorId,
-        tiktok_url: dto.tiktok_url,
-        status: 'QC_REVIEW', // Langsung masuk QC queue
+        tiktok_url: '', // Will be filled with GDrive link
+        status: 'UPLOADING',
+        file_name: file.originalname,
+        file_size: file.size,
+        file_type: file.mimetype,
       },
     });
 
-    // Create deliverable tracking
+    // 3. Create deliverable tracking
     await this.prisma.submissionDeliverable.create({
       data: {
         submission_id: submission.id,
-        total_sow: dto.total_sow,
+        total_sow: totalSow,
         completed_sow: 0,
-        remaining_sow: dto.total_sow,
+        remaining_sow: totalSow,
       },
     });
 
-    // Increment creator post count
+    // 4. Increment creator post count
     await this.prisma.creator.update({
       where: { user_id: creatorId },
       data: { total_posts: { increment: 1 } },
     });
 
-    // Notify CM about new submission in QC queue
-    const creator = await this.prisma.creator.findUnique({
-      where: { user_id: creatorId },
-      include: { user: { select: { name: true } } },
+    // 5. Background: Upload to Google Drive CM
+    this.uploadToGDriveAndCleanup(submission.id, creatorId, file).catch((err) => {
+      this.logger.error(`Background GDrive upload failed for submission ${submission.id}`, err);
     });
 
-    if (creator?.cm_id) {
-      await this.prisma.notification.create({
+    // 6. Return immediately (don't wait for GDrive upload)
+    return {
+      ...submission,
+      message: 'File berhasil diupload! Sedang dikirim ke Google Drive CM...',
+    };
+  }
+
+  /**
+   * Background job: Upload file to CM's Google Drive folder, then cleanup VPS
+   */
+  private async uploadToGDriveAndCleanup(
+    submissionId: string,
+    creatorId: string,
+    file: Express.Multer.File,
+  ) {
+    try {
+      // Get creator's CM info including gdrive folder
+      const creator = await this.prisma.creator.findUnique({
+        where: { user_id: creatorId },
+        include: {
+          user: { select: { name: true } },
+          cm_user: {
+            select: {
+              id: true,
+              name: true,
+              gdrive_url: true,
+              gdrive_folder_id: true,
+            },
+          },
+        },
+      });
+
+      let fileUrl = '';
+      let gdriveFileId: string | null = null;
+
+      // Determine the GDrive folder ID
+      const folderId = creator?.cm_user?.gdrive_folder_id
+        || GDriveService.extractFolderId(creator?.cm_user?.gdrive_url || '');
+
+      if (folderId && this.gdriveService.isAvailable()) {
+        // Upload to Google Drive
+        const creatorName = creator?.user?.name?.replace(/[^a-zA-Z0-9]/g, '_') || 'creator';
+        const timestamp = new Date().toISOString().split('T')[0];
+        const gdriveFileName = `${creatorName}_${timestamp}_${file.originalname}`;
+
+        const result = await this.gdriveService.uploadFile(
+          file.path,
+          gdriveFileName,
+          file.mimetype,
+          folderId,
+        );
+
+        if (result) {
+          fileUrl = result.webViewLink;
+          gdriveFileId = result.fileId;
+          this.logger.log(`✅ File uploaded to GDrive: ${fileUrl}`);
+        }
+      }
+
+      // If GDrive upload failed or not available, use local file URL
+      if (!fileUrl) {
+        fileUrl = `/uploads/${file.filename}`;
+        this.logger.warn(`⚠️ GDrive unavailable — file stored locally: ${fileUrl}`);
+      }
+
+      // Update submission with file URL and set status to QC_REVIEW
+      await this.prisma.submission.update({
+        where: { id: submissionId },
         data: {
-          user_id: creator.cm_id,
-          title: '📝 Submission Baru - QC Queue',
-          message: `${creator.user.name} submit VT untuk campaign. Menunggu QC review.`,
-          type: 'QC',
-          read_status: false,
+          tiktok_url: fileUrl,
+          gdrive_file_id: gdriveFileId,
+          status: 'QC_REVIEW',
+        },
+      });
+
+      // Delete local temp file if GDrive upload succeeded
+      if (gdriveFileId && fs.existsSync(file.path)) {
+        fs.unlinkSync(file.path);
+        this.logger.log(`🗑️ Temp file deleted from VPS: ${file.path}`);
+      }
+
+      // Notify CM about new submission
+      if (creator?.cm_id) {
+        const campaign = await this.prisma.campaign.findUnique({
+          where: { id: (await this.prisma.submission.findUnique({ where: { id: submissionId } }))?.campaign_id || '' },
+          select: { title: true },
+        });
+
+        await this.prisma.notification.create({
+          data: {
+            user_id: creator.cm_id,
+            title: '📝 Submission Baru - QC Queue',
+            message: `${creator.user.name} mengupload konten untuk campaign "${campaign?.title || ''}". File sudah di Google Drive Anda.`,
+            type: 'QC',
+            read_status: false,
+          },
+        });
+      }
+    } catch (error) {
+      this.logger.error(`❌ GDrive upload failed for submission ${submissionId}`, error);
+      // Set status to QC_REVIEW anyway with local path so submission isn't stuck
+      await this.prisma.submission.update({
+        where: { id: submissionId },
+        data: {
+          tiktok_url: `/uploads/${file.filename}`,
+          status: 'QC_REVIEW',
         },
       });
     }
-
-    return submission;
   }
 
   // ══════════════════════════════════════════════
-  // 21. SUBMISSION STATUS FLOW
+  // SUBMISSION STATUS FLOW
   // QC_REVIEW → APPROVED / REVISION → POSTED → COMPLETED
   // ══════════════════════════════════════════════
   async review(submissionId: string, dto: ReviewSubmissionDto) {
@@ -98,8 +208,7 @@ export class SubmissionsService {
       data: updateData,
     });
 
-    // ── 22. SOW TRACKING FLOW ──
-    // Submission Approved → completed_sow +1 → remaining_sow -1 → Progress Updated
+    // SOW TRACKING FLOW
     if (dto.status === 'APPROVED') {
       const deliverable = await this.prisma.submissionDeliverable.findUnique({
         where: { submission_id: submissionId },
@@ -120,7 +229,7 @@ export class SubmissionsService {
         data: {
           user_id: submission.creator_id,
           title: '✅ Submission Approved!',
-          message: `VT kamu telah disetujui oleh QC. ${dto.qc_notes || ''}`,
+          message: `Konten kamu telah disetujui oleh QC. ${dto.qc_notes || ''}`,
           type: 'QC',
           read_status: false,
         },
@@ -128,12 +237,11 @@ export class SubmissionsService {
     }
 
     if (dto.status === 'REVISION') {
-      // Notify creator about revision needed
       await this.prisma.notification.create({
         data: {
           user_id: submission.creator_id,
           title: '🔄 Revision Diperlukan',
-          message: `VT kamu perlu direvisi. Catatan: ${dto.qc_notes || 'Silakan cek kembali.'}`,
+          message: `Konten kamu perlu direvisi. Catatan: ${dto.qc_notes || 'Silakan cek kembali.'}`,
           type: 'QC',
           read_status: false,
         },
@@ -200,7 +308,7 @@ export class SubmissionsService {
     });
   }
 
-  // ── GET SOW PROGRESS BY CAMPAIGN (Dominos Pizza: 2/4 Posted) ──
+  // ── GET SOW PROGRESS BY CAMPAIGN ──
   async getSowProgress(campaignId: string) {
     const submissions = await this.prisma.submission.findMany({
       where: { campaign_id: campaignId },
@@ -220,6 +328,8 @@ export class SubmissionsService {
       creators: submissions.map((s) => ({
         name: s.creator.user.name,
         status: s.status,
+        fileName: s.file_name,
+        fileType: s.file_type,
         totalSow: s.deliverable?.total_sow || 0,
         completedSow: s.deliverable?.completed_sow || 0,
         remainingSow: s.deliverable?.remaining_sow || 0,

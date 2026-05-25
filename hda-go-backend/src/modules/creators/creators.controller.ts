@@ -17,6 +17,13 @@ export class CreatorsController {
     return this.creatorsService.getProfile(req.user.userId);
   }
 
+  // GET /creators/my-cm — Get assigned CM info for Creator
+  @Get('my-cm')
+  @Roles(Role.CREATOR)
+  getMyCM(@Req() req: any) {
+    return this.creatorsService.getMyCM(req.user.userId);
+  }
+
   // GET /creators/dashboard — Aggregated dashboard data
   @Get('dashboard')
   @Roles(Role.CREATOR)

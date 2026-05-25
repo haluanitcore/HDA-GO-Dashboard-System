@@ -1,25 +1,32 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { submissionService, campaignService, cmService } from '@/services';
+import { useEffect, useState, useRef, useCallback } from 'react';
+import { submissionService, campaignService, creatorService } from '@/services';
 import { Card, CardContent } from '@/components/ui/card';
-import { Video, Clock, CheckCircle2, AlertCircle, Send, Loader2, ExternalLink, Plus, BarChart3, UploadCloud, FolderOpen, ChevronDown } from 'lucide-react';
+import { Video, Clock, CheckCircle2, AlertCircle, Send, Loader2, ExternalLink, Plus, BarChart3, UploadCloud, FolderOpen, FileVideo, ImageIcon, X, CloudUpload } from 'lucide-react';
 import { api } from '@/services/api';
+
+const ALLOWED_VIDEO = ['video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/webm'];
+const ALLOWED_IMAGE = ['image/jpeg', 'image/png', 'image/webp'];
+const ALL_ALLOWED = [...ALLOWED_VIDEO, ...ALLOWED_IMAGE];
+const MAX_VIDEO_MB = 200;
+const MAX_IMAGE_MB = 50;
 
 export default function SubmissionsPage() {
   const [mySubmissions, setMySubmissions] = useState<any[]>([]);
   const [joinedCampaigns, setJoinedCampaigns] = useState<any[]>([]);
-  const [cmList, setCmList] = useState<any[]>([]);
+  const [myCm, setMyCm] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Form State
   const [selectedCampaign, setSelectedCampaign] = useState('');
-  const [selectedCm, setSelectedCm] = useState('');
-  const [videoUrl, setVideoUrl] = useState('');
-  const [totalSow, setTotalSow] = useState('1');
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // GMV Report State
   const [reportingSub, setReportingSub] = useState<any>(null);
@@ -35,10 +42,10 @@ export default function SubmissionsPage() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [subs, hubData, cms] = await Promise.all([
+      const [subs, hubData, cmData] = await Promise.all([
         submissionService.getMine().catch(() => []),
         campaignService.getHub().catch(() => []),
-        cmService.getCmList().catch(() => []),
+        creatorService.getMyCM().catch(() => null),
       ]);
 
       setMySubmissions(Array.isArray(subs) ? subs : []);
@@ -47,7 +54,7 @@ export default function SubmissionsPage() {
         ? hubData.filter((c: any) => c.alreadyJoined === true)
         : [];
       setJoinedCampaigns(joined);
-      setCmList(Array.isArray(cms) ? cms : []);
+      setMyCm(cmData);
     } catch (err) {
       console.error(err);
     } finally {
@@ -55,67 +62,86 @@ export default function SubmissionsPage() {
     }
   };
 
-  const selectedCmData = cmList.find(cm => cm.id === selectedCm);
+  // ── File Validation ──
+  const validateFile = (file: File): string | null => {
+    if (!ALL_ALLOWED.includes(file.type)) {
+      return `Format "${file.type}" tidak didukung. Hanya video (.mp4, .mov, .avi, .webm) dan foto (.jpg, .png, .webp).`;
+    }
+    const isVideo = ALLOWED_VIDEO.includes(file.type);
+    const maxMB = isVideo ? MAX_VIDEO_MB : MAX_IMAGE_MB;
+    const sizeMB = file.size / (1024 * 1024);
+    if (sizeMB > maxMB) {
+      return `Ukuran file (${sizeMB.toFixed(1)}MB) melebihi batas ${maxMB}MB untuk ${isVideo ? 'video' : 'foto'}.`;
+    }
+    return null;
+  };
 
+  const handleFileSelect = (file: File | null) => {
+    setError('');
+    if (!file) { setUploadFile(null); return; }
+    const err = validateFile(file);
+    if (err) { setError(err); return; }
+    setUploadFile(file);
+  };
+
+  // ── Drag & Drop Handlers ──
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleFileSelect(file);
+  }, []);
+
+  // ── Submit ──
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccess('');
 
-    if (!selectedCampaign) {
-      setError('Pilih campaign terlebih dahulu');
-      return;
-    }
-    if (!selectedCm) {
-      setError('Pilih Campaign Manager (CM) terlebih dahulu');
-      return;
-    }
-    if (!videoUrl) {
-      setError('Masukkan link video Google Drive kamu');
-      return;
-    }
-    if (!videoUrl.startsWith('http')) {
-      setError('URL video tidak valid, pastikan dimulai dengan https://');
-      return;
-    }
-
-    const sowNum = parseInt(totalSow, 10);
-    if (!sowNum || sowNum < 1) {
-      setError('Jumlah SOW minimal 1');
-      return;
-    }
+    if (!selectedCampaign) { setError('Pilih campaign terlebih dahulu'); return; }
+    if (!uploadFile) { setError('Upload file video atau foto terlebih dahulu'); return; }
 
     setIsSubmitting(true);
+    setUploadProgress(0);
+
     try {
       const camp = joinedCampaigns.find(c => c.id === selectedCampaign);
-      await submissionService.submit({
-        campaign_id: selectedCampaign,
-        tiktok_url: videoUrl, // Field tetap tiktok_url di backend, diisi dengan GDrive link
-        total_sow: camp?.sow_total || sowNum,
-      });
-      setSuccess('✅ Video berhasil disubmit! Menunggu QC review dari CM.');
-      setVideoUrl('');
-      setTotalSow('1');
+      await submissionService.upload(
+        uploadFile,
+        selectedCampaign,
+        camp?.sow_total || 1,
+        (pct) => setUploadProgress(pct),
+      );
+      setSuccess('✅ Konten berhasil diupload! Sedang dikirim ke Google Drive CM Anda.');
+      setUploadFile(null);
       setSelectedCampaign('');
-      setSelectedCm('');
+      setUploadProgress(0);
       await fetchData();
     } catch (err: any) {
-      setError(err.message || 'Gagal submit, coba lagi.');
+      setError(err.message || 'Upload gagal, coba lagi.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  // ── GMV Report Handlers ──
   const handleOcrUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
     setOcrFile(file);
     setOcrLoading(true);
-    
     const formData = new FormData();
     formData.append('file', file);
-    
     try {
       const token = localStorage.getItem('accessToken');
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api'}/gmv/ocr-parse`, {
@@ -124,7 +150,6 @@ export default function SubmissionsPage() {
         body: formData,
       });
       const data = await response.json();
-      
       if (data?.success) {
         setGmvData(prev => ({
           ...prev,
@@ -167,13 +192,16 @@ export default function SubmissionsPage() {
   };
 
   const statusConfig: Record<string, { label: string; color: string; bg: string; Icon: any }> = {
-    DRAFT:      { label: 'Draft',       color: 'text-gray-400',    bg: 'bg-gray-500/10',    Icon: Clock },
+    UPLOADING:  { label: 'Uploading',  color: 'text-sky-400',     bg: 'bg-sky-500/10',     Icon: CloudUpload },
+    DRAFT:      { label: 'Draft',      color: 'text-gray-400',    bg: 'bg-gray-500/10',    Icon: Clock },
     QC_REVIEW:  { label: 'QC Review',  color: 'text-amber-500',   bg: 'bg-amber-500/10',   Icon: Clock },
     APPROVED:   { label: 'Approved',   color: 'text-emerald-500', bg: 'bg-emerald-500/10', Icon: CheckCircle2 },
     REVISION:   { label: 'Revision',   color: 'text-red-500',     bg: 'bg-red-500/10',     Icon: AlertCircle },
     POSTED:     { label: 'Posted',     color: 'text-blue-400',    bg: 'bg-blue-500/10',    Icon: CheckCircle2 },
     COMPLETED:  { label: 'Completed',  color: 'text-purple-400',  bg: 'bg-purple-500/10',  Icon: CheckCircle2 },
   };
+
+  const isVideo = (type: string) => ALLOWED_VIDEO.includes(type);
 
   if (isLoading) {
     return (
@@ -191,7 +219,7 @@ export default function SubmissionsPage() {
     <div className="space-y-8 pb-12 max-w-5xl">
       <div>
         <h1 className="text-3xl font-black text-white tracking-tight">Deliverables Submission</h1>
-        <p className="text-gray-500 font-medium mt-1">Submit video campaign kamu melalui Google Drive CM dan pantau status persetujuan.</p>
+        <p className="text-gray-500 font-medium mt-1">Upload video/foto campaign kamu langsung — otomatis dikirim ke Google Drive CM.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -252,90 +280,120 @@ export default function SubmissionsPage() {
                   </select>
                 </div>
 
-                {/* CM Dropdown */}
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                    Campaign Manager (CM)
-                  </label>
-                  <select
-                    value={selectedCm}
-                    onChange={(e) => setSelectedCm(e.target.value)}
-                    disabled={joinedCampaigns.length === 0}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 appearance-none disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    <option value="" disabled className="bg-[#121212]">Pilih CM kamu...</option>
-                    {cmList.map(cm => (
-                      <option key={cm.id} value={cm.id} className="bg-[#121212]">
-                        {cm.name} {!cm.gdrive_url ? '(Folder belum diatur)' : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* GDrive Redirect Button — Muncul hanya jika CM dipilih dan punya GDrive URL */}
-                {selectedCmData && (
-                  <div className={`rounded-xl p-4 border ${selectedCmData.gdrive_url ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-amber-500/5 border-amber-500/20'}`}>
-                    {selectedCmData.gdrive_url ? (
-                      <>
-                        <p className="text-xs text-gray-400 mb-2.5">
-                          📁 Unggah video kamu ke folder Google Drive milik <span className="text-white font-bold">{selectedCmData.name}</span>, lalu salin link berkasnya ke bawah.
-                        </p>
-                        <a
-                          href={selectedCmData.gdrive_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="flex items-center justify-center gap-2 w-full bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 text-xs font-bold py-2.5 px-4 rounded-lg transition-all border border-emerald-500/30"
-                        >
-                          <FolderOpen className="h-3.5 w-3.5" />
-                          Buka Google Drive {selectedCmData.name}
-                          <ExternalLink className="h-3 w-3 ml-auto" />
-                        </a>
-                      </>
-                    ) : (
-                      <p className="text-xs text-amber-400 font-medium">
-                        ⚠️ CM <span className="font-bold">{selectedCmData.name}</span> belum mengatur folder Google Drive-nya. Hubungi CM Anda untuk mengisi tautan drive di menu Settings mereka.
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {/* Video URL Input (Google Drive link) */}
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                    Link Video Google Drive
-                  </label>
-                  <input
-                    type="url"
-                    value={videoUrl}
-                    onChange={(e) => setVideoUrl(e.target.value)}
-                    placeholder="https://drive.google.com/file/d/..."
-                    disabled={joinedCampaigns.length === 0}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 disabled:opacity-40 disabled:cursor-not-allowed"
-                  />
-                  <p className="text-[10px] text-gray-600 ml-1">
-                    Setelah upload ke Drive CM, klik kanan file → "Bagikan" → salin link-nya ke sini.
-                  </p>
-                </div>
-
-                {/* Selected campaign info */}
+                {/* Campaign Info + CM Info (auto) */}
                 {selectedCampaign && (() => {
                   const camp = joinedCampaigns.find(c => c.id === selectedCampaign);
                   return camp ? (
-                    <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-3 text-xs">
+                    <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-3 text-xs space-y-1.5">
                       <p className="font-bold text-white">{camp.title}</p>
-                      <p className="text-gray-400 mt-1">Total SOW: <span className="text-white font-bold">{camp.sow_total} konten</span></p>
+                      <p className="text-gray-400">Total SOW: <span className="text-white font-bold">{camp.sow_total} konten</span></p>
                       <p className="text-gray-400">Deadline: <span className="text-white font-bold">{new Date(camp.deadline).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</span></p>
+                      {myCm?.cm_name && (
+                        <p className="text-gray-400">CM: <span className="text-emerald-400 font-bold">👤 {myCm.cm_name}</span></p>
+                      )}
                     </div>
                   ) : null;
                 })()}
 
+                {/* ── DRAG & DROP UPLOAD ZONE ── */}
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                    Upload Video / Foto
+                  </label>
+
+                  {!uploadFile ? (
+                    <div
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onDrop={handleDrop}
+                      onClick={() => fileInputRef.current?.click()}
+                      className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all ${
+                        isDragOver
+                          ? 'border-blue-500 bg-blue-500/10 scale-[1.02]'
+                          : 'border-white/10 bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.04]'
+                      } ${joinedCampaigns.length === 0 ? 'opacity-40 pointer-events-none' : ''}`}
+                    >
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="video/mp4,video/quicktime,video/x-msvideo,video/webm,image/jpeg,image/png,image/webp"
+                        onChange={(e) => handleFileSelect(e.target.files?.[0] || null)}
+                        className="hidden"
+                      />
+                      <UploadCloud className={`h-8 w-8 mx-auto mb-2 ${isDragOver ? 'text-blue-400' : 'text-gray-600'}`} />
+                      <p className="text-sm font-bold text-white">
+                        {isDragOver ? 'Lepaskan file di sini' : 'Drag & drop file di sini'}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">atau klik untuk browse</p>
+                      <div className="flex items-center justify-center gap-3 mt-3">
+                        <span className="text-[10px] text-gray-600 flex items-center gap-1">
+                          <FileVideo className="h-3 w-3" /> .mp4 .mov (maks {MAX_VIDEO_MB}MB)
+                        </span>
+                        <span className="text-[10px] text-gray-600 flex items-center gap-1">
+                          <ImageIcon className="h-3 w-3" /> .jpg .png (maks {MAX_IMAGE_MB}MB)
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-gray-600 mt-1">⚠️ Hanya 1 file per submission</p>
+                    </div>
+                  ) : (
+                    // ── File Preview ──
+                    <div className="bg-white/5 border border-white/10 rounded-2xl p-4 relative">
+                      <button
+                        type="button"
+                        onClick={() => { setUploadFile(null); setUploadProgress(0); }}
+                        className="absolute top-2 right-2 text-gray-500 hover:text-red-400 transition-colors p-1"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                      <div className="flex items-center gap-3">
+                        <div className={`h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                          isVideo(uploadFile.type) ? 'bg-purple-500/10' : 'bg-sky-500/10'
+                        }`}>
+                          {isVideo(uploadFile.type)
+                            ? <FileVideo className="h-5 w-5 text-purple-400" />
+                            : <ImageIcon className="h-5 w-5 text-sky-400" />
+                          }
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-bold text-white truncate">{uploadFile.name}</p>
+                          <p className="text-[10px] text-gray-500 mt-0.5">
+                            {(uploadFile.size / (1024 * 1024)).toFixed(1)} MB • {isVideo(uploadFile.type) ? 'Video' : 'Foto'}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Progress Bar */}
+                      {isSubmitting && (
+                        <div className="mt-3 space-y-1.5">
+                          <div className="w-full bg-white/5 rounded-full h-2 overflow-hidden">
+                            <div
+                              className="h-full bg-gradient-to-r from-blue-500 to-emerald-500 rounded-full transition-all duration-300 ease-out"
+                              style={{ width: `${uploadProgress}%` }}
+                            />
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <p className="text-[10px] text-blue-400 font-medium flex items-center gap-1">
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                              {uploadProgress < 100
+                                ? `Mengunggah... ${uploadProgress}%`
+                                : 'Mengirim ke Drive CM...'
+                              }
+                            </p>
+                            <span className="text-[10px] text-gray-600 font-bold">{uploadProgress}%</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
                 <button
                   type="submit"
-                  disabled={isSubmitting || joinedCampaigns.length === 0}
+                  disabled={isSubmitting || joinedCampaigns.length === 0 || !uploadFile}
                   className="w-full bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed mt-2"
                 >
                   {isSubmitting
-                    ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Submitting...</>
+                    ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Uploading...</>
                     : <><Send className="h-4 w-4 mr-2" /> Submit Konten</>
                   }
                 </button>
@@ -359,15 +417,15 @@ export default function SubmissionsPage() {
             <div className="bg-[#121212] border border-dashed border-white/10 rounded-3xl p-12 text-center">
               <Video className="h-12 w-12 text-gray-700 mx-auto mb-4" />
               <p className="text-gray-400 font-medium">Belum ada submission.</p>
-              <p className="text-gray-600 text-sm mt-1">Submit video campaign kamu dari form di samping.</p>
+              <p className="text-gray-600 text-sm mt-1">Upload konten campaign kamu dari form di samping.</p>
             </div>
           ) : (
             <div className="space-y-3">
               {mySubmissions.map((sub: any) => {
                 const cfg = statusConfig[sub.status] || statusConfig['DRAFT'];
                 const Icon = cfg.Icon;
-                // Deteksi apakah ini Google Drive link atau TikTok
                 const isGdrive = sub.tiktok_url?.includes('drive.google.com');
+                const hasFile = sub.file_name;
 
                 return (
                   <div
@@ -383,21 +441,44 @@ export default function SubmissionsPage() {
                           <h3 className="font-bold text-white text-sm leading-none truncate">
                             {sub.campaign?.title || 'Unknown Campaign'}
                           </h3>
-                          <a
-                            href={sub.tiktok_url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-xs text-emerald-400 hover:text-emerald-300 hover:underline mt-1.5 flex items-center gap-1 truncate max-w-[280px]"
-                          >
-                            {isGdrive
-                              ? <FolderOpen className="h-3 w-3 flex-shrink-0" />
-                              : <ExternalLink className="h-3 w-3 flex-shrink-0" />
-                            }
-                            {isGdrive ? 'Lihat Video di Google Drive' : sub.tiktok_url}
-                          </a>
+
+                          {/* File info */}
+                          {hasFile && (
+                            <p className="text-[10px] text-gray-500 mt-1 flex items-center gap-1">
+                              {sub.file_type?.startsWith('video')
+                                ? <FileVideo className="h-3 w-3" />
+                                : <ImageIcon className="h-3 w-3" />
+                              }
+                              {sub.file_name} • {sub.file_size ? `${(sub.file_size / (1024 * 1024)).toFixed(1)}MB` : ''}
+                            </p>
+                          )}
+
+                          {/* Link to file */}
+                          {sub.tiktok_url && sub.status !== 'UPLOADING' && (
+                            <a
+                              href={sub.tiktok_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-xs text-emerald-400 hover:text-emerald-300 hover:underline mt-1 flex items-center gap-1 truncate max-w-[280px]"
+                            >
+                              {isGdrive
+                                ? <FolderOpen className="h-3 w-3 flex-shrink-0" />
+                                : <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                              }
+                              {isGdrive ? 'Lihat File di Google Drive' : 'Lihat File'}
+                            </a>
+                          )}
+
+                          {sub.status === 'UPLOADING' && (
+                            <p className="text-[10px] text-sky-400 mt-1 flex items-center gap-1">
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                              Sedang diupload ke Drive CM...
+                            </p>
+                          )}
+
                           {sub.qc_notes && (
                             <p className="text-[11px] text-gray-500 mt-1.5 italic">
-                              📝 CM: "{sub.qc_notes}"
+                              📝 CM: &quot;{sub.qc_notes}&quot;
                             </p>
                           )}
                         </div>

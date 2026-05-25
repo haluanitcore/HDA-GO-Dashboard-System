@@ -90,6 +90,46 @@ class ApiClient {
   delete<T>(endpoint: string) {
     return this.request<T>(endpoint, { method: 'DELETE' });
   }
+
+  // ── Upload with progress tracking (for file uploads) ──
+  uploadWithProgress<T>(
+    endpoint: string,
+    formData: FormData,
+    onProgress?: (percent: number) => void,
+  ): Promise<T> {
+    return new Promise((resolve, reject) => {
+      const token = this.getToken();
+      const xhr = new XMLHttpRequest();
+
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+          const percent = Math.round((e.loaded / e.total) * 100);
+          onProgress?.(percent);
+        }
+      };
+
+      xhr.onload = () => {
+        try {
+          const data = JSON.parse(xhr.responseText);
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve(data as T);
+          } else {
+            reject(new Error(data.message || 'Upload gagal'));
+          }
+        } catch {
+          reject(new Error('Upload gagal — response tidak valid'));
+        }
+      };
+
+      xhr.onerror = () => reject(new Error('Upload gagal — koneksi terputus'));
+      xhr.ontimeout = () => reject(new Error('Upload gagal — waktu habis'));
+
+      xhr.open('POST', `${API_BASE}${endpoint}`);
+      if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      xhr.timeout = 5 * 60 * 1000; // 5 minutes timeout for large files
+      xhr.send(formData);
+    });
+  }
 }
 
 export const api = new ApiClient();

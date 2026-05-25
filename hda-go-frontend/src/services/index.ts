@@ -9,6 +9,7 @@ export const creatorService = {
   getDashboard: () => api.get<any>('/creators/dashboard'),
   getProfile: () => api.get<any>('/creators/profile'),
   updateStreak: () => api.patch<any>('/creators/streak'),
+  getMyCM: () => api.get<any>('/creators/my-cm'),
 };
 
 export const campaignService = {
@@ -30,8 +31,13 @@ export const campaignService = {
 
 export const submissionService = {
   getMine: () => api.get<any>('/submissions/my'),
-  submit: (data: { campaign_id: string; tiktok_url: string; total_sow: number }) =>
-    api.post<any>('/submissions', data),
+  upload: (file: File, campaignId: string, totalSow: number, onProgress?: (pct: number) => void) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('campaign_id', campaignId);
+    formData.append('total_sow', totalSow.toString());
+    return api.uploadWithProgress<any>('/submissions/upload', formData, onProgress);
+  },
   getSowProgress: (campaignId: string) => 
     api.get<any>(`/submissions/sow/${campaignId}`),
   getQcQueue: () => api.get<any>('/submissions/qc-queue'),

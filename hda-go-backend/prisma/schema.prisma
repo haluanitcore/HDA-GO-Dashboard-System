@@ -22,9 +22,11 @@ model User {
   avatar_url    String?
   bio           String?
   phone         String?
-  gdrive_url    String?         // Tautan Folder Google Drive (Khusus CM)
+  gdrive_url        String?         // Tautan Folder Google Drive (Khusus CM)
+  gdrive_folder_id  String?         // Google Drive Folder ID (untuk API upload)
   
   creator       Creator?
+  managed_creators Creator[] @relation("CreatorCM")
   notifications Notification[]
   preferences   UserPreferences?
 }
@@ -46,6 +48,7 @@ model Creator {
   live_participation Int               @default(0)    // LIVE sessions joined
   posting_consistency Float            @default(0)    // % consistency score
   cm_id             String?
+  cm_user           User?              @relation("CreatorCM", fields: [cm_id], references: [id])
 
   progress          CreatorProgress?
   participants      CampaignParticipant[]
@@ -197,13 +200,17 @@ model Submission {
   id                String                 @id @default(uuid())
   campaign_id       String
   creator_id        String
-  tiktok_url        String
-  status            String                 // DRAFT, QC_REVIEW, APPROVED, REVISION, POSTED, COMPLETED
+  tiktok_url        String                 // Akan berisi GDrive link setelah upload selesai
+  status            String                 // UPLOADING, QC_REVIEW, APPROVED, REVISION, POSTED, COMPLETED
   qc_notes          String?
   submitted_at      DateTime               @default(now())
   reviewed_at       DateTime?
   posted_at         DateTime?
   completed_at      DateTime?
+  file_name         String?                // Nama file asli (e.g. "promo_v2.mp4")
+  file_size         Int?                   // Ukuran file dalam bytes
+  file_type         String?                // MIME type (video/mp4, image/jpeg)
+  gdrive_file_id    String?                // Google Drive File ID
 
   campaign          Campaign               @relation(fields: [campaign_id], references: [id])
   creator           Creator                @relation(fields: [creator_id], references: [user_id])

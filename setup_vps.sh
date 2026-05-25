@@ -116,9 +116,10 @@ EOT
 
 echo -e "\e[32m[OK] Generated secure .env file with fresh JWT secret keys.\e[0m"
 
-# Run Prisma schema push & seed
+# Run Prisma schema push, generate client & seed
 echo -e "\e[33mRunning database migrations & seeder...\e[0m"
 npx prisma db push
+npx prisma generate
 npx prisma db seed
 
 # Build backend

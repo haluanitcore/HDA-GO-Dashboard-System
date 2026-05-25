@@ -49,6 +49,22 @@ export class CmCreatorsService {
       });
     });
 
+    // Send welcome notification to the new Creator
+    const cmUser = await this.prisma.user.findUnique({
+      where: { id: cmId },
+      select: { name: true },
+    });
+
+    await this.prisma.notification.create({
+      data: {
+        user_id: userId,
+        title: '👋 Selamat Datang di HDA GO!',
+        message: `Anda telah ditugaskan ke Campaign Manager: ${cmUser?.name || 'CM'}. Upload konten campaign dari menu Submissions!`,
+        type: 'SYSTEM',
+        read_status: false,
+      },
+    });
+
     return { success: true, creator_id: userId, credentials: { username: dto.email, tempPassword } };
   }
 

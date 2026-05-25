@@ -19,6 +19,38 @@ export class CreatorsService {
   }
 
   // ──────────────────────────────────────────────
+  // GET MY CM — Get assigned Campaign Manager info
+  // ──────────────────────────────────────────────
+  async getMyCM(userId: string) {
+    const creator = await this.prisma.creator.findUnique({
+      where: { user_id: userId },
+      select: {
+        cm_id: true,
+        cm_user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            gdrive_url: true,
+            gdrive_folder_id: true,
+          },
+        },
+      },
+    });
+
+    if (!creator?.cm_user) {
+      return { cm_id: null, cm_name: null, cm_email: null, gdrive_url: null };
+    }
+
+    return {
+      cm_id: creator.cm_user.id,
+      cm_name: creator.cm_user.name,
+      cm_email: creator.cm_user.email,
+      gdrive_url: creator.cm_user.gdrive_url,
+    };
+  }
+
+  // ──────────────────────────────────────────────
   // CREATOR DASHBOARD AGGREGATION
   // Frontend Request Dashboard API → Backend Aggregate → Return all data
   // ──────────────────────────────────────────────
