@@ -1,4 +1,5 @@
-name: Production Deployment to Hostinger VPS
+# Production Deployment to Hostinger VPS
+# Triggered on every push to main branch with clean builds
 
 on:
   push:
