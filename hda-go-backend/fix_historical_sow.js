@@ -1,8 +1,14 @@
 const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const { PrismaBetterSqlite3 } = require('@prisma/adapter-better-sqlite3');
+const path = require('path');
+
+// Initialize Prisma with the Better-Sqlite3 Adapter
+const dbPath = path.resolve(__dirname, 'dev.db');
+const adapter = new PrismaBetterSqlite3({ url: dbPath });
+const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  console.log('🔄 Starting historical SOW synchronization...');
+  console.log('🔄 Starting historical SOW database synchronization...');
   
   // 1. Get all submissions with campaign info
   const submissions = await prisma.submission.findMany({
