@@ -402,4 +402,80 @@ export class SubmissionsService {
       })),
     };
   }
+
+  // ── GET DYNAMIC QC PERFORMANCE METRICS ──
+  async getQcStats() {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+
+    // Reviewed today: reviewed_at is today, status is APPROVED, REVISION, or REJECTED
+    const reviewedToday = await this.prisma.submission.count({
+      where: {
+        reviewed_at: {
+          gte: todayStart,
+          lte: todayEnd,
+        },
+        status: {
+          in: ['APPROVED', 'REVISION', 'REJECTED', 'POSTED', 'COMPLETED'],
+        },
+      },
+    });
+
+    // Total reviewed historically (to compute rates)
+    const totalReviewed = await this.prisma.submission.count({
+      where: {
+        status: {
+          in: ['APPROVED', 'REVISION', 'REJECTED', 'POSTED', 'COMPLETED'],
+        },
+      },
+    });
+
+    let approvalRate = 0;
+    let revisionRate = 0;
+    let rejectionRate = 0;
+
+    if (totalReviewed > 0) {
+      const approvedCount = await this.prisma.submission.count({
+        where: {
+          status: {
+            in: ['APPROVED', 'POSTED', 'COMPLETED'],
+          },
+        },
+      });
+
+      const revisionCount = await this.prisma.submission.count({
+        where: {
+          status: 'REVISION',
+        },
+      });
+
+      const rejectedCount = await this.prisma.submission.count({
+        where: {
+          status: 'REJECTED',
+        },
+      });
+
+      approvalRate = Math.round((approvedCount / totalReviewed) * 100);
+      revisionRate = Math.round((revisionCount / totalReviewed) * 100);
+      rejectionRate = Math.round((rejectedCount / totalReviewed) * 100);
+    }
+
+    const pendingCount = await this.prisma.submission.count({
+      where: {
+        status: 'QC_REVIEW',
+      },
+    });
+
+    return {
+      reviewedToday,
+      dailyTarget: 60,
+      approvalRate,
+      revisionRate,
+      rejectionRate,
+      pendingCount,
+    };
+  }
 }

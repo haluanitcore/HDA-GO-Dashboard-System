@@ -74,6 +74,13 @@ export class SubmissionsController {
     return this.submissionsService.findPendingQC();
   }
 
+  // GET /submissions/qc-stats — Performance stats for QC Team Dashboard
+  @Get('qc-stats')
+  @Roles(Role.CM, Role.ADMIN, Role.QC)
+  getQcStats() {
+    return this.submissionsService.getQcStats();
+  }
+
   // GET /submissions/sow/:campaignId — SOW progress by campaign
   @Get('sow/:campaignId')
   @Roles(Role.CM, Role.ADMIN, Role.BRAND, Role.QC)

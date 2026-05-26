@@ -41,6 +41,7 @@ export const submissionService = {
   getSowProgress: (campaignId: string) => 
     api.get<any>(`/submissions/sow/${campaignId}`),
   getQcQueue: () => api.get<any>('/submissions/qc-queue'),
+  getQcStats: () => api.get<any>('/submissions/qc-stats'),
   review: (id: string, data: { 
     status: string; 
     qc_notes?: string; 
