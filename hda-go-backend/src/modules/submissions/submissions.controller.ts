@@ -4,7 +4,7 @@ import { RolesGuard } from '../../common/roles.guard';
 import { Roles } from '../../common/roles.decorator';
 import { Role } from '../../common/roles.enum';
 import { SubmissionsService } from './submissions.service';
-import { CreateSubmissionUploadDto, ReviewSubmissionDto } from './dto/submission.dto';
+import { CreateSubmissionUploadDto, ReviewSubmissionDto, BulkReviewDto } from './dto/submission.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { multerConfig, validateFileSize } from '../../config/upload.config';
 
@@ -37,6 +37,13 @@ export class SubmissionsController {
   @Roles(Role.CM, Role.ADMIN)
   review(@Param('id') id: string, @Body() dto: ReviewSubmissionDto) {
     return this.submissionsService.review(id, dto);
+  }
+
+  // PATCH /submissions/bulk-review — CM reviews multiple submissions in batch
+  @Patch('bulk-review')
+  @Roles(Role.CM, Role.ADMIN)
+  bulkReview(@Body() dto: BulkReviewDto) {
+    return this.submissionsService.bulkReview(dto);
   }
 
   // PATCH /submissions/:id/posted — Mark as posted (content live)

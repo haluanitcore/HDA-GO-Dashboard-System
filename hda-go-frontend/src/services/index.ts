@@ -41,8 +41,27 @@ export const submissionService = {
   getSowProgress: (campaignId: string) => 
     api.get<any>(`/submissions/sow/${campaignId}`),
   getQcQueue: () => api.get<any>('/submissions/qc-queue'),
-  review: (id: string, data: { status: 'APPROVED' | 'REVISION'; qc_notes?: string }) => 
+  review: (id: string, data: { 
+    status: string; 
+    qc_notes?: string; 
+    quality_score?: number;
+    checked_items?: string;
+    qc_issues?: string;
+    internal_tags?: string;
+    schedule_posting?: string;
+    reviewer_id?: string;
+  }) => 
     api.patch<any>(`/submissions/${id}/review`, data),
+  bulkReview: (data: {
+    submissionIds: string[];
+    status: string;
+    qc_notes?: string;
+    qc_issues?: string;
+    internal_tags?: string;
+    schedule_posting?: string;
+    reviewer_id?: string;
+  }) => 
+    api.patch<any>('/submissions/bulk-review', data),
 };
 
 export const gmvService = {

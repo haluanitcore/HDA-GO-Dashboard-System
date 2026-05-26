@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { GDriveService } from '../gdrive/gdrive.service';
-import { CreateSubmissionUploadDto, ReviewSubmissionDto } from './dto/submission.dto';
+import { CreateSubmissionUploadDto, ReviewSubmissionDto, BulkReviewDto } from './dto/submission.dto';
 import * as fs from 'fs';
 
 @Injectable()
@@ -176,7 +176,7 @@ export class SubmissionsService {
 
   // ══════════════════════════════════════════════
   // SUBMISSION STATUS FLOW
-  // QC_REVIEW → APPROVED / REVISION → POSTED → COMPLETED
+  // QC_REVIEW → APPROVED / REVISION / REJECTED → POSTED → COMPLETED
   // ══════════════════════════════════════════════
   async review(submissionId: string, dto: ReviewSubmissionDto) {
     const submission = await this.prisma.submission.findUnique({
@@ -189,11 +189,28 @@ export class SubmissionsService {
     const updateData: any = {
       status: dto.status,
       qc_notes: dto.qc_notes,
+      quality_score: dto.quality_score !== undefined ? dto.quality_score : undefined,
+      checked_items: dto.checked_items !== undefined ? dto.checked_items : undefined,
+      qc_issues: dto.qc_issues !== undefined ? dto.qc_issues : undefined,
+      internal_tags: dto.internal_tags !== undefined ? dto.internal_tags : undefined,
+      schedule_posting: dto.schedule_posting ? new Date(dto.schedule_posting) : undefined,
+      reviewer_id: dto.reviewer_id !== undefined ? dto.reviewer_id : undefined,
     };
 
     // Set review timestamp
-    if (dto.status === 'APPROVED' || dto.status === 'REVISION') {
+    if (dto.status === 'APPROVED' || dto.status === 'REVISION' || dto.status === 'REJECTED') {
       updateData.reviewed_at = new Date();
+    }
+
+    if (dto.status === 'REVISION' || dto.status === 'REJECTED') {
+      updateData.revision_count = { increment: 1 };
+      // Default revision deadline: 2 days from now
+      const deadline = new Date();
+      deadline.setDate(deadline.getDate() + 2);
+      updateData.revision_deadline = deadline;
+    } else if (dto.status === 'APPROVED') {
+      // Clear revision deadline on approval
+      updateData.revision_deadline = null;
     }
 
     const updated = await this.prisma.submission.update({
@@ -205,7 +222,6 @@ export class SubmissionsService {
     await this.syncDeliverables(submission.creator_id, submission.campaign_id);
 
     if (dto.status === 'APPROVED') {
-      // Notify creator about approval
       await this.prisma.notification.create({
         data: {
           user_id: submission.creator_id,
@@ -229,10 +245,42 @@ export class SubmissionsService {
       });
     }
 
+    if (dto.status === 'REJECTED') {
+      await this.prisma.notification.create({
+        data: {
+          user_id: submission.creator_id,
+          title: '❌ Submission Ditolak',
+          message: `Konten kamu ditolak oleh QC. Catatan: ${dto.qc_notes || 'Silakan hubungi CM.'}`,
+          type: 'QC',
+          read_status: false,
+        },
+      });
+    }
+
     return updated;
   }
 
-  // ── Mark as POSTED (content goes live) ──
+  // ── Stage 4 Bulk Review Workflow ──
+  async bulkReview(dto: BulkReviewDto) {
+    const results: any[] = [];
+    for (const subId of dto.submissionIds) {
+      try {
+        const res = await this.review(subId, {
+          status: dto.status,
+          qc_notes: dto.qc_notes,
+          qc_issues: dto.qc_issues,
+          internal_tags: dto.internal_tags,
+          schedule_posting: dto.schedule_posting,
+          reviewer_id: dto.reviewer_id,
+        });
+        results.push(res);
+      } catch (err) {
+        this.logger.error(`Error in bulkReview for submission ${subId}:`, err);
+      }
+    }
+    return { success: true, count: results.length };
+  }
+
   async markAsPosted(submissionId: string) {
     const updated = await this.prisma.submission.update({
       where: { id: submissionId },
@@ -319,7 +367,7 @@ export class SubmissionsService {
         creator: {
           include: { user: { select: { name: true } } },
         },
-        campaign: { select: { title: true, category: true } },
+        campaign: { select: { title: true, category: true, qc_checklist: true } },
         deliverable: true,
       },
       orderBy: { submitted_at: 'asc' },

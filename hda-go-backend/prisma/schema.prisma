@@ -151,6 +151,7 @@ model Campaign {
   bd_approved_at    DateTime?
   slot              Int                    @default(0)  // max participants
   created_at        DateTime               @default(now())
+  qc_checklist      String?                // stringified JSON array of criteria
   
   participants      CampaignParticipant[]
   submissions       Submission[]
@@ -211,6 +212,14 @@ model Submission {
   file_size         Int?                   // Ukuran file dalam bytes
   file_type         String?                // MIME type (video/mp4, image/jpeg)
   gdrive_file_id    String?                // Google Drive File ID
+  quality_score     Int?                   // Rating 1-5
+  checked_items     String?                // stringified JSON checklist state
+  revision_count    Int                    @default(0) // count of soft-rejections
+  revision_deadline DateTime?              // auto-calculated limit (2 days)
+  schedule_posting  DateTime?              // custom publish timing
+  qc_issues         String?                // stringified JSON of issue categories
+  internal_tags     String?                // stringified JSON of admin tags (e.g. "Best Practice")
+  reviewer_id       String?                // CM / Admin ID who processed the review
 
   campaign          Campaign               @relation(fields: [campaign_id], references: [id])
   creator           Creator                @relation(fields: [creator_id], references: [user_id])
