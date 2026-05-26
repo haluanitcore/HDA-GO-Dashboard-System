@@ -9,4 +9,5 @@ export enum Role {
   BD = 'BD',
   ADMIN = 'ADMIN',
   EXECUTIVE = 'EXECUTIVE',
+  QC = 'QC',
 }

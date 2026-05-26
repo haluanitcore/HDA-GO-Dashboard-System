@@ -34,28 +34,28 @@ export class SubmissionsController {
 
   // PATCH /submissions/:id/review — CM reviews (QC & Approval / Revision)
   @Patch(':id/review')
-  @Roles(Role.CM, Role.ADMIN)
+  @Roles(Role.CM, Role.ADMIN, Role.QC)
   review(@Param('id') id: string, @Body() dto: ReviewSubmissionDto) {
     return this.submissionsService.review(id, dto);
   }
 
   // PATCH /submissions/bulk-review — CM reviews multiple submissions in batch
   @Patch('bulk-review')
-  @Roles(Role.CM, Role.ADMIN)
+  @Roles(Role.CM, Role.ADMIN, Role.QC)
   bulkReview(@Body() dto: BulkReviewDto) {
     return this.submissionsService.bulkReview(dto);
   }
 
   // PATCH /submissions/:id/posted — Mark as posted (content live)
   @Patch(':id/posted')
-  @Roles(Role.CM, Role.ADMIN)
+  @Roles(Role.CM, Role.ADMIN, Role.QC)
   markPosted(@Param('id') id: string) {
     return this.submissionsService.markAsPosted(id);
   }
 
   // PATCH /submissions/:id/completed — Mark as completed
   @Patch(':id/completed')
-  @Roles(Role.CM, Role.ADMIN)
+  @Roles(Role.CM, Role.ADMIN, Role.QC)
   markCompleted(@Param('id') id: string) {
     return this.submissionsService.markAsCompleted(id);
   }
@@ -69,21 +69,21 @@ export class SubmissionsController {
 
   // GET /submissions/qc-queue — All pending QC (CM dashboard)
   @Get('qc-queue')
-  @Roles(Role.CM, Role.ADMIN)
+  @Roles(Role.CM, Role.ADMIN, Role.QC)
   findPendingQC() {
     return this.submissionsService.findPendingQC();
   }
 
   // GET /submissions/sow/:campaignId — SOW progress by campaign
   @Get('sow/:campaignId')
-  @Roles(Role.CM, Role.ADMIN, Role.BRAND)
+  @Roles(Role.CM, Role.ADMIN, Role.BRAND, Role.QC)
   getSowProgress(@Param('campaignId') campaignId: string) {
     return this.submissionsService.getSowProgress(campaignId);
   }
 
   // GET /submissions/campaign/:id — Submissions by campaign
   @Get('campaign/:id')
-  @Roles(Role.CM, Role.ADMIN, Role.BRAND)
+  @Roles(Role.CM, Role.ADMIN, Role.BRAND, Role.QC)
   findByCampaign(@Param('id') id: string) {
     return this.submissionsService.findByCampaign(id);
   }

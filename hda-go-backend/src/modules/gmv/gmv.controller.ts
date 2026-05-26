@@ -26,21 +26,21 @@ export class GmvController {
   }
 
   @Patch(':id/verify')
-  @Roles(Role.CM, Role.ADMIN)
+  @Roles(Role.CM, Role.ADMIN, Role.QC)
   verifyGmv(@Param('id') id: string, @Req() req: any, @Body() body: any) {
     return this.gmvService.verifyGmv(id, req.user.userId, body);
   }
 
   // POST /gmv/record — Record new order (CM/Admin direct legacy)
   @Post('record')
-  @Roles(Role.CM, Role.ADMIN)
+  @Roles(Role.CM, Role.ADMIN, Role.QC)
   recordOrder(@Body() body: { creator_id: string; campaign_id: string; order_count: number; gmv_amount: number }) {
     return this.gmvService.recordOrder(body.creator_id, body.campaign_id, body.order_count, body.gmv_amount);
   }
 
   // GET /gmv/pending — Get all pending GMV verifications
   @Get('pending')
-  @Roles(Role.CM, Role.ADMIN)
+  @Roles(Role.CM, Role.ADMIN, Role.QC)
   getPendingGmv() {
     return this.gmvService.getPendingGmv();
   }

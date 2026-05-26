@@ -46,7 +46,11 @@ export function Sidebar() {
         { name: 'Pipeline', href: '/cm/pipeline', icon: Users },
         { name: 'Campaigns', href: '/cm/campaigns', icon: Target },
         { name: 'Monitoring', href: '/cm/monitoring', icon: TrendingUp },
-        { name: 'QC Queue', href: '/cm/qc', icon: ShieldCheck },
+      ];
+    }
+    if (user?.role === 'QC') {
+      return [
+        { name: 'QC Dashboard', href: '/qc', icon: ShieldCheck },
       ];
     }
     if (user?.role === 'EXECUTIVE') {
