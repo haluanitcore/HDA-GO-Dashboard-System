@@ -71,6 +71,17 @@ export default function QCQueuePage() {
   const [qcNotes, setQcNotes] = useState('');
   const [schedulePosting, setSchedulePosting] = useState('');
   const [activeDecision, setActiveDecision] = useState<'APPROVED' | 'REVISION' | 'REJECTED'>('APPROVED');
+  
+  const [stats, setStats] = useState<any>({
+    reviewedToday: 0,
+    dailyTarget: 60,
+    approvalRate: 0,
+    revisionRate: 0,
+    rejectionRate: 0,
+    pendingCount: 0,
+    overdueCount: 0,
+    deadlineTodayCount: 0
+  });
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
@@ -131,12 +142,47 @@ export default function QCQueuePage() {
   const fetchQueues = async (showLoading = true) => {
     if (showLoading) setIsLoading(true);
     try {
-      const [qcData, gmvRes] = await Promise.all([
+      const [qcData, gmvRes, statsRes] = await Promise.all([
         submissionService.getQcQueue(),
         api.get('/gmv/pending'),
+        submissionService.getQcStats().catch(() => null),
       ]);
       setQueue(qcData || []);
       setGmvQueue((gmvRes as any) || []);
+
+      const overdueCount = qcData?.filter((item: any) => {
+        const diffHours = (new Date().getTime() - new Date(item.submitted_at).getTime()) / (1000 * 60 * 60);
+        return diffHours > 48;
+      }).length || 0;
+
+      const deadlineTodayCount = qcData?.filter((item: any) => {
+        const diffHours = (new Date().getTime() - new Date(item.submitted_at).getTime()) / (1000 * 60 * 60);
+        return diffHours >= 24 && diffHours <= 48;
+      }).length || 0;
+
+      if (statsRes) {
+        setStats({
+          reviewedToday: statsRes.reviewedToday || 0,
+          dailyTarget: statsRes.dailyTarget || 60,
+          approvalRate: statsRes.approvalRate || 0,
+          revisionRate: statsRes.revisionRate || 0,
+          rejectionRate: statsRes.rejectionRate || 0,
+          pendingCount: qcData?.length || 0,
+          overdueCount,
+          deadlineTodayCount
+        });
+      } else {
+        setStats({
+          reviewedToday: 0,
+          dailyTarget: 60,
+          approvalRate: 0,
+          revisionRate: 0,
+          rejectionRate: 0,
+          pendingCount: qcData?.length || 0,
+          overdueCount,
+          deadlineTodayCount
+        });
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -259,24 +305,7 @@ export default function QCQueuePage() {
     );
   };
 
-  // Helper calculation for mock/current progress stats (Stage 5 Personal Metrics)
-  const stats = {
-    reviewedToday: queue.filter(item => item.reviewed_at && new Date(item.reviewed_at).toDateString() === new Date().toDateString()).length + 45, // Adding baseline for mock presentation
-    dailyTarget: 60,
-    approvalRate: 84,
-    revisionRate: 11,
-    rejectionRate: 5,
-    pendingCount: queue.length,
-    overdueCount: queue.filter(item => {
-      // submissions older than 48 hours
-      const diffHours = (new Date().getTime() - new Date(item.submitted_at).getTime()) / (1000 * 60 * 60);
-      return diffHours > 48;
-    }).length,
-    deadlineTodayCount: queue.filter(item => {
-      const diffHours = (new Date().getTime() - new Date(item.submitted_at).getTime()) / (1000 * 60 * 60);
-      return diffHours >= 24 && diffHours <= 48;
-    }).length
-  };
+  // Helper calculation removed - now utilizing live dynamic state from the backend
 
   // Apply Search + Campaign Filters + Sorters to Queue
   const filteredQueue = queue.filter(item => {
