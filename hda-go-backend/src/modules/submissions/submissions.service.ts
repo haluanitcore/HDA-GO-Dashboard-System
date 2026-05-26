@@ -3,6 +3,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { GDriveService } from '../gdrive/gdrive.service';
 import { CreateSubmissionUploadDto, ReviewSubmissionDto, BulkReviewDto } from './dto/submission.dto';
 import * as fs from 'fs';
+import * as path from 'path';
 
 @Injectable()
 export class SubmissionsService {
@@ -36,13 +37,14 @@ export class SubmissionsService {
       throw new BadRequestException('Kamu belum bergabung di campaign ini');
     }
 
-    // 2. Create submission record (status: UPLOADING)
+    // 2. Create submission record (status: QC_REVIEW, save local VPS URL)
+    const localUrl = `/api/uploads/${file.filename}`;
     const submission = await this.prisma.submission.create({
       data: {
         campaign_id: dto.campaign_id,
         creator_id: creatorId,
-        tiktok_url: '', // Will be filled with GDrive link
-        status: 'UPLOADING',
+        tiktok_url: localUrl,
+        status: 'QC_REVIEW',
         file_name: file.originalname,
         file_size: file.size,
         file_type: file.mimetype,
@@ -58,30 +60,60 @@ export class SubmissionsService {
       data: { total_posts: { increment: 1 } },
     });
 
-    // 5. Background: Upload to Google Drive CM
-    this.uploadToGDriveAndCleanup(submission.id, creatorId, file).catch((err) => {
-      this.logger.error(`Background GDrive upload failed for submission ${submission.id}`, err);
-    });
+    // 5. Notify CM about new submission in QC Queue
+    try {
+      const creator = await this.prisma.creator.findUnique({
+        where: { user_id: creatorId },
+        include: { user: { select: { name: true } } },
+      });
+      if (creator?.cm_id) {
+        const campaign = await this.prisma.campaign.findUnique({
+          where: { id: dto.campaign_id },
+          select: { title: true },
+        });
 
-    // 6. Return immediately (don't wait for GDrive upload)
+        await this.prisma.notification.create({
+          data: {
+            user_id: creator.cm_id,
+            title: '📝 Submission Baru - QC Queue',
+            message: `${creator.user.name} mengupload konten untuk campaign "${campaign?.title || ''}". Menunggu peninjauan QC Team.`,
+            type: 'QC',
+            read_status: false,
+          },
+        });
+      }
+    } catch (err) {
+      this.logger.error(`Failed to notify CM for submission ${submission.id} upload`, err);
+    }
+
+    // 6. Return immediately (saved locally, GDrive upload will happen on Approval)
     return {
       ...submission,
-      message: 'File berhasil diupload! Sedang dikirim ke Google Drive CM...',
+      message: 'File berhasil diupload! Menunggu proses verifikasi oleh QC Team...',
     };
   }
 
   /**
-   * Background job: Upload file to CM's Google Drive folder, then cleanup VPS
+   * Helper to upload local VPS file to GDrive and delete local file after success
    */
-  private async uploadToGDriveAndCleanup(
-    submissionId: string,
-    creatorId: string,
-    file: Express.Multer.File,
-  ) {
+  private async uploadLocalFileToGDrive(submission: any): Promise<{ url: string; fileId: string | null }> {
     try {
-      // Get creator's CM info including gdrive folder
+      if (!submission.tiktok_url || !submission.tiktok_url.startsWith('/api/uploads/')) {
+        this.logger.warn(`Submission ${submission.id} does not have a local path: ${submission.tiktok_url}`);
+        return { url: submission.tiktok_url, fileId: submission.gdrive_file_id };
+      }
+
+      const filename = submission.tiktok_url.replace('/api/uploads/', '');
+      const filePath = path.join(process.cwd(), 'tmp_uploads', filename);
+
+      if (!fs.existsSync(filePath)) {
+        this.logger.warn(`Local file not found at ${filePath} for submission ${submission.id}`);
+        return { url: submission.tiktok_url, fileId: submission.gdrive_file_id };
+      }
+
+      // Get CM GDrive folder
       const creator = await this.prisma.creator.findUnique({
-        where: { user_id: creatorId },
+        where: { user_id: submission.creator_id },
         include: {
           user: { select: { name: true } },
           cm_user: {
@@ -95,82 +127,44 @@ export class SubmissionsService {
         },
       });
 
-      let fileUrl = '';
-      let gdriveFileId: string | null = null;
-
-      // Determine the GDrive folder ID
       const folderId = creator?.cm_user?.gdrive_folder_id
         || GDriveService.extractFolderId(creator?.cm_user?.gdrive_url || '');
 
-      if (folderId && this.gdriveService.isAvailable()) {
-        // Upload to Google Drive
-        const creatorName = creator?.user?.name?.replace(/[^a-zA-Z0-9]/g, '_') || 'creator';
-        const timestamp = new Date().toISOString().split('T')[0];
-        const gdriveFileName = `${creatorName}_${timestamp}_${file.originalname}`;
+      if (!folderId) {
+        this.logger.warn(`CM GDrive folder not found for creator ${submission.creator_id} — keeping file local`);
+        return { url: submission.tiktok_url, fileId: submission.gdrive_file_id };
+      }
 
-        const result = await this.gdriveService.uploadFile(
-          file.path,
-          gdriveFileName,
-          file.mimetype,
-          folderId,
-        );
+      if (!this.gdriveService.isAvailable()) {
+        this.logger.warn(`GDriveService not initialized — keeping file local`);
+        return { url: submission.tiktok_url, fileId: submission.gdrive_file_id };
+      }
 
-        if (result) {
-          fileUrl = result.webViewLink;
-          gdriveFileId = result.fileId;
-          this.logger.log(`✅ File uploaded to GDrive: ${fileUrl}`);
+      const creatorName = creator?.user?.name?.replace(/[^a-zA-Z0-9]/g, '_') || 'creator';
+      const timestamp = new Date().toISOString().split('T')[0];
+      const gdriveFileName = `${creatorName}_${timestamp}_${submission.file_name || filename}`;
+
+      this.logger.log(`📤 Uploading approved file to GDrive for submission ${submission.id}...`);
+      const result = await this.gdriveService.uploadFile(
+        filePath,
+        gdriveFileName,
+        submission.file_type || 'video/mp4',
+        folderId,
+      );
+
+      if (result) {
+        // Delete local temp file
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+          this.logger.log(`🗑️ Temp file deleted from VPS after GDrive upload: ${filePath}`);
         }
+        return { url: result.webViewLink, fileId: result.fileId };
       }
 
-      // If GDrive upload failed or not available, use local file URL
-      if (!fileUrl) {
-        fileUrl = `/api/uploads/${file.filename}`;
-        this.logger.warn(`⚠️ GDrive unavailable — file stored locally: ${fileUrl}`);
-      }
-
-      // Update submission with file URL and set status to QC_REVIEW
-      await this.prisma.submission.update({
-        where: { id: submissionId },
-        data: {
-          tiktok_url: fileUrl,
-          gdrive_file_id: gdriveFileId,
-          status: 'QC_REVIEW',
-        },
-      });
-
-      // Delete local temp file if GDrive upload succeeded
-      if (gdriveFileId && fs.existsSync(file.path)) {
-        fs.unlinkSync(file.path);
-        this.logger.log(`🗑️ Temp file deleted from VPS: ${file.path}`);
-      }
-
-      // Notify CM about new submission
-      if (creator?.cm_id) {
-        const campaign = await this.prisma.campaign.findUnique({
-          where: { id: (await this.prisma.submission.findUnique({ where: { id: submissionId } }))?.campaign_id || '' },
-          select: { title: true },
-        });
-
-        await this.prisma.notification.create({
-          data: {
-            user_id: creator.cm_id,
-            title: '📝 Submission Baru - QC Queue',
-            message: `${creator.user.name} mengupload konten untuk campaign "${campaign?.title || ''}". File sudah di Google Drive Anda.`,
-            type: 'QC',
-            read_status: false,
-          },
-        });
-      }
+      return { url: submission.tiktok_url, fileId: submission.gdrive_file_id };
     } catch (error) {
-      this.logger.error(`❌ GDrive upload failed for submission ${submissionId}`, error);
-      // Set status to QC_REVIEW anyway with local path so submission isn't stuck
-      await this.prisma.submission.update({
-        where: { id: submissionId },
-        data: {
-          tiktok_url: `/api/uploads/${file.filename}`,
-          status: 'QC_REVIEW',
-        },
-      });
+      this.logger.error(`Failed uploading file to GDrive on approval for submission ${submission.id}`, error);
+      return { url: submission.tiktok_url, fileId: submission.gdrive_file_id };
     }
   }
 
@@ -211,6 +205,11 @@ export class SubmissionsService {
     } else if (dto.status === 'APPROVED') {
       // Clear revision deadline on approval
       updateData.revision_deadline = null;
+
+      // ── NEW FLOW: Upload file to GDrive CM and delete from local VPS ──
+      const uploadResult = await this.uploadLocalFileToGDrive(submission);
+      updateData.tiktok_url = uploadResult.url;
+      updateData.gdrive_file_id = uploadResult.fileId;
     }
 
     const updated = await this.prisma.submission.update({
