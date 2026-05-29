@@ -44,9 +44,7 @@ export default function BDHotelsPage() {
       const formData = new FormData();
       formData.append('file', file);
       
-      await api.post('/bd/hotels/upload-excel', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      await api.uploadWithProgress('/bd/hotels/upload-excel', formData);
       
       alert('Data hotel berhasil diunggah!');
       fetchHotels();
