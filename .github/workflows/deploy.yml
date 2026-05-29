@@ -37,7 +37,7 @@ jobs:
             # Remove build cache to avoid stale chunks/assets
             rm -rf .next
             npm install
-            npm run build
+            NEXT_PUBLIC_API_URL=https://dashboardhdago.com/api NEXT_PUBLIC_SOCKET_URL=https://dashboardhdago.com npm run build
             pm2 restart hda-go-frontend || pm2 start npm --name "hda-go-frontend" -- start -- -p 3000
             
             # 3. Save PM2 configurations
