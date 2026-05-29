@@ -41,6 +41,14 @@ export class CreateCampaignDto {
   @IsOptional()
   @IsString()
   brief_url?: string; // PDF brief attachment link
+
+  @IsOptional()
+  @IsInt()
+  target_creators_count?: number;
+
+  @IsOptional()
+  @IsString()
+  collaboration_type?: string;
 }
 
 export class JoinCampaignDto {

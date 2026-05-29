@@ -28,6 +28,8 @@ export class CampaignsService {
         budget: dto.budget || 0,
         brief_url: dto.brief_url || null,
         status: dto.status || 'PENDING_BD',
+        target_creators_count: dto.target_creators_count || 0,
+        collaboration_type: dto.collaboration_type || null,
       },
     });
 
