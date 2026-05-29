@@ -156,8 +156,8 @@ export default function BDCampaignsPage() {
                 <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">Campaign</th>
                 <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">Brand</th>
                 <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">Category</th>
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">Budget</th>
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">SOW</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">Budget / Kuota</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">SOW / Kerja Sama</th>
                 <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">Deadline</th>
                 <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">Status</th>
                 <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest"></th>
@@ -188,13 +188,32 @@ export default function BDCampaignsPage() {
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <div className="flex items-center gap-1.5">
-                      <DollarSign className="h-3.5 w-3.5 text-emerald-500" />
-                      <span className="text-sm font-bold text-white">Rp {((campaign.budget || 0) / 1000000).toFixed(1)}M</span>
-                    </div>
+                    {campaign.category === 'HOTEL' ? (
+                      <div className="flex items-center gap-1.5">
+                        <Users className="h-3.5 w-3.5 text-[#F6D145]" />
+                        <span className="text-sm font-bold text-white">
+                          {campaign._count?.participants || 0}/{campaign.target_creators_count || campaign.slot || 5} Kreator
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5">
+                        <DollarSign className="h-3.5 w-3.5 text-emerald-500" />
+                        <span className="text-sm font-bold text-white">Rp {((campaign.budget || 0) / 1000000).toFixed(1)}M</span>
+                      </div>
+                    )}
                   </td>
                   <td className="px-6 py-4">
-                    <span className="text-sm font-bold text-white">{campaign.sow_total}</span>
+                    {campaign.category === 'HOTEL' && campaign.collaboration_type ? (
+                      <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest border ${
+                        campaign.collaboration_type === 'VISIT_ONLY' ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20' :
+                        campaign.collaboration_type === 'BARTER_STAY' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' :
+                        'bg-orange-500/10 text-orange-400 border-orange-500/20'
+                      }`}>
+                        {campaign.collaboration_type.replace(/_/g, ' ')}
+                      </span>
+                    ) : (
+                      <span className="text-sm font-bold text-white">{campaign.sow_total} SOW</span>
+                    )}
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-1.5">

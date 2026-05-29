@@ -50,6 +50,8 @@ export default function BDCampaignDetailPage() {
         deadline: campaignDetail.deadline ? new Date(campaignDetail.deadline).toISOString().split('T')[0] : '',
         budget: campaignDetail.budget,
         slot: campaignDetail.slot,
+        target_creators_count: campaignDetail.target_creators_count || 0,
+        collaboration_type: campaignDetail.collaboration_type || 'VISIT_ONLY',
       });
     }
   }, [campaignDetail]);
@@ -229,6 +231,27 @@ export default function BDCampaignDetailPage() {
                         />
                       </div>
                     </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Jumlah Kreator Target</label>
+                        <input
+                          type="number" value={editData.target_creators_count || 0} onChange={e => setEditData({ ...editData, target_creators_count: Number(e.target.value) })}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors"
+                          min="0"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Jenis Kerja Sama (Hotel)</label>
+                        <select
+                          value={editData.collaboration_type || 'VISIT_ONLY'} onChange={e => setEditData({ ...editData, collaboration_type: e.target.value })}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 appearance-none"
+                        >
+                          <option value="VISIT_ONLY" className="bg-gray-900">Visit Only</option>
+                          <option value="BARTER_STAY" className="bg-gray-900">Barter Stay</option>
+                          <option value="BARTER_DINING" className="bg-gray-900">Barter Dining</option>
+                        </select>
+                      </div>
+                    </div>
                     <div className="space-y-2">
                       <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Edit Notes (reason)</label>
                       <input
@@ -263,6 +286,12 @@ export default function BDCampaignDetailPage() {
                       { label: 'Min Level', value: `Level ${c.min_level}`, icon: Target },
                       { label: 'Reward Type', value: c.reward_type, icon: DollarSign },
                       { label: 'Slot', value: c.slot || 'Unlimited', icon: User },
+                      ...(c.category === 'HOTEL' || c.target_creators_count ? [
+                        { label: 'Jumlah Kreator Target', value: c.target_creators_count || 0, icon: User },
+                      ] : []),
+                      ...(c.collaboration_type ? [
+                        { label: 'Jenis Kerja Sama', value: c.collaboration_type.replace(/_/g, ' '), icon: FileText },
+                      ] : []),
                     ].map((item, i) => {
                       const Icon = item.icon;
                       return (

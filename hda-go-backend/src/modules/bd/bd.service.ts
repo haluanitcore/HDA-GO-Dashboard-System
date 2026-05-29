@@ -114,6 +114,11 @@ export class BdService {
 
     const campaigns = await this.prisma.campaign.findMany({
       where: whereClause,
+      include: {
+        _count: {
+          select: { participants: true, submissions: true },
+        },
+      },
       orderBy: { created_at: 'desc' },
     });
 
@@ -365,6 +370,8 @@ export class BdService {
       budget: 'budget',
       slot: 'slot',
       brief_url: 'brief_url',
+      target_creators_count: 'target_creators_count',
+      collaboration_type: 'collaboration_type',
     };
 
     for (const [dtoField, dbField] of Object.entries(fieldMap)) {
