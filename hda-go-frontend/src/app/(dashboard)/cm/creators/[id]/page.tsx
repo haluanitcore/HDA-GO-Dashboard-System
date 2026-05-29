@@ -221,6 +221,54 @@ export default function CreatorDetailPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Riwayat Submission & Tautan VT */}
+          <Card className="glass-card border-0 rounded-[24px] shadow-xl">
+            <CardContent className="p-6">
+              <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">Riwayat Submission & Tautan VT</h3>
+              
+              {!creator.submissions || creator.submissions.length === 0 ? (
+                <p className="text-sm text-gray-500 font-medium py-4 text-center">Belum ada riwayat submission untuk kreator ini.</p>
+              ) : (
+                <div className="space-y-4">
+                  {creator.submissions.map((sub: any) => (
+                    <div key={sub.id} className="bg-white/5 rounded-2xl p-4 border border-white/5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-sm font-bold text-white">{sub.campaign?.title || 'Campaign'}</h4>
+                          <span className="text-[10px] font-black text-blue-400 uppercase tracking-wider bg-blue-500/10 px-2 py-0.5 rounded">
+                            {sub.campaign?.category}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Dikirim: {new Date(sub.submitted_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </p>
+                      </div>
+                      
+                      <div className="flex items-center gap-3">
+                        <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest ${sub.status === 'APPROVED' || sub.status === 'POSTED' || sub.status === 'COMPLETED' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-[#F6D145]/10 text-[#F6D145]'}`}>
+                          {sub.status}
+                        </span>
+                        
+                        {sub.tiktok_vt_link ? (
+                          <a 
+                            href={sub.tiktok_vt_link} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="bg-[#F6D145]/10 hover:bg-[#F6D145]/20 text-[#F6D145] text-xs font-bold px-3 py-1.5 rounded-xl border border-[#F6D145]/30 flex items-center gap-1.5 transition-all"
+                          >
+                            Tonton VT <ExternalLink className="w-3.5 h-3.5" />
+                          </a>
+                        ) : (
+                          <span className="text-xs text-gray-600 font-medium">Link VT Belum Ada</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
 

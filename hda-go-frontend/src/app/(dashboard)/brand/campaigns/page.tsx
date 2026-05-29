@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Target, Plus, X, Upload, Loader2 } from 'lucide-react';
+import { ArrowLeft, Target, Plus, X, Upload, Loader2, ExternalLink } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { campaignService } from '@/services';
 import { useAuthStore } from '@/store';
@@ -14,6 +14,11 @@ export default function BrandCampaignsPage() {
   const [campaigns, setCampaigns] = useState<any[]>([]);
 
   const [newCampaign, setNewCampaign] = useState({ title: '', category: 'FNB', budget: '', sow: '', min_level: '0', target_creators_count: '' });
+  
+  // Campaign detail modal states
+  const [selectedCampaign, setSelectedCampaign] = useState<any>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isFetchingDetail, setIsFetchingDetail] = useState(false);
 
   const { user } = useAuthStore();
 
@@ -32,6 +37,20 @@ export default function BrandCampaignsPage() {
       setCampaigns([]);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleOpenDetailModal = async (campaignId: string) => {
+    setIsFetchingDetail(true);
+    try {
+      const data = await campaignService.getDetail(campaignId);
+      setSelectedCampaign(data);
+      setIsDetailModalOpen(true);
+    } catch (err) {
+      console.error(err);
+      alert('Gagal mengambil detail campaign.');
+    } finally {
+      setIsFetchingDetail(false);
     }
   };
 
@@ -132,6 +151,14 @@ export default function BrandCampaignsPage() {
                     </p>
                   </div>
                 </div>
+                
+                <button 
+                  onClick={() => handleOpenDetailModal(camp.id)}
+                  disabled={isFetchingDetail}
+                  className="w-full mt-4 bg-white/5 hover:bg-white/10 text-white font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-2 transition-all border border-white/10 disabled:opacity-50"
+                >
+                  Detail & Kreator VT Link
+                </button>
               </div>
             </CardContent>
           </Card>
@@ -249,6 +276,90 @@ export default function BrandCampaignsPage() {
                 {isSubmitting ? 'Submitting...' : 'Submit Campaign'}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Campaign Detail & VT Links Tracker Modal */}
+      {isDetailModalOpen && selectedCampaign && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsDetailModalOpen(false)} />
+          <div className="glass-panel-solid w-full max-w-2xl rounded-3xl p-8 relative z-10 animate-in fade-in zoom-in-95 duration-200">
+            <button 
+              onClick={() => setIsDetailModalOpen(false)}
+              className="absolute top-6 right-6 text-gray-400 hover:text-white transition-colors"
+            >
+              <X className="h-6 w-6" />
+            </button>
+            
+            <div className="flex items-center gap-3 mb-2">
+              <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest bg-blue-500/10 px-2.5 py-1 rounded-full">
+                {selectedCampaign.category}
+              </span>
+              <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest ${selectedCampaign.status === 'ACTIVE' ? 'bg-[#416CB1]/10 text-[#416CB1]' : 'bg-[#F6D145]/10 text-[#F6D145]'}`}>
+                {selectedCampaign.status}
+              </span>
+            </div>
+            <h2 className="text-2xl font-black text-white mb-2 tracking-tight">{selectedCampaign.title}</h2>
+            <p className="text-gray-400 text-sm mb-6">Pantau hasil postingan link VT TikTok dari seluruh kreator bimbingan.</p>
+            
+            <div className="space-y-4 max-h-[350px] overflow-y-auto pr-2">
+              <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Daftar Partisipan & Hasil VT</h3>
+              
+              {!selectedCampaign.participants || selectedCampaign.participants.length === 0 ? (
+                <p className="text-sm text-gray-500 font-medium py-4 text-center">Belum ada kreator yang bergabung di campaign ini.</p>
+              ) : (
+                <div className="space-y-3">
+                  {selectedCampaign.participants.map((part: any) => {
+                    // Find submission for this creator inside this campaign
+                    const submission = selectedCampaign.submissions?.find(
+                      (s: any) => s.creator_id === part.creator_id
+                    );
+                    
+                    return (
+                      <div key={part.creator_id} className="bg-white/5 rounded-2xl p-4 border border-white/5 flex items-center justify-between gap-4">
+                        <div>
+                          <h4 className="text-sm font-bold text-white">{part.creator?.user?.name || 'Kreator'}</h4>
+                          <p className="text-xs text-gray-500 mt-1">Level {part.creator?.creator_level || 0}</p>
+                        </div>
+                        
+                        <div className="flex items-center gap-3">
+                          {submission?.tiktok_vt_link ? (
+                            <>
+                              <span className="text-[10px] font-black px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 uppercase tracking-wider">
+                                VT Link Submitted ✅
+                              </span>
+                              <a 
+                                href={submission.tiktok_vt_link} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="bg-[#F6D145]/10 hover:bg-[#F6D145]/20 text-[#F6D145] text-xs font-bold px-3 py-1.5 rounded-xl border border-[#F6D145]/30 flex items-center gap-1.5 transition-all"
+                              >
+                                Tonton VT <ExternalLink className="w-3.5 h-3.5" />
+                              </a>
+                            </>
+                          ) : (
+                            <span className="text-xs text-gray-600 font-medium bg-white/2 px-2 py-1 rounded">
+                              Belum submit link VT
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                }
+                </div>
+              )}
+            </div>
+            
+            <div className="flex justify-end mt-6 pt-4 border-t border-white/5">
+              <button 
+                onClick={() => setIsDetailModalOpen(false)}
+                className="bg-white/5 hover:bg-white/10 text-white font-bold px-6 py-2.5 rounded-xl text-sm transition-colors"
+              >
+                Tutup
+              </button>
+            </div>
           </div>
         </div>
       )}

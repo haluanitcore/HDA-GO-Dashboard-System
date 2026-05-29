@@ -82,7 +82,15 @@ export class CmCreatorsService {
   async getCreatorDetail(creatorId: string) {
     const creator = await this.prisma.creator.findUnique({
       where: { user_id: creatorId },
-      include: { user: { select: { id: true, name: true, email: true } } },
+      include: { 
+        user: { select: { id: true, name: true, email: true } },
+        submissions: {
+          include: {
+            campaign: { select: { title: true, category: true } }
+          },
+          orderBy: { submitted_at: 'desc' }
+        }
+      },
     });
     if (!creator) throw new NotFoundException('Creator not found');
     return creator;
