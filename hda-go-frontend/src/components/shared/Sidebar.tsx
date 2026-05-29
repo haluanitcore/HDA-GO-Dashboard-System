@@ -15,6 +15,7 @@ import {
   Bell,
   Users,
   ShieldCheck,
+  Building2,
   X
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -70,6 +71,7 @@ export function Sidebar() {
       return [
         { name: 'Dashboard', href: '/bd', icon: LayoutDashboard },
         { name: 'Campaign Review', href: '/bd/campaigns', icon: Target },
+        { name: 'Hotel Partners', href: '/bd/hotels', icon: Building2 },
         { name: 'Analytics', href: '/bd/analytics', icon: BarChart3 },
         { name: 'Review History', href: '/bd/history', icon: ShieldCheck },
       ];
