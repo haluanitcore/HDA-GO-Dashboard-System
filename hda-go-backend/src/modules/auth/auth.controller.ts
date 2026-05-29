@@ -1,4 +1,4 @@
-import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Get, Body, HttpCode, HttpStatus } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto, LoginDto, RefreshTokenDto } from './dto/auth.dto';
 
@@ -21,5 +21,11 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async refresh(@Body() dto: RefreshTokenDto) {
     return this.authService.refreshToken(dto.refreshToken);
+  }
+
+  // GET /auth/cm-list — Public endpoint for registration dropdown
+  @Get('cm-list')
+  async getCMList() {
+    return this.authService.getCMListPublic();
   }
 }

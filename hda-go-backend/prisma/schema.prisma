@@ -56,6 +56,7 @@ model Creator {
   orders            CreatorOrder[]
   rewards           CreatorReward[]
   monthlyStats      CreatorMonthlyStats[]
+  hotelVisits       HotelVisit[]
 
   // Biodata Section 1 - Identitas
   phone_number       String?
@@ -152,6 +153,10 @@ model Campaign {
   slot              Int                    @default(0)  // max participants
   created_at        DateTime               @default(now())
   qc_checklist      String?                // stringified JSON array of criteria
+
+  // ── Phase 2: BD Hotel & FNB ──
+  collaboration_type    String?            // VISIT_ONLY, BARTER_STAY, BARTER_DINING (Hotel only)
+  target_creators_count Int                @default(0)  // Kuota jumlah kreator (all categories)
   
   participants      CampaignParticipant[]
   submissions       Submission[]
@@ -159,6 +164,7 @@ model Campaign {
   rewards           CreatorReward[]
   analytics         CampaignAnalytics?
   editLogs          CampaignEditLog[]
+  hotelVisits       HotelVisit[]
 }
 
 // ═══════════════════════════════════════════════════
@@ -220,6 +226,9 @@ model Submission {
   qc_issues         String?                // stringified JSON of issue categories
   internal_tags     String?                // stringified JSON of admin tags (e.g. "Best Practice")
   reviewer_id       String?                // CM / Admin ID who processed the review
+
+  // ── Phase 2: Link VT TikTok ──
+  tiktok_vt_link    String?                // Link VT rill dari TikTok (https://www.tiktok.com/@user/video/123)
 
   campaign          Campaign               @relation(fields: [campaign_id], references: [id])
   creator           Creator                @relation(fields: [creator_id], references: [user_id])
@@ -368,3 +377,49 @@ model UserPreferences {
   updated_at           DateTime @updatedAt
   user                 User     @relation(fields: [user_id], references: [id])
 }
+
+// ═══════════════════════════════════════════════════
+// PHASE 2: HOTEL PARTNER — Mitra Hotel Database
+// Populated via Excel upload by BD
+// ═══════════════════════════════════════════════════
+
+model HotelPartner {
+  id          String       @id @default(uuid())
+  name        String
+  location    String
+  city        String?
+  category    String?      // HOTEL, RESORT, VILLA, RESTAURANT
+  facilities  String?      // JSON stringified
+  contact     String?
+  is_active   Boolean      @default(true)
+  created_at  DateTime     @default(now())
+
+  hotelVisits HotelVisit[]
+}
+
+// ═══════════════════════════════════════════════════
+// PHASE 2: HOTEL VISIT — Kunjungan Kreator ke Hotel
+// Links Creator ↔ Campaign ↔ HotelPartner
+// ═══════════════════════════════════════════════════
+
+model HotelVisit {
+  id              String       @id @default(uuid())
+  campaign_id     String
+  creator_id      String
+  hotel_id        String
+
+  visit_type      String       // VISIT_ONLY, BARTER_STAY, BARTER_DINING
+  visit_date      DateTime     // Tanggal kunjungan rencana
+  visit_time      String       // Jam kunjungan rencana (e.g. "11:00")
+  visit_location  String?      // Lokasi spesifik dalam hotel
+  status          String       @default("PENDING") // PENDING, APPROVED, COMPLETED, CANCELLED
+  notes           String?
+
+  created_at      DateTime     @default(now())
+  updated_at      DateTime     @updatedAt
+
+  campaign        Campaign     @relation(fields: [campaign_id], references: [id])
+  creator         Creator      @relation(fields: [creator_id], references: [user_id])
+  hotel           HotelPartner @relation(fields: [hotel_id], references: [id])
+}
+

@@ -94,4 +94,15 @@ export class SubmissionsController {
   findByCampaign(@Param('id') id: string) {
     return this.submissionsService.findByCampaign(id);
   }
+
+  // PATCH /submissions/:id/vt-link — Creator submits TikTok VT link
+  @Patch(':id/vt-link')
+  @Roles(Role.CREATOR)
+  submitVtLink(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() body: { tiktok_vt_link: string },
+  ) {
+    return this.submissionsService.submitVtLink(id, req.user.userId, body.tiktok_vt_link);
+  }
 }

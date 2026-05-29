@@ -24,7 +24,7 @@ interface AuthState {
 
   setUser: (user: User) => void;
   login: (email: string, password: string) => Promise<string>; // returns redirectUrl
-  register: (data: { name: string; email: string; password: string; role: string }) => Promise<string>;
+  register: (data: { name: string; email: string; password: string; role: string; cm_id?: string }) => Promise<string>;
   logout: () => void;
   loadFromStorage: () => void;
 }

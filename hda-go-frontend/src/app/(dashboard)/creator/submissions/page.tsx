@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { submissionService, campaignService, creatorService } from '@/services';
 import { Card, CardContent } from '@/components/ui/card';
-import { Video, Clock, CheckCircle2, AlertCircle, Send, Loader2, ExternalLink, Plus, BarChart3, UploadCloud, FolderOpen, FileVideo, ImageIcon, X, CloudUpload } from 'lucide-react';
+import { Video, Clock, CheckCircle2, AlertCircle, Send, Loader2, ExternalLink, Plus, BarChart3, UploadCloud, FolderOpen, FileVideo, ImageIcon, X, CloudUpload, Link2 } from 'lucide-react';
 import { api } from '@/services/api';
 
 const ALLOWED_VIDEO = ['video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/webm'];
@@ -34,6 +34,12 @@ export default function SubmissionsPage() {
   const [ocrLoading, setOcrLoading] = useState(false);
   const [gmvData, setGmvData] = useState({ orderCount: '', gmvAmount: '', periodDate: new Date().toISOString().split('T')[0], notes: '' });
   const [gmvSubmitting, setGmvSubmitting] = useState(false);
+
+  // VT Link State
+  const [vtEditingSub, setVtEditingSub] = useState<string | null>(null);
+  const [vtLinkInput, setVtLinkInput] = useState('');
+  const [vtSubmitting, setVtSubmitting] = useState(false);
+  const [vtSuccess, setVtSuccess] = useState('');
 
   useEffect(() => {
     fetchData();
@@ -499,16 +505,100 @@ export default function SubmissionsPage() {
                         </div>
                       </div>
 
-                      {/* GMV Reporting Button for Approved/Posted/Completed */}
+                      {/* GMV & VT Link Actions for Approved/Posted/Completed */}
                       {['APPROVED', 'POSTED', 'COMPLETED'].includes(sub.status) && (
-                        <div className="mt-4 pt-4 border-t border-white/5 flex justify-end">
-                          <button
-                            onClick={() => setReportingSub(sub)}
-                            className="bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 text-xs font-bold py-2 px-4 rounded-lg flex items-center transition-colors border border-blue-500/20"
-                          >
-                            <BarChart3 className="h-3 w-3 mr-1.5" />
-                            Laporkan Performa (GMV)
-                          </button>
+                        <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
+                          {/* VT Link Section */}
+                          <div className="bg-gradient-to-r from-[#F6D145]/5 to-[#E3903A]/5 border border-[#F6D145]/15 rounded-xl p-3">
+                            {sub.tiktok_vt_link ? (
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <Link2 className="h-3.5 w-3.5 text-[#F6D145]" />
+                                  <span className="text-xs font-bold text-[#F6D145]">Link VT Submitted</span>
+                                </div>
+                                <a
+                                  href={sub.tiktok_vt_link}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-[10px] text-[#E3903A] hover:text-[#F6D145] hover:underline flex items-center gap-1 truncate max-w-[200px]"
+                                >
+                                  <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                                  Buka VT
+                                </a>
+                              </div>
+                            ) : vtEditingSub === sub.id ? (
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-2">
+                                  <Link2 className="h-3.5 w-3.5 text-[#F6D145]" />
+                                  <span className="text-xs font-bold text-white">Submit Link VT TikTok</span>
+                                </div>
+                                <div className="flex gap-2">
+                                  <input
+                                    type="url"
+                                    value={vtLinkInput}
+                                    onChange={(e) => setVtLinkInput(e.target.value)}
+                                    placeholder="https://www.tiktok.com/@user/video/..."
+                                    className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-[#F6D145]/40"
+                                  />
+                                  <button
+                                    onClick={async () => {
+                                      if (!vtLinkInput.trim()) return;
+                                      setVtSubmitting(true);
+                                      try {
+                                        await submissionService.submitVtLink(sub.id, vtLinkInput.trim());
+                                        setVtSuccess(sub.id);
+                                        setVtEditingSub(null);
+                                        setVtLinkInput('');
+                                        setTimeout(() => setVtSuccess(''), 3000);
+                                        await fetchData();
+                                      } catch (err: any) {
+                                        alert(err.message || 'Gagal submit link VT');
+                                      } finally {
+                                        setVtSubmitting(false);
+                                      }
+                                    }}
+                                    disabled={vtSubmitting || !vtLinkInput.trim()}
+                                    className="bg-[#F6D145] hover:bg-[#E3903A] text-black text-xs font-bold px-3 py-2 rounded-lg transition-all disabled:opacity-50 flex items-center gap-1"
+                                  >
+                                    {vtSubmitting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+                                    Submit
+                                  </button>
+                                  <button
+                                    onClick={() => { setVtEditingSub(null); setVtLinkInput(''); }}
+                                    className="text-gray-500 hover:text-white text-xs px-2 py-2 rounded-lg transition-colors"
+                                  >
+                                    Batal
+                                  </button>
+                                </div>
+                                <p className="text-[10px] text-gray-600 ml-1">Paste link VT rill dari halaman profil TikTok kamu</p>
+                              </div>
+                            ) : vtSuccess === sub.id ? (
+                              <div className="flex items-center gap-2 text-emerald-400">
+                                <CheckCircle2 className="h-3.5 w-3.5" />
+                                <span className="text-xs font-bold">Link VT berhasil disimpan!</span>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => { setVtEditingSub(sub.id); setVtLinkInput(''); }}
+                                className="flex items-center gap-2 text-[#F6D145] hover:text-[#E3903A] transition-colors w-full"
+                              >
+                                <Link2 className="h-3.5 w-3.5" />
+                                <span className="text-xs font-bold">Submit Link VT</span>
+                                <span className="text-[10px] text-gray-600 ml-auto">Belum disubmit</span>
+                              </button>
+                            )}
+                          </div>
+
+                          {/* GMV Button */}
+                          <div className="flex justify-end">
+                            <button
+                              onClick={() => setReportingSub(sub)}
+                              className="bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 text-xs font-bold py-2 px-4 rounded-lg flex items-center transition-colors border border-blue-500/20"
+                            >
+                              <BarChart3 className="h-3 w-3 mr-1.5" />
+                              Laporkan Performa (GMV)
+                            </button>
+                          </div>
                         </div>
                       )}
                     </div>

@@ -45,7 +45,7 @@ export class AuthService {
           total_campaigns: 0,
           total_posts: 0,
           streak_days: 0,
-          cm_id: null, // Auto-assign CM can be handled by CM module
+          cm_id: dto.cm_id || null, // CM assignment from self-registration dropdown
         },
       });
 
@@ -156,5 +156,16 @@ export class AuthService {
       EXECUTIVE: '/executive',
     };
     return routes[role] || '/';
+  }
+
+  // ──────────────────────────────────────────────
+  // PUBLIC CM LIST — For Creator self-registration dropdown
+  // ──────────────────────────────────────────────
+  async getCMListPublic() {
+    return this.prisma.user.findMany({
+      where: { role: 'CM' },
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' },
+    });
   }
 }

@@ -169,9 +169,23 @@ export default function BDDashboard() {
                     </div>
                     <div className="flex items-center gap-4 flex-shrink-0">
                       <div className="text-right">
-                        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Budget</p>
-                        <p className="text-sm font-bold text-white">Rp {((campaign.budget || 0) / 1000000).toFixed(1)}M</p>
+                        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Kreator</p>
+                        <p className="text-sm font-bold text-white">
+                          {campaign._count?.participants || 0}/{campaign.target_creators_count || campaign.slot || '∞'}
+                        </p>
                       </div>
+                      {campaign.collaboration_type && (
+                        <div className="text-right">
+                          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Jenis</p>
+                          <span className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest border ${
+                            campaign.collaboration_type === 'VISIT_ONLY' ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20' :
+                            campaign.collaboration_type === 'BARTER_STAY' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' :
+                            'bg-orange-500/10 text-orange-400 border-orange-500/20'
+                          }`}>
+                            {campaign.collaboration_type.replace(/_/g, ' ')}
+                          </span>
+                        </div>
+                      )}
                       <div className="text-right">
                         <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">SOW</p>
                         <p className="text-sm font-bold text-white">{campaign.sow_total}</p>

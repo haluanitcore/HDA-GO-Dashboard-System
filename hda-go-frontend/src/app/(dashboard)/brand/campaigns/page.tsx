@@ -13,7 +13,7 @@ export default function BrandCampaignsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [campaigns, setCampaigns] = useState<any[]>([]);
 
-  const [newCampaign, setNewCampaign] = useState({ title: '', category: 'FNB', budget: '', sow: '', min_level: '0' });
+  const [newCampaign, setNewCampaign] = useState({ title: '', category: 'FNB', budget: '', sow: '', min_level: '0', target_creators_count: '' });
 
   const { user } = useAuthStore();
 
@@ -52,9 +52,10 @@ export default function BrandCampaignsPage() {
         slot: 10,
         status: 'PENDING_BD',
         budget: Number(newCampaign.budget) || 0,
+        target_creators_count: Number(newCampaign.target_creators_count) || 0,
       });
       setIsModalOpen(false);
-      setNewCampaign({ title: '', category: 'FNB', budget: '', sow: '', min_level: '0' });
+      setNewCampaign({ title: '', category: 'FNB', budget: '', sow: '', min_level: '0', target_creators_count: '' });
       fetchCampaigns();
     } catch (error) {
       console.error(error);
@@ -115,7 +116,7 @@ export default function BrandCampaignsPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5">
+                <div className="grid grid-cols-3 gap-4 pt-4 border-t border-white/5">
                   <div>
                     <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Budget</p>
                     <p className="text-sm font-bold text-white">Rp {(camp.budget / 1000000).toFixed(1)}M</p>
@@ -123,6 +124,12 @@ export default function BrandCampaignsPage() {
                   <div>
                     <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Generated GMV</p>
                     <p className="text-sm font-bold text-emerald-500">Rp {(camp.gmv / 1000000).toFixed(1)}M</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Kreator</p>
+                    <p className="text-sm font-bold text-[#F6D145]">
+                      {camp._count?.participants || 0}/{camp.target_creators_count || camp.slot || '∞'}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -210,6 +217,18 @@ export default function BrandCampaignsPage() {
                     required
                   />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Jumlah Kreator Target</label>
+                <input 
+                  type="number" 
+                  value={newCampaign.target_creators_count}
+                  onChange={e => setNewCampaign({...newCampaign, target_creators_count: e.target.value})}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-colors"
+                  placeholder="Contoh: 5"
+                  min="1"
+                />
               </div>
 
               <div className="space-y-2">

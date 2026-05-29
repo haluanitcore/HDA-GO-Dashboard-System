@@ -478,4 +478,28 @@ export class SubmissionsService {
       pendingCount,
     };
   }
+
+  // ── SUBMIT LINK VT (Creator → TikTok VT URL) ──
+  async submitVtLink(submissionId: string, creatorId: string, vtLink: string) {
+    const submission = await this.prisma.submission.findUnique({
+      where: { id: submissionId },
+    });
+
+    if (!submission) throw new NotFoundException('Submission not found');
+    if (submission.creator_id !== creatorId) {
+      throw new BadRequestException('Anda tidak memiliki akses ke submission ini');
+    }
+
+    // Only allow VT link on approved/posted/completed submissions
+    if (!['APPROVED', 'POSTED', 'COMPLETED'].includes(submission.status)) {
+      throw new BadRequestException('VT link hanya bisa disubmit setelah konten disetujui');
+    }
+
+    const updated = await this.prisma.submission.update({
+      where: { id: submissionId },
+      data: { tiktok_vt_link: vtLink },
+    });
+
+    return { success: true, submission: updated };
+  }
 }

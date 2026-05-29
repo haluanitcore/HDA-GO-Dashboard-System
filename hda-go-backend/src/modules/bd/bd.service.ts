@@ -587,4 +587,172 @@ export class BdService {
     });
     return assignments.map(a => a.brand_user_id);
   }
+
+  // ══════════════════════════════════════════════════
+  // PHASE 2: SUBMIT NEW DEAL — BD Creates Campaign
+  // ══════════════════════════════════════════════════
+  async submitNewDeal(bdUserId: string, dto: any) {
+    const campaign = await this.prisma.campaign.create({
+      data: {
+        title: dto.title,
+        category: dto.category,
+        brand_id: dto.brand_id,
+        sow_total: dto.sow_total || 0,
+        reward_type: dto.reward_type || 'FIXED',
+        deadline: dto.deadline ? new Date(dto.deadline) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        status: 'PENDING_BD',
+        budget: dto.budget || 0,
+        slot: dto.slot || 0,
+        brief_url: dto.brief_url || null,
+        collaboration_type: dto.collaboration_type || null,
+        target_creators_count: dto.target_creators_count || 0,
+      },
+    });
+
+    // Create edit log for deal creation
+    await this.prisma.campaignEditLog.create({
+      data: {
+        campaign_id: campaign.id,
+        editor_id: bdUserId,
+        editor_role: 'BD',
+        field_name: 'status',
+        old_value: '',
+        new_value: 'PENDING_BD',
+        action: 'CREATE',
+        notes: `New deal created: ${dto.title}`,
+      },
+    });
+
+    return { success: true, campaign };
+  }
+
+  // ══════════════════════════════════════════════════
+  // PHASE 2: HOTEL PARTNERS — Excel Upload & CRUD
+  // ══════════════════════════════════════════════════
+  async uploadHotelExcel(file: Express.Multer.File) {
+    const fs = require('fs');
+    const filePath = file.path;
+
+    try {
+      // Read file and parse CSV/Tab-separated format
+      // Expected columns: name, location, city, category, facilities, contact
+      const content = fs.readFileSync(filePath, 'utf-8');
+      const lines = content.split('\n').filter((line: string) => line.trim().length > 0);
+
+      if (lines.length < 2) {
+        throw new BadRequestException('File harus memiliki header dan minimal 1 baris data');
+      }
+
+      // Detect separator (tab or comma)
+      const header = lines[0];
+      const separator = header.includes('\t') ? '\t' : ',';
+      const headers = header.split(separator).map((h: string) => h.trim().toLowerCase().replace(/[^a-z_]/g, ''));
+
+      const results: any[] = [];
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].split(separator).map((c: string) => c.trim());
+        const nameIdx = headers.indexOf('name') !== -1 ? headers.indexOf('name') : 0;
+        const locationIdx = headers.indexOf('location') !== -1 ? headers.indexOf('location') : 1;
+        const cityIdx = headers.indexOf('city') !== -1 ? headers.indexOf('city') : 2;
+        const categoryIdx = headers.indexOf('category') !== -1 ? headers.indexOf('category') : 3;
+        const facilitiesIdx = headers.indexOf('facilities') !== -1 ? headers.indexOf('facilities') : 4;
+        const contactIdx = headers.indexOf('contact') !== -1 ? headers.indexOf('contact') : 5;
+
+        if (!cols[nameIdx] || !cols[locationIdx]) continue; // skip empty rows
+
+        const hotel = await this.prisma.hotelPartner.create({
+          data: {
+            name: cols[nameIdx] || '',
+            location: cols[locationIdx] || '',
+            city: cols[cityIdx] || null,
+            category: cols[categoryIdx] || 'HOTEL',
+            facilities: cols[facilitiesIdx] || null,
+            contact: cols[contactIdx] || null,
+          },
+        });
+        results.push(hotel);
+      }
+
+      // Clean up temp file
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+
+      return { success: true, imported: results.length, hotels: results };
+    } catch (err) {
+      // Clean up temp file on error
+      const fs2 = require('fs');
+      if (fs2.existsSync(filePath)) fs2.unlinkSync(filePath);
+      throw err;
+    }
+  }
+
+  async getHotels() {
+    const hotels = await this.prisma.hotelPartner.findMany({
+      where: { is_active: true },
+      orderBy: { created_at: 'desc' },
+    });
+    return { total: hotels.length, hotels };
+  }
+
+  async createHotel(dto: any) {
+    const hotel = await this.prisma.hotelPartner.create({
+      data: {
+        name: dto.name,
+        location: dto.location,
+        city: dto.city || null,
+        category: dto.category || 'HOTEL',
+        facilities: dto.facilities ? JSON.stringify(dto.facilities) : null,
+        contact: dto.contact || null,
+      },
+    });
+    return { success: true, hotel };
+  }
+
+  // ══════════════════════════════════════════════════
+  // PHASE 2: HOTEL VISIT WORKFLOW
+  // BD schedules visits → Creator visits hotel → BD marks completed
+  // ══════════════════════════════════════════════════
+  async createHotelVisit(dto: any) {
+    const visit = await this.prisma.hotelVisit.create({
+      data: {
+        campaign_id: dto.campaign_id,
+        creator_id: dto.creator_id,
+        hotel_id: dto.hotel_id,
+        visit_type: dto.visit_type,
+        visit_date: new Date(dto.visit_date),
+        visit_time: dto.visit_time || '10:00',
+        visit_location: dto.visit_location || null,
+        status: 'PENDING',
+        notes: dto.notes || null,
+      },
+    });
+    return { success: true, visit };
+  }
+
+  async updateHotelVisitStatus(visitId: string, status: string, notes?: string) {
+    const visit = await this.prisma.hotelVisit.findUnique({ where: { id: visitId } });
+    if (!visit) throw new NotFoundException('Hotel visit not found');
+
+    const updated = await this.prisma.hotelVisit.update({
+      where: { id: visitId },
+      data: { status, notes: notes || visit.notes },
+    });
+    return { success: true, visit: updated };
+  }
+
+  async getHotelVisits(campaignId?: string) {
+    const where: any = {};
+    if (campaignId) where.campaign_id = campaignId;
+
+    const visits = await this.prisma.hotelVisit.findMany({
+      where,
+      include: {
+        hotel: true,
+        creator: { include: { user: { select: { name: true } } } },
+        campaign: { select: { title: true, category: true } },
+      },
+      orderBy: { visit_date: 'desc' },
+    });
+
+    return { total: visits.length, visits };
+  }
 }

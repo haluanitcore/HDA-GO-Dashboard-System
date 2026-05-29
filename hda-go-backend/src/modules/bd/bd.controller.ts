@@ -1,10 +1,12 @@
-import { Controller, Get, Patch, Post, Param, Body, Query, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Patch, Post, Param, Body, Query, Req, UseGuards, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../../common/roles.guard';
 import { Roles } from '../../common/roles.decorator';
 import { Role } from '../../common/roles.enum';
 import { BdService } from './bd.service';
-import { BDReviewDto, BDEditCampaignDto, BDAssignBrandDto } from './dto/bd-review.dto';
+import { BDReviewDto, BDEditCampaignDto, BDAssignBrandDto, BDSubmitDealDto } from './dto/bd-review.dto';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { multerConfig } from '../../config/upload.config';
 
 // ══════════════════════════════════════════════════
 // BD (Business Development) CONTROLLER
@@ -111,4 +113,62 @@ export class BdController {
   assignBrand(@Body() dto: BDAssignBrandDto) {
     return this.bdService.assignBrand(dto.bd_user_id, dto.brand_user_id);
   }
+
+  // ══════════════════════════════════════════════════
+  // PHASE 2: BD HOTEL & FNB — New Endpoints
+  // ══════════════════════════════════════════════════
+
+  // POST /bd/deals — Submit new campaign deal
+  @Post('deals')
+  @Roles(Role.BD, Role.ADMIN)
+  submitDeal(@Req() req: any, @Body() dto: BDSubmitDealDto) {
+    return this.bdService.submitNewDeal(req.user.userId, dto);
+  }
+
+  // POST /bd/hotels/upload-excel — Upload hotel list via Excel
+  @Post('hotels/upload-excel')
+  @Roles(Role.BD, Role.ADMIN)
+  @UseInterceptors(FileInterceptor('file', multerConfig))
+  uploadHotelExcel(@UploadedFile() file: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException('File Excel wajib diupload');
+    }
+    return this.bdService.uploadHotelExcel(file);
+  }
+
+  // GET /bd/hotels — List all hotel partners
+  @Get('hotels')
+  @Roles(Role.BD, Role.ADMIN)
+  getHotels() {
+    return this.bdService.getHotels();
+  }
+
+  // POST /bd/hotels — Create single hotel partner
+  @Post('hotels')
+  @Roles(Role.BD, Role.ADMIN)
+  createHotel(@Body() body: any) {
+    return this.bdService.createHotel(body);
+  }
+
+  // POST /bd/hotel-visits — Schedule hotel visit
+  @Post('hotel-visits')
+  @Roles(Role.BD, Role.ADMIN)
+  createHotelVisit(@Body() body: any) {
+    return this.bdService.createHotelVisit(body);
+  }
+
+  // PATCH /bd/hotel-visits/:id — Update hotel visit status
+  @Patch('hotel-visits/:id')
+  @Roles(Role.BD, Role.ADMIN)
+  updateHotelVisit(@Param('id') id: string, @Body() body: any) {
+    return this.bdService.updateHotelVisitStatus(id, body.status, body.notes);
+  }
+
+  // GET /bd/hotel-visits — List hotel visits
+  @Get('hotel-visits')
+  @Roles(Role.BD, Role.ADMIN)
+  getHotelVisits(@Query('campaign_id') campaignId?: string) {
+    return this.bdService.getHotelVisits(campaignId);
+  }
 }
+

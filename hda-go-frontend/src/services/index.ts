@@ -63,6 +63,9 @@ export const submissionService = {
     reviewer_id?: string;
   }) => 
     api.patch<any>('/submissions/bulk-review', data),
+  // Phase 2: Submit VT Link
+  submitVtLink: (id: string, tiktok_vt_link: string) =>
+    api.patch<any>(`/submissions/${id}/vt-link`, { tiktok_vt_link }),
 };
 
 export const gmvService = {
@@ -119,6 +122,20 @@ export const bdService = {
   getHistory: () => api.get<any>('/bd/campaigns/history'),
   getAnalytics: () => api.get<any>('/bd/analytics'),
   getAssignments: () => api.get<any>('/bd/assignments'),
+  // Phase 2: BD Hotel & FNB
+  submitDeal: (data: any) => api.post<any>('/bd/deals', data),
+  getHotels: () => api.get<any>('/bd/hotels'),
+  createHotel: (data: any) => api.post<any>('/bd/hotels', data),
+  uploadHotelExcel: (file: File, onProgress?: (pct: number) => void) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.uploadWithProgress<any>('/bd/hotels/upload-excel', formData, onProgress);
+  },
+  getHotelVisits: (campaignId?: string) =>
+    api.get<any>(`/bd/hotel-visits${campaignId ? `?campaign_id=${campaignId}` : ''}`),
+  createHotelVisit: (data: any) => api.post<any>('/bd/hotel-visits', data),
+  updateHotelVisit: (id: string, status: string, notes?: string) =>
+    api.patch<any>(`/bd/hotel-visits/${id}`, { status, notes }),
 };
 
 // ── Analytics Services (Executive) ──
@@ -134,8 +151,9 @@ export const analyticsService = {
 export const authService = {
   login: (email: string, password: string) =>
     api.post<any>('/auth/login', { email, password }),
-  register: (data: { name: string; email: string; password: string; role: string }) =>
+  register: (data: { name: string; email: string; password: string; role: string; cm_id?: string }) =>
     api.post<any>('/auth/register', data),
+  getCMListPublic: () => api.get<any[]>('/auth/cm-list'),
 };
 
 // ── Brand Services ──
