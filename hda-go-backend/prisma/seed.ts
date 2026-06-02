@@ -112,8 +112,8 @@ async function main() {
       followers: 1163,
       niche: '["Attraction", "F&B", "Hotel"]',
       level: 1,
-      gmv: 1507297,
-      orders: 15,
+      gmv: 0,
+      orders: 0,
       profileUrl: 'https://www.tiktok.com/@ulanberkelana'
     },
     {
@@ -125,8 +125,8 @@ async function main() {
       followers: 1373,
       niche: '["F&B", "Hotel"]',
       level: 1,
-      gmv: 15108429,
-      orders: 151,
+      gmv: 0,
+      orders: 0,
       profileUrl: 'https://www.tiktok.com/@jadikieu'
     },
     {
@@ -164,8 +164,8 @@ async function main() {
       followers: 7089,
       niche: '["F&B", "Hotel"]',
       level: 2,
-      gmv: 46515190,
-      orders: 465,
+      gmv: 0,
+      orders: 0,
       profileUrl: 'https://www.tiktok.com/@deviamlyhh'
     },
     {
@@ -190,8 +190,8 @@ async function main() {
       followers: 2259,
       niche: '["Attraction", "F&B"]',
       level: 1,
-      gmv: 10535722,
-      orders: 105,
+      gmv: 0,
+      orders: 0,
       profileUrl: 'https://www.tiktok.com/@agisrutt'
     },
     {
@@ -203,8 +203,8 @@ async function main() {
       followers: 1516,
       niche: '["Attraction", "F&B", "Hotel"]',
       level: 1,
-      gmv: 16552478,
-      orders: 165,
+      gmv: 0,
+      orders: 0,
       profileUrl: 'https://www.tiktok.com/@desibaladewi'
     },
     {
@@ -216,8 +216,8 @@ async function main() {
       followers: 37432,
       niche: '["Attraction", "F&B", "Hotel"]',
       level: 1,
-      gmv: 14722235,
-      orders: 147,
+      gmv: 0,
+      orders: 0,
       profileUrl: 'https://www.tiktok.com/@balispot'
     },
     {
@@ -229,8 +229,8 @@ async function main() {
       followers: 37400,
       niche: '["Attraction", "F&B", "Hotel"]',
       level: 1,
-      gmv: 15684067,
-      orders: 156,
+      gmv: 0,
+      orders: 0,
       profileUrl: 'https://www.tiktok.com/@debillaar_'
     }
   ];
