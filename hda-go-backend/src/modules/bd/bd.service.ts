@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../../prisma/prisma.service';
 import { EventsGateway } from '../notifications/events.gateway';
 import { BDEditCampaignDto } from './dto/bd-review.dto';
+import { LevelsService } from '../levels/levels.service';
 
 // ══════════════════════════════════════════════════════════════
 // BD (Business Development) SERVICE
@@ -22,6 +23,7 @@ export class BdService {
   constructor(
     private prisma: PrismaService,
     private eventsGateway: EventsGateway,
+    private levelsService: LevelsService,
   ) {}
 
   // ──────────────────────────────────────────────
@@ -788,5 +790,264 @@ export class BdService {
     });
 
     return { total: visits.length, visits };
+  }
+
+  // ══════════════════════════════════════════════════
+  // BULK EXCEL CREATOR GMV & ORDERS IMPORTER
+  // ══════════════════════════════════════════════════
+  async uploadCreatorGmvExcel(file: Express.Multer.File) {
+    const fs = require('fs');
+    const XLSX = require('xlsx');
+    const filePath = file.path;
+
+    try {
+      if (!fs.existsSync(filePath)) {
+        throw new BadRequestException('Berkas Excel tidak ditemukan');
+      }
+
+      const workbook = XLSX.readFile(filePath);
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const rows: any[] = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+
+      if (rows.length === 0) {
+        throw new BadRequestException('Excel tidak mengandung data atau kosong');
+      }
+
+      // Dynamic header mapping helpers
+      const findKey = (row: any, patterns: string[]) => {
+        const keys = Object.keys(row);
+        for (const pattern of patterns) {
+          const matchedKey = keys.find(k => k.toLowerCase().replace(/[^a-z0-9]/g, '').includes(pattern));
+          if (matchedKey) return matchedKey;
+        }
+        return null;
+      };
+
+      const sampleRow = rows[0];
+      const usernameKey = findKey(sampleRow, ['username', 'creator', 'kreator', 'nama']);
+      const gmvKey = findKey(sampleRow, ['gmv', 'omset', 'penjualan', 'salesamount', 'salesvalue']);
+      const ordersKey = findKey(sampleRow, ['order', 'pesanan', 'sales', 'ordercount']);
+      const periodKey = findKey(sampleRow, ['periode', 'bulan', 'month', 'date', 'tanggal']);
+
+      if (!usernameKey) {
+        throw new BadRequestException('Kolom Username TikTok tidak ditemukan di Excel. Pastikan ada kolom "Username", "Creator", atau "Nama".');
+      }
+
+      if (!gmvKey) {
+        throw new BadRequestException('Kolom GMV tidak ditemukan di Excel. Pastikan ada kolom "GMV", "Omset", atau "Penjualan".');
+      }
+
+      // Self-healing default campaign for referential integrity
+      let campaign = await this.prisma.campaign.findFirst({
+        where: { status: 'ACTIVE' }
+      });
+      if (!campaign) {
+        campaign = await this.prisma.campaign.findFirst();
+      }
+      if (!campaign) {
+        campaign = await this.prisma.campaign.create({
+          data: {
+            title: 'Excel Import Campaign Tracking',
+            category: 'HOTEL',
+            sow_total: 1,
+            reward_type: 'COMMISSION',
+            deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            status: 'ACTIVE',
+            brand_id: 'default-brand-id',
+          }
+        });
+      }
+      const campaignId = campaign.id;
+
+      // Current Month as default period: "YYYY-MM"
+      const now = new Date();
+      const currentPeriod = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+      let totalUpdated = 0;
+      let totalGmvAdded = 0;
+      let totalOrdersAdded = 0;
+      const leveledUpCreators: any[] = [];
+      const skippedRows: any[] = [];
+
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        let username = String(row[usernameKey]).trim();
+        
+        // Clean username from @ prefix and spaces
+        if (username.startsWith('@')) {
+          username = username.substring(1).trim();
+        }
+
+        if (!username) {
+          skippedRows.push({
+            row: i + 2,
+            username: '',
+            reason: 'Username kosong'
+          });
+          continue;
+        }
+
+        // Parse GMV
+        let rawGmv = String(row[gmvKey] || '0').trim();
+        let cleanedGmvStr = rawGmv.replace(/[^\d.,]/g, '');
+        let parsedGmv = 0;
+
+        if (cleanedGmvStr.includes(',') && cleanedGmvStr.includes('.')) {
+          if (cleanedGmvStr.indexOf(',') > cleanedGmvStr.indexOf('.')) {
+            cleanedGmvStr = cleanedGmvStr.replace(/\./g, '').replace(/,/g, '.');
+          } else {
+            cleanedGmvStr = cleanedGmvStr.replace(/,/g, '');
+          }
+        } else if (cleanedGmvStr.includes(',')) {
+          const parts = cleanedGmvStr.split(',');
+          if (parts[parts.length - 1].length === 3) {
+            cleanedGmvStr = cleanedGmvStr.replace(/,/g, '');
+          } else {
+            cleanedGmvStr = cleanedGmvStr.replace(/,/g, '.');
+          }
+        } else if (cleanedGmvStr.includes('.')) {
+          const parts = cleanedGmvStr.split('.');
+          if (parts[parts.length - 1].length === 3) {
+            cleanedGmvStr = cleanedGmvStr.replace(/\./g, '');
+          }
+        }
+        parsedGmv = parseFloat(cleanedGmvStr) || 0;
+
+        // Parse Orders
+        let parsedOrders = 0;
+        if (ordersKey && row[ordersKey] !== undefined && row[ordersKey] !== '') {
+          const rawOrders = String(row[ordersKey]).replace(/[^\d]/g, '');
+          parsedOrders = parseInt(rawOrders, 10) || 0;
+        } else {
+          // Smart fallback: assume average basket size of Rp 100,000 if Orders is missing
+          parsedOrders = Math.floor(parsedGmv / 100000) || 1;
+        }
+
+        // Parse Period
+        let parsedPeriod = currentPeriod;
+        if (periodKey && row[periodKey]) {
+          const rawPeriod = String(row[periodKey]).trim();
+          const match = rawPeriod.match(/(\d{4})[-/](\d{2})/);
+          if (match) {
+            parsedPeriod = `${match[1]}-${match[2]}`;
+          }
+        }
+
+        // Safe case-insensitive equivalent find for SQLite
+        const creator = await this.prisma.creator.findFirst({
+          where: {
+            OR: [
+              { tiktok_username: username },
+              { tiktok_username: username.toLowerCase() },
+              { tiktok_username: username.toUpperCase() },
+            ]
+          },
+          include: { user: true }
+        });
+
+        if (!creator) {
+          skippedRows.push({
+            row: i + 2,
+            username: username,
+            reason: `Username TikTok "${username}" tidak terdaftar di sistem HDA-GO`
+          });
+          continue;
+        }
+
+        // Record the transaction as verified BD order upload
+        await this.prisma.creatorOrder.create({
+          data: {
+            creator_id: creator.user_id,
+            campaign_id: campaignId,
+            order_count: parsedOrders,
+            gmv_amount: parsedGmv,
+            source: 'EXCEL_UPLOAD_BD',
+            status: 'VERIFIED',
+            period_date: new Date(),
+            notes: `Bulk GMV Excel upload by BD for period ${parsedPeriod}. Row ${i + 2}`,
+          }
+        });
+
+        // Record monthly stats
+        await this.prisma.creatorMonthlyStats.upsert({
+          where: {
+            creator_id_month: {
+              creator_id: creator.user_id,
+              month: parsedPeriod,
+            }
+          },
+          update: {
+            gmv: { increment: parsedGmv },
+            orders: { increment: parsedOrders },
+          },
+          create: {
+            creator_id: creator.user_id,
+            month: parsedPeriod,
+            gmv: parsedGmv,
+            orders: parsedOrders,
+          }
+        });
+
+        // Update aggregates on Creator table
+        await this.prisma.creator.update({
+          where: { user_id: creator.user_id },
+          data: {
+            gmv_total: { increment: parsedGmv },
+            gmv_monthly: { increment: parsedGmv },
+            total_orders: { increment: parsedOrders },
+          }
+        });
+
+        // Recalculate levels using the Level Up Engine
+        const evalResult = await this.levelsService.evaluateLevel(creator.user_id);
+        if (evalResult && evalResult.leveledUp) {
+          leveledUpCreators.push({
+            id: creator.user_id,
+            name: creator.user.name,
+            username: creator.tiktok_username,
+            oldLevel: evalResult.previousLevel,
+            newLevel: evalResult.newLevel,
+            levelName: evalResult.levelName,
+          });
+
+          // Pemicu Websocket real-time event to creator
+          this.eventsGateway.emitLevelUp(creator.user_id, {
+            newLevel: evalResult.newLevel,
+            levelName: evalResult.levelName,
+          });
+        }
+
+        totalUpdated++;
+        totalGmvAdded += parsedGmv;
+        totalOrdersAdded += parsedOrders;
+      }
+
+      // Clean up uploaded temp file
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+
+      return {
+        success: true,
+        message: `Berhasil memproses Excel GMV & Orders`,
+        summary: {
+          total_rows_processed: rows.length,
+          total_updated_creators: totalUpdated,
+          total_gmv_added: totalGmvAdded,
+          total_orders_added: totalOrdersAdded,
+        },
+        leveled_up_creators: leveledUpCreators,
+        skipped_rows: skippedRows,
+      };
+
+    } catch (err) {
+      // Clean up temp file on error
+      const fs2 = require('fs');
+      if (fs2.existsSync(filePath)) {
+        fs2.unlinkSync(filePath);
+      }
+      throw err;
+    }
   }
 }

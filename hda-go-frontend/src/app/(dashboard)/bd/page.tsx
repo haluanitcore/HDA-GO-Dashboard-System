@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useBDStore } from '@/store';
 import Link from 'next/link';
+import { api } from '@/services/api';
 import {
   Card,
   CardContent,
@@ -19,10 +20,62 @@ import {
   FileText,
   TrendingUp,
   ArrowRight,
+  UploadCloud,
+  Download,
+  AlertTriangle,
+  Trophy,
+  ChevronDown,
+  ChevronUp,
+  Sparkles,
+  Check,
 } from 'lucide-react';
 
 export default function BDDashboard() {
   const { dashboard, fetchDashboard, isLoading } = useBDStore();
+
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadResult, setUploadResult] = useState<any>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [showSkipped, setShowSkipped] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const downloadTemplate = () => {
+    const csvContent = "data:text/csv;charset=utf-8,TikTok Username,GMV Mei,Orders,Periode (YYYY-MM),Catatan\nulanberkelana,1469299,15,2026-05,Kreator Level 1\njadikieu,14879956,150,2026-05,Kreator Level 2\nintravelstaycation,86510301,860,2026-05,Kreator Level 3\n";
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "template_gmv_hda_go.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    setUploadError(null);
+    setUploadResult(null);
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res: any = await api.uploadWithProgress('/bd/creators/upload-gmv', formData);
+      if (res && res.success) {
+        setUploadResult(res);
+        fetchDashboard();
+      } else {
+        setUploadError(res?.message || 'Gagal memproses file Excel.');
+      }
+    } catch (err: any) {
+      setUploadError(err?.response?.data?.message || 'Gagal mengunggah file. Pastikan format kolom benar.');
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   useEffect(() => {
     fetchDashboard();
@@ -129,6 +182,146 @@ export default function BDDashboard() {
           </Card>
         ))}
       </div>
+
+      {/* 📥 Bulk Creator GMV & Orders Excel Importer */}
+      <Card className="glass-card rounded-[32px] border border-white/5 overflow-hidden shadow-2xl relative">
+        <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-[#F6D145]/40 to-transparent" />
+        <CardContent className="p-8">
+          <div className="flex flex-col md:flex-row gap-8 items-center justify-between">
+            <div className="space-y-2 max-w-lg">
+              <h2 className="text-xl font-black text-white tracking-tight flex items-center gap-2">
+                <UploadCloud className="h-6 w-6 text-[#F6D145]" /> Bulk Impor Performa Kreator (GMV & Orders)
+              </h2>
+              <p className="text-sm text-gray-500 font-medium leading-relaxed">
+                Unggah spreadsheet performa kreator bulanan Anda untuk memperbarui pencapaian GMV secara massal dan memicu kenaikan level otomatis secara real-time!
+              </p>
+              <div className="flex flex-wrap items-center gap-4 pt-2">
+                <button
+                  onClick={downloadTemplate}
+                  className="text-xs font-bold text-[#F6D145] bg-[#F6D145]/10 hover:bg-[#F6D145]/20 border border-[#F6D145]/10 px-4 py-2.5 rounded-xl transition-all flex items-center gap-2"
+                >
+                  <Download className="h-3.5 w-3.5" /> Unduh Template Excel
+                </button>
+                <span className="text-[10px] text-gray-600 font-medium">
+                  Mendukung kolom: <b>Username, GMV, Orders, Periode (Opsional)</b>
+                </span>
+              </div>
+            </div>
+
+            {/* Dropzone Area */}
+            <div className="w-full md:w-80 flex-shrink-0">
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileUpload}
+                accept=".xlsx,.xls,.csv"
+                className="hidden"
+              />
+              <div
+                onClick={() => !isUploading && fileInputRef.current?.click()}
+                className={`border-2 border-dashed border-white/10 hover:border-[#F6D145]/40 hover:bg-white/[0.01] rounded-3xl p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-3 relative ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}
+              >
+                {isUploading ? (
+                  <>
+                    <Loader2 className="h-10 w-10 text-[#F6D145] animate-spin" />
+                    <p className="text-xs font-bold text-gray-400">Sedang memproses...</p>
+                  </>
+                ) : (
+                  <>
+                    <UploadCloud className="h-10 w-10 text-gray-500 group-hover:text-[#F6D145] transition-colors animate-pulse" />
+                    <div>
+                      <p className="text-sm font-bold text-white">Unggah Berkas Excel / CSV</p>
+                      <p className="text-xs text-gray-500 mt-1">Seret berkas ke sini atau klik untuk memilih</p>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* ❌ Upload Error Alert */}
+          {uploadError && (
+            <div className="mt-6 flex items-center gap-3 bg-red-500/10 border border-red-500/20 rounded-2xl p-4 text-sm text-red-400 font-medium animate-fadeIn">
+              <AlertTriangle className="h-5 w-5 flex-shrink-0" />
+              {uploadError}
+            </div>
+          )}
+
+          {/* 🎉 Upload Success & Level Up Summary */}
+          {uploadResult && (
+            <div className="mt-8 border-t border-white/5 pt-6 space-y-6 animate-[slideUp_0.4s_ease-out]">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-white/5 border border-white/5 rounded-2xl p-4">
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Kreator Terupdate</p>
+                  <p className="text-xl font-bold text-white mt-1">{uploadResult.summary?.total_updated_creators || 0}</p>
+                </div>
+                <div className="bg-white/5 border border-white/5 rounded-2xl p-4">
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Total Baris Diproses</p>
+                  <p className="text-xl font-bold text-white mt-1">{uploadResult.summary?.total_rows_processed || 0}</p>
+                </div>
+                <div className="bg-white/5 border border-white/5 rounded-2xl p-4">
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Total GMV Masuk</p>
+                  <p className="text-xl font-bold text-emerald-400 mt-1">Rp {Number(uploadResult.summary?.total_gmv_added || 0).toLocaleString('id-ID')}</p>
+                </div>
+                <div className="bg-white/5 border border-white/5 rounded-2xl p-4">
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Total Orders Masuk</p>
+                  <p className="text-xl font-bold text-blue-400 mt-1">{uploadResult.summary?.total_orders_added || 0}</p>
+                </div>
+              </div>
+
+              {/* Celebration Leveled Up List */}
+              {uploadResult.leveled_up_creators && uploadResult.leveled_up_creators.length > 0 && (
+                <div className="bg-[#F6D145]/5 border border-[#F6D145]/15 rounded-3xl p-6 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-4 opacity-10">
+                    <Trophy className="h-24 w-24 text-[#F6D145]" />
+                  </div>
+                  <h3 className="text-sm font-bold text-[#F6D145] uppercase tracking-widest flex items-center gap-2 mb-4">
+                    <Sparkles className="h-4 w-4 animate-bounce" /> Kenaikan Level Kreator Terdeteksi! 🎉
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                    {uploadResult.leveled_up_creators.map((c: any) => (
+                      <div key={c.id} className="bg-black/40 border border-white/5 rounded-2xl p-4 flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-[#F6D145] flex items-center justify-center text-black font-black text-sm">
+                          Lv.{c.newLevel}
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-white">{c.name}</p>
+                          <p className="text-xs text-gray-500 mt-0.5">@{c.username} &middot; <span className="text-[#F6D145] font-semibold">{c.levelName}</span></p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Skipped Rows */}
+              {uploadResult.skipped_rows && uploadResult.skipped_rows.length > 0 && (
+                <div className="bg-white/[0.01] border border-white/5 rounded-3xl overflow-hidden">
+                  <button
+                    onClick={() => setShowSkipped(!showSkipped)}
+                    className="w-full px-6 py-4 flex items-center justify-between hover:bg-white/[0.01] transition-colors"
+                  >
+                    <div className="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase tracking-widest">
+                      <AlertTriangle className="h-4 w-4 text-amber-500" /> Baris Data Dilewati ({uploadResult.skipped_rows.length})
+                    </div>
+                    {showSkipped ? <ChevronUp className="h-4 w-4 text-gray-500" /> : <ChevronDown className="h-4 w-4 text-gray-500" />}
+                  </button>
+                  {showSkipped && (
+                    <div className="border-t border-white/5 bg-black/20 divide-y divide-white/5 max-h-48 overflow-y-auto">
+                      {uploadResult.skipped_rows.map((row: any, i: number) => (
+                        <div key={i} className="px-6 py-3.5 flex items-center justify-between text-xs font-medium">
+                          <span className="text-gray-400">Baris {row.row}: <b>{row.username || 'Username Kosong'}</b></span>
+                          <span className="text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">{row.reason}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

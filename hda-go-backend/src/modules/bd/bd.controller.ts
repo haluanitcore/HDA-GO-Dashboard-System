@@ -136,6 +136,17 @@ export class BdController {
     return this.bdService.uploadHotelExcel(file);
   }
 
+  // POST /bd/creators/upload-gmv — Bulk upload GMV and Orders excel
+  @Post('creators/upload-gmv')
+  @Roles(Role.BD, Role.ADMIN)
+  @UseInterceptors(FileInterceptor('file', multerConfig))
+  uploadCreatorGmvExcel(@UploadedFile() file: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException('File Excel/CSV wajib diupload');
+    }
+    return this.bdService.uploadCreatorGmvExcel(file);
+  }
+
   // GET /bd/hotels — List all hotel partners
   @Get('hotels')
   @Roles(Role.BD, Role.ADMIN)
