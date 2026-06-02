@@ -290,12 +290,53 @@ export default function SubmissionsPage() {
                 {selectedCampaign && (() => {
                   const camp = joinedCampaigns.find(c => c.id === selectedCampaign);
                   return camp ? (
-                    <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-3 text-xs space-y-1.5">
-                      <p className="font-bold text-white">{camp.title}</p>
+                    <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-4 text-xs space-y-2 text-left">
+                      <p className="font-bold text-sm text-white mb-2 pb-1 border-b border-white/5">{camp.title}</p>
                       <p className="text-gray-400">Total SOW: <span className="text-white font-bold">{camp.sow_total} konten</span></p>
-                      <p className="text-gray-400">Deadline: <span className="text-white font-bold">{new Date(camp.deadline).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</span></p>
+                      
+                      {camp.start_date ? (
+                        <p className="text-gray-400">Periode: <span className="text-white font-bold">{new Date(camp.start_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} s/d {new Date(camp.deadline).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span></p>
+                      ) : (
+                        <p className="text-gray-400">Deadline: <span className="text-white font-bold">{new Date(camp.deadline).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</span></p>
+                      )}
+
+                      {camp.collaboration_type && (
+                        <p className="text-gray-400">Jenis Kerja Sama: <span className="text-blue-400 font-bold uppercase tracking-wider">{camp.collaboration_type.replace(/_/g, ' ')}</span></p>
+                      )}
+
+                      {camp.pic_contact && (
+                        <p className="text-gray-400">PIC BD Contact: <span className="text-emerald-400 font-bold">{camp.pic_contact}</span></p>
+                      )}
+
                       {myCm?.cm_name && (
                         <p className="text-gray-400">CM: <span className="text-emerald-400 font-bold">👤 {myCm.cm_name}</span></p>
+                      )}
+
+                      {camp.description && (
+                        <div className="pt-2 border-t border-white/5 mt-1">
+                          <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest block">Deskripsi Campaign</span>
+                          <p className="text-[11px] text-gray-300 mt-1 leading-relaxed font-medium">{camp.description}</p>
+                        </div>
+                      )}
+
+                      {camp.brief_text && (
+                        <div className="pt-2 border-t border-white/5 mt-1">
+                          <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest block">Brief Manual (Ketik)</span>
+                          <p className="text-[11px] text-gray-300 mt-1 leading-relaxed whitespace-pre-line bg-black/20 p-2.5 rounded-lg border border-white/5 max-h-24 overflow-y-auto font-medium">{camp.brief_text}</p>
+                        </div>
+                      )}
+
+                      {camp.brief_url && (
+                        <div className="pt-2 border-t border-white/5 mt-2 flex justify-start">
+                          <a 
+                            href={camp.brief_url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="bg-[#416CB1]/10 hover:bg-[#416CB1]/20 text-[#416CB1] text-[10px] font-bold px-3 py-1.5 rounded-lg border border-[#416CB1]/30 flex items-center gap-1 transition-all"
+                          >
+                            Unduh Brief PDF <ExternalLink className="w-3 h-3" />
+                          </a>
+                        </div>
                       )}
                     </div>
                   ) : null;
