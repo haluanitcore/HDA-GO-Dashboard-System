@@ -863,15 +863,20 @@ export class BdService {
         gmvKey = findKey(sampleRow, ['gmv', 'omset', 'penjualan', 'salesamount', 'salesvalue']);
         ordersKey = findKey(sampleRow, ['order', 'pesanan', 'sales', 'ordercount']);
         periodKey = findKey(sampleRow, ['periode', 'bulan', 'month', 'date', 'tanggal']);
-
-        if (!usernameKey) {
-          throw new BadRequestException('Kolom Username TikTok tidak ditemukan di Excel. Pastikan ada kolom "Username", "Creator", atau "Nama".');
-        }
-
-        if (!gmvKey) {
-          throw new BadRequestException('Kolom GMV tidak ditemukan di Excel. Pastikan ada kolom "GMV", "Omset", atau "Penjualan".');
-        }
       }
+
+      if (!usernameKey) {
+        throw new BadRequestException('Kolom Username TikTok tidak ditemukan di Excel. Pastikan ada kolom "Username", "Creator", atau "Nama".');
+      }
+
+      if (!gmvKey) {
+        throw new BadRequestException('Kolom GMV tidak ditemukan di Excel. Pastikan ada kolom "GMV", "Omset", atau "Penjualan".');
+      }
+
+      const uKey = usernameKey;
+      const gKey = gmvKey;
+      const oKey = ordersKey;
+      const pKey = periodKey;
 
       // Self-healing default campaign for referential integrity
       let campaign = await this.prisma.campaign.findFirst({
@@ -907,7 +912,7 @@ export class BdService {
 
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
-        let username = String(row[usernameKey]).trim();
+        let username = String(row[uKey]).trim();
         
         // Clean username from @ prefix and spaces
         if (username.startsWith('@')) {
@@ -924,7 +929,7 @@ export class BdService {
         }
 
         // Parse GMV
-        let rawGmv = String(row[gmvKey] || '0').trim();
+        let rawGmv = String(row[gKey] || '0').trim();
         let cleanedGmvStr = rawGmv.replace(/[^\d.,]/g, '');
         let parsedGmv = 0;
 
@@ -951,8 +956,8 @@ export class BdService {
 
         // Parse Orders
         let parsedOrders = 0;
-        if (ordersKey && row[ordersKey] !== undefined && row[ordersKey] !== '') {
-          const rawOrders = String(row[ordersKey]).replace(/[^\d]/g, '');
+        if (oKey && row[oKey] !== undefined && row[oKey] !== '') {
+          const rawOrders = String(row[oKey]).replace(/[^\d]/g, '');
           parsedOrders = parseInt(rawOrders, 10) || 0;
         } else {
           // Smart fallback: assume average basket size of Rp 100,000 if Orders is missing
@@ -961,8 +966,8 @@ export class BdService {
 
         // Parse Period
         let parsedPeriod = currentPeriod;
-        if (periodKey && row[periodKey]) {
-          const rawPeriod = String(row[periodKey]).trim();
+        if (pKey && row[pKey]) {
+          const rawPeriod = String(row[pKey]).trim();
           const match = rawPeriod.match(/(\d{4})[-/](\d{2})/);
           if (match) {
             parsedPeriod = `${match[1]}-${match[2]}`;
