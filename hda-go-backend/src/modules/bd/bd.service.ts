@@ -909,6 +909,7 @@ export class BdService {
       let totalOrdersAdded = 0;
       const leveledUpCreators: any[] = [];
       const skippedRows: any[] = [];
+      const updatedCreators: any[] = [];
 
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
@@ -1058,6 +1059,14 @@ export class BdService {
           });
         }
 
+        updatedCreators.push({
+          id: creator.user_id,
+          name: creator.user.name,
+          username: creator.tiktok_username,
+          gmvAdded: parsedGmv,
+          ordersAdded: parsedOrders,
+        });
+
         totalUpdated++;
         totalGmvAdded += parsedGmv;
         totalOrdersAdded += parsedOrders;
@@ -1077,6 +1086,7 @@ export class BdService {
           total_gmv_added: totalGmvAdded,
           total_orders_added: totalOrdersAdded,
         },
+        updated_creators: updatedCreators,
         leveled_up_creators: leveledUpCreators,
         skipped_rows: skippedRows,
       };
@@ -1194,6 +1204,7 @@ export class BdService {
       let totalOrdersAdded = 0;
       const leveledUpCreators: any[] = [];
       const skippedRows: any[] = [];
+      const updatedCreators: any[] = [];
 
       for (let i = 1; i < parsedRows.length; i++) {
         const cols = parsedRows[i];
@@ -1343,6 +1354,14 @@ export class BdService {
           });
         }
 
+        updatedCreators.push({
+          id: creator.user_id,
+          name: creator.user.name,
+          username: creator.tiktok_username,
+          gmvAdded: parsedGmv,
+          ordersAdded: parsedOrders,
+        });
+
         totalUpdated++;
         totalGmvAdded += parsedGmv;
         totalOrdersAdded += parsedOrders;
@@ -1357,6 +1376,7 @@ export class BdService {
           total_gmv_added: totalGmvAdded,
           total_orders_added: totalOrdersAdded,
         },
+        updated_creators: updatedCreators,
         leveled_up_creators: leveledUpCreators,
         skipped_rows: skippedRows,
       };

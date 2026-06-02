@@ -39,6 +39,7 @@ export default function BDDashboard() {
   const [uploadResult, setUploadResult] = useState<any>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [showSkipped, setShowSkipped] = useState(false);
+  const [showUpdated, setShowUpdated] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const downloadTemplate = () => {
@@ -325,6 +326,37 @@ export default function BDDashboard() {
                       </div>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {/* Updated Creators List */}
+              {uploadResult.updated_creators && uploadResult.updated_creators.length > 0 && (
+                <div className="bg-white/[0.01] border border-white/5 rounded-3xl overflow-hidden mb-4">
+                  <button
+                    onClick={() => setShowUpdated(!showUpdated)}
+                    className="w-full px-6 py-4 flex items-center justify-between hover:bg-white/[0.01] transition-colors"
+                  >
+                    <div className="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase tracking-widest">
+                      <Check className="h-4 w-4 text-emerald-500" /> Detail Kreator Terupdate ({uploadResult.updated_creators.length})
+                    </div>
+                    {showUpdated ? <ChevronUp className="h-4 w-4 text-gray-500" /> : <ChevronDown className="h-4 w-4 text-gray-500" />}
+                  </button>
+                  {showUpdated && (
+                    <div className="border-t border-white/5 bg-black/20 divide-y divide-white/5 max-h-60 overflow-y-auto">
+                      {uploadResult.updated_creators.map((c: any, i: number) => (
+                        <div key={i} className="px-6 py-3.5 flex items-center justify-between text-xs font-medium">
+                          <div className="flex flex-col">
+                            <span className="text-white font-bold">{c.name}</span>
+                            <span className="text-gray-500 text-[10px]">@{c.username}</span>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <span className="text-emerald-400">GMV: +Rp {Number(c.gmvAdded).toLocaleString('id-ID')}</span>
+                            <span className="text-blue-400">Orders: +{c.ordersAdded}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
