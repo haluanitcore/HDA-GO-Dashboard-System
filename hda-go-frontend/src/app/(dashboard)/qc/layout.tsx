@@ -14,12 +14,12 @@ export default function QCLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!isAuthenticated) {
       router.push('/login');
-    } else if (user?.role !== 'QC' && user?.role !== 'ADMIN') {
+    } else if (user?.role !== 'QC' && user?.role !== 'CM' && user?.role !== 'ADMIN') {
       router.push(`/${user!.role.toLowerCase()}`);
     }
   }, [isAuthenticated, user, router]);
 
-  if (!isAuthenticated || (user?.role !== 'QC' && user?.role !== 'ADMIN')) {
+  if (!isAuthenticated || (user?.role !== 'QC' && user?.role !== 'CM' && user?.role !== 'ADMIN')) {
     return (
       <div className="h-screen w-screen flex items-center justify-center bg-[#0C0E10]">
         <Loader2 className="h-8 w-8 text-[#F6D145] animate-spin" />

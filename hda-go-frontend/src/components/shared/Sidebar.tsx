@@ -38,6 +38,7 @@ export function Sidebar() {
         { name: 'User Management', href: '/admin/users', icon: Users },
         { name: 'CM Management', href: '/admin/cm-management', icon: Users },
         { name: 'Configuration', href: '/admin/settings', icon: Settings },
+        { name: 'QC Dashboard', href: '/qc', icon: ShieldCheck },
       ];
     }
     if (user?.role === 'CM') {
@@ -47,6 +48,7 @@ export function Sidebar() {
         { name: 'Pipeline', href: '/cm/pipeline', icon: Users },
         { name: 'Campaigns', href: '/cm/campaigns', icon: Target },
         { name: 'Monitoring', href: '/cm/monitoring', icon: TrendingUp },
+        { name: 'QC Dashboard', href: '/qc', icon: ShieldCheck },
       ];
     }
     if (user?.role === 'QC') {
