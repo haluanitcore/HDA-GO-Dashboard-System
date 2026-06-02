@@ -107,52 +107,57 @@ Apakah kamu ingin me-review restoran viral, atau merencanakan liburanstaycation 
 
 Setelah lamaran kampanyemu disetujui oleh BD, saatnya kamu berkreasi membuat video terbaik sesuai arahan taklimat (*brief*)!
 
-### Alur Penyerahan Video (Step-by-Step):
+### Alur Penyerahan Konten (Step-by-Step):
 
 ```mermaid
 graph TD
-    A["🎬 Produksi Video mentah sesuai brief"] --> B["📤 Upload file video/foto langsung di dashboard HDA GO"]
-    B --> C["🤖 Sistem otomatis mengunggah file ke Google Drive CM-mu"]
-    C --> D{"🔍 CM melakukan Quality Control (QC) langsung di player"}
-    D -- "❌ REVISION (Ditolak Sementara)" --> E["📝 Baca catatan perbaikan, edit video, upload ulang berkas baru"]
+    A["🎬 Produksi video/foto sesuai brief"] --> B["💻 Drag & drop berkas langsung di dasbor"]
+    B --> C["📤 Sistem otomatis mengunggah & mengirim ke Drive CM"]
+    C --> D{"🔍 CM melakukan Quality Control (QC)"}
+    D -- "❌ REVISION (Ditolak Sementara)" --> E["📝 Baca catatan perbaikan, re-upload file baru"]
     D -- "✅ APPROVED (Disetujui)" --> F["📱 Posting video approved ke TikTok Publik"]
-    F --> G["🔗 Kirim link VT TikTok rill di dasbor"]
+    F --> G["🔗 Submit Link VT TikTok rill di kartu riwayat"]
 ```
 
-### 1. Mengunggah Video Mentah secara Instan
-Kamu **tidak perlu lagi repot** membuka Google Drive, mengunggah video secara manual, menyalin link, dan menempelkannya ke dasbor. Sistem HDA GO yang baru telah mengotomatisasi seluruh proses ini!
-*   Buat videomu terlebih dahulu sesuai taklimat (*brief*) PDF kampanye.
-*   Masuk ke menu **"Submissions"** (`/creator/submissions`) di dasbormu.
-*   Pada bagian **"Upload Video / Foto"**, seret berkas videomu (`.mp4`, `.mov` maks 100MB) langsung ke kotak area **Drag & Drop** (atau klik area tersebut untuk memilih berkas dari folder komputermu).
-*   Klik **"Submit Konten"**.
-*   Sistem akan menampilkan indikator progress bar pengunggahan. Begitu selesai, sistem HDA GO **secara otomatis mengunggah berkas videomumu langsung ke folder Google Drive CM pengampumu** via integrasi Google API!
-*   Status tugasmu otomatis berubah menjadi `'QC_REVIEW'`.
+### 1. Mengunggah Video/Foto Hasil Karya
+*   Masuk ke halaman **"Submissions"** (`/creator/submissions`) di dasbor sebelah kiri.
+*   **Pilih Campaign yang Diikuti** pada menu pilihan (*select dropdown*). Sistem akan otomatis memunculkan detail SOW, tanggal batas waktu, deskripsi brief, dan nama CM pengampumu.
+*   **Zona Seret & Taruh (Drag & Drop Zone)**: Kamu tidak perlu membuat folder Google Drive manual atau menyalin tautan link apa pun! Cukup seret (*drag*) file video/fotomu dari handphone atau laptop, lalu letakkan di area kotak putus-putus.
+    *   **Batas Ukuran Video**: Maksimal **200MB** (format `.mp4`, `.mov`, `.x-msvideo`, `.webm`).
+    *   **Batas Ukuran Foto**: Maksimal **50MB** (format `.jpg`, `.jpeg`, `.png`, `.webp`).
+*   Klik tombol **"Submit Konten"**. Sistem akan memunculkan bilah kemajuan (*Progress Bar*) pengunggahan secara real-time dan secara otomatis memindahkan file tersebut ke **Google Drive CM Anda** di latar belakang.
+*   Setelah berhasil, status submission akan berubah menjadi `'QC_REVIEW'`.
 
-### 2. Memantau Status Quality Control (QC)
-*   CM pengampumu akan meninjau video tersebut secara langsung melalui pemutar video dasbor mereka.
-*   **Jika Butuh Perbaikan (`REVISION`)**: Kamu akan melihat teks berwarna merah berisi catatan revisi CM secara jelas (misal: *"Watermark HDA-GO di detik ke-5 kurang terlihat, tolong diperbesar"*). Silakan edit kembali videomumu, lalu unggah kembali berkas video yang baru di kotak unggahan yang sama.
-*   **Jika Disetujui (`APPROVED`)**: Kamu akan mendapat notifikasi sukses dan semburan confetti. Sekarang, saatnya memposting video tersebut ke akun TikTok publikmu!
+### 2. Memantau Status Quality Control (QC) & Mengakses Feedback
+Kamu dapat memantau hasil tinjauan CM secara real-time di tabel **"Riwayat Submission"**:
+*   `UPLOADING` (Biru Langit): File sedang dalam proses transfer otomatis ke Drive CM.
+*   `QC_REVIEW` (Kuning Jingga): CM sedang meninjau kelayakan visual dan kesesuaian taklimat videomumu.
+*   `REVISION` (Merah): Video ditolak sementara. Kamu akan melihat catatan revisi langsung dari CM (misal: *"Audio musik latar terlalu keras, tolong diperkecil 20%"*). Cukup klik tombol silang (`X`), perbaiki videomumu, lalu unggah kembali berkas file barumu di form yang sama.
+*   `APPROVED` (Hijau Emerald): Video disetujui 100%! Selamat, kamu sudah diperbolehkan memposting video tersebut ke akun TikTok publikmu.
 
-### 3. Melaporkan Tautan VT TikTok Publik (Final Step)
-*   Setelah videomu resmi tayang di TikTok, salin tautan link video TikTok-mu (VT Link), contoh: `https://www.tiktok.com/@kreatormu/video/1234567890`.
-*   Masuk ke halaman tugasmu di dasbor, klik tombol **"Kirim VT Link TikTok"**, masukkan tautan rill video TikTok-mu tersebut, dan simpan. Status tugasmu kini resmi berubah menjadi `'COMPLETED'`!
+### 3. Melaporkan Tautan VT TikTok Publik
+*   Setelah memposting video yang disetujui (`APPROVED`) ke TikTok publikmu, buka postingan tersebut di TikTok, lalu salin (*copy*) tautan link video aslinya (VT Link).
+*   Kembali ke Dashboard HDA GO pada halaman **"Submissions"**, cari kartu riwayat videomu yang berstatus `APPROVED`.
+*   Pada kartu tersebut, akan terbuka panel kuning bertuliskan **"Submit Link VT"**.
+*   Klik tombol tersebut, rekatkan (*paste*) tautan video TikTok publikmu (contoh: `https://www.tiktok.com/@username/video/1234567890`), lalu klik **"Submit"**.
+*   Tautan akan diverifikasi dan status tugasmu akan berubah menjadi `POSTED`!
 
 ---
 
 ## 💵 Langkah 5: Melaporkan Penjualan Mandiri (Self-Report GMV & OCR)
 
-Jika video review-mu berhasil memikat penonton dan menghasilkan penjualan keranjang kuning afiliasi, saatnya kamu melaporkan pencapaianmu agar sistem mencatat nominal GMV dan pesananmu untuk kenaikan level!
+Jika video TikTok-mu berhasil menghasilkan penjualan produk keranjang kuning afiliasi, laporkan performamu agar sistem mencatat nominal penjualan (**GMV**) dan jumlah pesanan (**Orders**) untuk membantumu melesat naik level!
 
 ### Cara Melaporkan Transaksi Penjualan:
 1.  Ambil tangkapan layar (*screenshot*) bukti struk penjualan / komisi komersial dari dasbor TikTok Shop Afiliasimu. Pastikan gambar jernih dan angka-angka terlihat terang.
-2.  Buka menu **"Submissions"** di dasbor, lalu masuk ke tab **"Self-Report"** (Lapor Mandiri).
-3.  Klik tombol **"Lapor Transaksi Baru"**.
-4.  Unggah berkas foto tangkapan layar struk belanjamu ke dalam kotak unggahan (*dropzone*).
-5.  Klik **"Kirim Bukti"**.
-
-### Bagaimana Sistem Memproses Laporanmu?
-*   Sistem HDA GO dilengkapi dengan **AI OCR Engine (Tesseract.js)**. Sesaat setelah kamu mengirim foto, mesin pintar ini akan memindai teks gambar secara otomatis untuk membaca nominal GMV, ID Pesanan, dan jumlah transaksi.
-*   Laporan akan masuk ke antrean verifikasi CM. CM akan memvalidasi keaslian struk dan menyetujuinya. Begitu disetujui, akumulasi GMV dasbormu akan langsung bertambah dan membantumu naik level secara instan!
+2.  Buka menu **"Submissions"** dan cari riwayat videomu yang berstatus `APPROVED`, `POSTED`, atau `COMPLETED`.
+3.  Klik tombol **"Laporkan Performa (GMV)"** di bagian bawah kartu tugas tersebut.
+4.  Sebuah jendela popup (*modal*) laporan akan muncul.
+5.  **Gunakan Fitur Cerdas AI OCR**: Seret atau unggah foto tangkapan layar struk TikTok Affiliate milikmu ke area kotak unggahan OCR.
+6.  **Pemindaian Instan AI**: Sistem cerdas **Tesseract.js OCR** akan memindai teks pada gambar secara otomatis selama beberapa detik, membaca nominal GMV serta jumlah pesananmu, lalu **mengisi formulir angka secara otomatis**!
+7.  Periksa kembali angka yang terisi otomatis (Total Orders & Total GMV). Kamu dapat mengetik manual jika ingin menyesuaikan data.
+8.  Pilih **Periode Tanggal** pelaporan, tambahkan catatan opsional jika perlu, lalu klik **"Kirim Laporan GMV"**.
+9.  Laporan akan dikirim ke antrean verifikasi CM. Setelah CM mengonfirmasi kesesuaian gambar, level akunmu akan langsung diperbarui oleh sistem!
 
 ---
 
