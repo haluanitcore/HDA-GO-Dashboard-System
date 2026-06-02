@@ -147,6 +147,13 @@ export class BdController {
     return this.bdService.uploadCreatorGmvExcel(file);
   }
 
+  // POST /bd/creators/sync-spreadsheet — Direct live sync from Google Sheet
+  @Post('creators/sync-spreadsheet')
+  @Roles(Role.BD, Role.ADMIN)
+  syncGoogleSpreadsheet() {
+    return this.bdService.syncGoogleSpreadsheet();
+  }
+
   // GET /bd/hotels — List all hotel partners
   @Get('hotels')
   @Roles(Role.BD, Role.ADMIN)

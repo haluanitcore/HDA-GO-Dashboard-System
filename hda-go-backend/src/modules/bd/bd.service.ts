@@ -1085,4 +1085,279 @@ export class BdService {
       throw err;
     }
   }
+
+  // ══════════════════════════════════════════════════
+  // DIRECT LIVE GOOGLE SHEETS SINKRONISASI (AUTO-SYNC API)
+  // ══════════════════════════════════════════════════
+  async syncGoogleSpreadsheet() {
+    try {
+      const url = 'https://docs.google.com/spreadsheets/d/1Alp1XHgQtK8CnIW3fFD7p-8HXGDsA5IbYM4Da97btGc/export?format=csv&gid=1505444998';
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new BadRequestException('Gagal mengunduh data dari Google Sheets. Pastikan Spreadsheet dibagikan secara publik (Anyone with the link can view).');
+      }
+      
+      const csvContent = await response.text();
+      if (!csvContent || csvContent.trim().length === 0) {
+        throw new BadRequestException('Data dari Google Sheets kosong');
+      }
+
+      // Robust quote-aware state-machine CSV parser
+      const parseCSV = (content: string): string[][] => {
+        const result: string[][] = [];
+        const lines = content.split(/\r?\n/);
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          const row: string[] = [];
+          let inQuotes = false;
+          let currentField = '';
+          for (let i = 0; i < line.length; i++) {
+            const char = line[i];
+            if (char === '"') {
+              inQuotes = !inQuotes;
+            } else if (char === ',' && !inQuotes) {
+              row.push(currentField.trim());
+              currentField = '';
+            } else {
+              currentField += char;
+            }
+          }
+          row.push(currentField.trim());
+          result.push(row.map(r => r.replace(/^"|"$/g, '').trim()));
+        }
+        return result;
+      };
+
+      const parsedRows = parseCSV(csvContent);
+      if (parsedRows.length < 2) {
+        throw new BadRequestException('Format Google Sheets tidak valid. Harus memiliki minimal 1 baris tajuk dan 1 baris data.');
+      }
+
+      const headers = parsedRows[0].map(h => h.toLowerCase().replace(/[^a-z0-9]/g, ''));
+      
+      // Look for Username and GMV columns
+      const findIndex = (patterns: string[]) => {
+        for (const pattern of patterns) {
+          const idx = headers.findIndex(h => h.includes(pattern));
+          if (idx !== -1) return idx;
+        }
+        return -1;
+      };
+
+      const usernameIdx = findIndex(['username', 'creator', 'kreator', 'nama']);
+      const gmvIdx = findIndex(['gmv', 'omset', 'penjualan', 'salesamount', 'salesvalue']);
+      const ordersIdx = findIndex(['order', 'pesanan', 'sales', 'ordercount']);
+      const periodIdx = findIndex(['periode', 'bulan', 'month', 'date', 'tanggal']);
+
+      if (usernameIdx === -1) {
+        throw new BadRequestException('Kolom Username TikTok tidak ditemukan pada Google Sheets. Pastikan ada kolom "Username", "Creator", atau "Nama".');
+      }
+
+      if (gmvIdx === -1) {
+        throw new BadRequestException('Kolom GMV tidak ditemukan pada Google Sheets. Pastikan ada kolom "GMV", "Omset", atau "Penjualan".');
+      }
+
+      // Self-healing default campaign for referential integrity
+      let campaign = await this.prisma.campaign.findFirst({
+        where: { status: 'ACTIVE' }
+      });
+      if (!campaign) {
+        campaign = await this.prisma.campaign.findFirst();
+      }
+      if (!campaign) {
+        campaign = await this.prisma.campaign.create({
+          data: {
+            title: 'Google Sheet Sync Campaign Tracking',
+            category: 'HOTEL',
+            sow_total: 1,
+            reward_type: 'COMMISSION',
+            deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            status: 'ACTIVE',
+            brand_id: 'default-brand-id',
+          }
+        });
+      }
+      const campaignId = campaign.id;
+
+      // Current Month as default period: "YYYY-MM"
+      const now = new Date();
+      const currentPeriod = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+      let totalUpdated = 0;
+      let totalGmvAdded = 0;
+      let totalOrdersAdded = 0;
+      const leveledUpCreators: any[] = [];
+      const skippedRows: any[] = [];
+
+      for (let i = 1; i < parsedRows.length; i++) {
+        const cols = parsedRows[i];
+        let username = String(cols[usernameIdx] || '').trim();
+        
+        // Clean username from @ prefix and spaces
+        if (username.startsWith('@')) {
+          username = username.substring(1).trim();
+        }
+
+        if (!username) {
+          skippedRows.push({
+            row: i + 1,
+            username: '',
+            reason: 'Username kosong'
+          });
+          continue;
+        }
+
+        // Parse GMV
+        let rawGmv = String(cols[gmvIdx] || '0').trim();
+        let cleanedGmvStr = rawGmv.replace(/[^\d.,]/g, '');
+        let parsedGmv = 0;
+
+        if (cleanedGmvStr.includes(',') && cleanedGmvStr.includes('.')) {
+          if (cleanedGmvStr.indexOf(',') > cleanedGmvStr.indexOf('.')) {
+            cleanedGmvStr = cleanedGmvStr.replace(/\./g, '').replace(/,/g, '.');
+          } else {
+            cleanedGmvStr = cleanedGmvStr.replace(/,/g, '');
+          }
+        } else if (cleanedGmvStr.includes(',')) {
+          const parts = cleanedGmvStr.split(',');
+          if (parts[parts.length - 1].length === 3) {
+            cleanedGmvStr = cleanedGmvStr.replace(/,/g, '');
+          } else {
+            cleanedGmvStr = cleanedGmvStr.replace(/,/g, '.');
+          }
+        } else if (cleanedGmvStr.includes('.')) {
+          const parts = cleanedGmvStr.split('.');
+          if (parts[parts.length - 1].length === 3) {
+            cleanedGmvStr = cleanedGmvStr.replace(/\./g, '');
+          }
+        }
+        parsedGmv = parseFloat(cleanedGmvStr) || 0;
+
+        // Parse Orders
+        let parsedOrders = 0;
+        if (ordersIdx !== -1 && cols[ordersIdx] !== undefined && cols[ordersIdx] !== '') {
+          const rawOrders = String(cols[ordersIdx]).replace(/[^\d]/g, '');
+          parsedOrders = parseInt(rawOrders, 10) || 0;
+        } else {
+          // Smart fallback: assume average basket size of Rp 100,000 if Orders is missing
+          parsedOrders = Math.floor(parsedGmv / 100000) || 1;
+        }
+
+        // Parse Period
+        let parsedPeriod = currentPeriod;
+        if (periodIdx !== -1 && cols[periodIdx]) {
+          const rawPeriod = String(cols[periodIdx]).trim();
+          const match = rawPeriod.match(/(\d{4})[-/](\d{2})/);
+          if (match) {
+            parsedPeriod = `${match[1]}-${match[2]}`;
+          }
+        }
+
+        // Safe case-insensitive equivalent find for SQLite
+        const creator = await this.prisma.creator.findFirst({
+          where: {
+            OR: [
+              { tiktok_username: username },
+              { tiktok_username: username.toLowerCase() },
+              { tiktok_username: username.toUpperCase() },
+            ]
+          },
+          include: { user: true }
+        });
+
+        if (!creator) {
+          skippedRows.push({
+            row: i + 1,
+            username: username,
+            reason: `Username TikTok "${username}" tidak terdaftar di sistem HDA-GO`
+          });
+          continue;
+        }
+
+        // Record the transaction as verified BD order upload
+        await this.prisma.creatorOrder.create({
+          data: {
+            creator_id: creator.user_id,
+            campaign_id: campaignId,
+            order_count: parsedOrders,
+            gmv_amount: parsedGmv,
+            source: 'EXCEL_UPLOAD_BD',
+            status: 'VERIFIED',
+            period_date: new Date(),
+            notes: `Auto Sync with Google Sheets for period ${parsedPeriod}. Row ${i + 1}`,
+          }
+        });
+
+        // Record monthly stats
+        await this.prisma.creatorMonthlyStats.upsert({
+          where: {
+            creator_id_month: {
+              creator_id: creator.user_id,
+              month: parsedPeriod,
+            }
+          },
+          update: {
+            gmv: { increment: parsedGmv },
+            orders: { increment: parsedOrders },
+          },
+          create: {
+            creator_id: creator.user_id,
+            month: parsedPeriod,
+            gmv: parsedGmv,
+            orders: parsedOrders,
+          }
+        });
+
+        // Update aggregates on Creator table
+        await this.prisma.creator.update({
+          where: { user_id: creator.user_id },
+          data: {
+            gmv_total: { increment: parsedGmv },
+            gmv_monthly: { increment: parsedGmv },
+            total_orders: { increment: parsedOrders },
+          }
+        });
+
+        // Recalculate levels using the Level Up Engine
+        const evalResult = await this.levelsService.evaluateLevel(creator.user_id);
+        if (evalResult && evalResult.leveledUp) {
+          leveledUpCreators.push({
+            id: creator.user_id,
+            name: creator.user.name,
+            username: creator.tiktok_username,
+            oldLevel: evalResult.previousLevel,
+            newLevel: evalResult.newLevel,
+            levelName: evalResult.levelName,
+          });
+
+          // Pemicu Websocket real-time event to creator
+          this.eventsGateway.emitLevelUp(creator.user_id, {
+            newLevel: evalResult.newLevel,
+            levelName: evalResult.levelName,
+          });
+        }
+
+        totalUpdated++;
+        totalGmvAdded += parsedGmv;
+        totalOrdersAdded += parsedOrders;
+      }
+
+      return {
+        success: true,
+        message: `Berhasil menyinkronkan data dengan Google Sheets!`,
+        summary: {
+          total_rows_processed: parsedRows.length - 1,
+          total_updated_creators: totalUpdated,
+          total_gmv_added: totalGmvAdded,
+          total_orders_added: totalOrdersAdded,
+        },
+        leveled_up_creators: leveledUpCreators,
+        skipped_rows: skippedRows,
+      };
+
+    } catch (err) {
+      throw err;
+    }
+  }
 }

@@ -28,12 +28,14 @@ import {
   ChevronUp,
   Sparkles,
   Check,
+  RefreshCw,
 } from 'lucide-react';
 
 export default function BDDashboard() {
   const { dashboard, fetchDashboard, isLoading } = useBDStore();
 
   const [isUploading, setIsUploading] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [uploadResult, setUploadResult] = useState<any>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [showSkipped, setShowSkipped] = useState(false);
@@ -74,6 +76,26 @@ export default function BDDashboard() {
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleGoogleSheetsSync = async () => {
+    setIsSyncing(true);
+    setUploadError(null);
+    setUploadResult(null);
+
+    try {
+      const res: any = await api.post('/bd/creators/sync-spreadsheet');
+      if (res && res.success) {
+        setUploadResult(res);
+        fetchDashboard();
+      } else {
+        setUploadError(res?.message || 'Gagal menyelaraskan spreadsheet.');
+      }
+    } catch (err: any) {
+      setUploadError(err?.message || 'Gagal menyelaraskan spreadsheet. Pastikan koneksi internet stabil.');
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -190,22 +212,34 @@ export default function BDDashboard() {
           <div className="flex flex-col md:flex-row gap-8 items-center justify-between">
             <div className="space-y-2 max-w-lg">
               <h2 className="text-xl font-black text-white tracking-tight flex items-center gap-2">
-                <UploadCloud className="h-6 w-6 text-[#F6D145]" /> Bulk Impor Performa Kreator (GMV & Orders)
+                <UploadCloud className="h-6 w-6 text-[#F6D145]" /> Integrasi & Sinkronisasi Performa Kreator
               </h2>
               <p className="text-sm text-gray-500 font-medium leading-relaxed">
-                Unggah spreadsheet performa kreator bulanan Anda untuk memperbarui pencapaian GMV secara massal dan memicu kenaikan level otomatis secara real-time!
+                Unggah berkas performa secara manual ATAU lakukan sinkronisasi langsung dengan tautan Google Sheets performa kreator HDA-GO untuk memicu kenaikan level otomatis secara real-time!
               </p>
-              <div className="flex flex-wrap items-center gap-4 pt-2">
+              <div className="flex flex-wrap items-center gap-3 pt-2">
+                <button
+                  onClick={handleGoogleSheetsSync}
+                  disabled={isSyncing || isUploading}
+                  className="text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-emerald-600/10 border border-emerald-500/20"
+                >
+                  {isSyncing ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-3.5 w-3.5" />
+                  )}
+                  {isSyncing ? 'Menyinkronkan...' : 'Sinkronkan Google Sheet'}
+                </button>
                 <button
                   onClick={downloadTemplate}
                   className="text-xs font-bold text-[#F6D145] bg-[#F6D145]/10 hover:bg-[#F6D145]/20 border border-[#F6D145]/10 px-4 py-2.5 rounded-xl transition-all flex items-center gap-2"
                 >
                   <Download className="h-3.5 w-3.5" /> Unduh Template Excel
                 </button>
-                <span className="text-[10px] text-gray-600 font-medium">
-                  Mendukung kolom: <b>Username, GMV, Orders, Periode (Opsional)</b>
-                </span>
               </div>
+              <p className="text-[10px] text-gray-600 font-medium">
+                Mendukung sinkronisasi langsung via Google Sheets API (tab Creator HDA-GO) atau pemetaan kolom berkas unggahan: <b>Username, GMV, Orders, Periode (Opsional)</b>
+              </p>
             </div>
 
             {/* Dropzone Area */}
@@ -218,13 +252,13 @@ export default function BDDashboard() {
                 className="hidden"
               />
               <div
-                onClick={() => !isUploading && fileInputRef.current?.click()}
-                className={`border-2 border-dashed border-white/10 hover:border-[#F6D145]/40 hover:bg-white/[0.01] rounded-3xl p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-3 relative ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}
+                onClick={() => !isUploading && !isSyncing && fileInputRef.current?.click()}
+                className={`border-2 border-dashed border-white/10 hover:border-[#F6D145]/40 hover:bg-white/[0.01] rounded-3xl p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-3 relative ${(isUploading || isSyncing) ? 'opacity-50 pointer-events-none' : ''}`}
               >
-                {isUploading ? (
+                {(isUploading || isSyncing) ? (
                   <>
                     <Loader2 className="h-10 w-10 text-[#F6D145] animate-spin" />
-                    <p className="text-xs font-bold text-gray-400">Sedang memproses...</p>
+                    <p className="text-xs font-bold text-gray-400">{isSyncing ? 'Sinkronisasi Google Sheets...' : 'Sedang memproses berkas...'}</p>
                   </>
                 ) : (
                   <>
