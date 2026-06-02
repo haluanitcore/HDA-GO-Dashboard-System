@@ -630,8 +630,8 @@ export default function SubmissionsPage() {
                             )}
                           </div>
 
-                          {/* GMV Button */}
-                          <div className="flex justify-end">
+                          {/* GMV Button - CURRENTLY ON HOLD (GMV only synced from sheets/excel by BD) */}
+                          {/* <div className="flex justify-end">
                             <button
                               onClick={() => setReportingSub(sub)}
                               className="bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 text-xs font-bold py-2 px-4 rounded-lg flex items-center transition-colors border border-blue-500/20"
@@ -639,7 +639,7 @@ export default function SubmissionsPage() {
                               <BarChart3 className="h-3 w-3 mr-1.5" />
                               Laporkan Performa (GMV)
                             </button>
-                          </div>
+                          </div> */}
                         </div>
                       )}
                     </div>

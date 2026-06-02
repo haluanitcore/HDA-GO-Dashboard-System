@@ -144,20 +144,12 @@ Kamu dapat memantau hasil tinjauan CM secara real-time di tabel **"Riwayat Submi
 
 ---
 
-## 💵 Langkah 5: Melaporkan Penjualan Mandiri (Self-Report GMV & OCR)
+## 💵 Langkah 5: Pemantauan Omset Penjualan (GMV) Otomatis
 
-Jika video TikTok-mu berhasil menghasilkan penjualan produk keranjang kuning afiliasi, laporkan performamu agar sistem mencatat nominal penjualan (**GMV**) dan jumlah pesanan (**Orders**) untuk membantumu melesat naik level!
+Kamu tidak perlu repot melaporkan penjualan secara manual atau mengunggah tangkapan layar struk belanja satu per satu! Ekosistem Dashboard HDA GO telah terintegrasi penuh untuk memberikan kenyamanan maksimal bagi perjalanan karirmu:
 
-### Cara Melaporkan Transaksi Penjualan:
-1.  Ambil tangkapan layar (*screenshot*) bukti struk penjualan / komisi komersial dari dasbor TikTok Shop Afiliasimu. Pastikan gambar jernih dan angka-angka terlihat terang.
-2.  Buka menu **"Submissions"** dan cari riwayat videomu yang berstatus `APPROVED`, `POSTED`, atau `COMPLETED`.
-3.  Klik tombol **"Laporkan Performa (GMV)"** di bagian bawah kartu tugas tersebut.
-4.  Sebuah jendela popup (*modal*) laporan akan muncul.
-5.  **Gunakan Fitur Cerdas AI OCR**: Seret atau unggah foto tangkapan layar struk TikTok Affiliate milikmu ke area kotak unggahan OCR.
-6.  **Pemindaian Instan AI**: Sistem cerdas **Tesseract.js OCR** akan memindai teks pada gambar secara otomatis selama beberapa detik, membaca nominal GMV serta jumlah pesananmu, lalu **mengisi formulir angka secara otomatis**!
-7.  Periksa kembali angka yang terisi otomatis (Total Orders & Total GMV). Kamu dapat mengetik manual jika ingin menyesuaikan data.
-8.  Pilih **Periode Tanggal** pelaporan, tambahkan catatan opsional jika perlu, lalu klik **"Kirim Laporan GMV"**.
-9.  Laporan akan dikirim ke antrean verifikasi CM. Setelah CM mengonfirmasi kesesuaian gambar, level akunmu akan langsung diperbarui oleh sistem!
+*   **Penyelarasan Data Otomatis**: Seluruh data kinerja penjualan nyata dari keranjang kuning afiliasi TikTok-mu (Total GMV & Jumlah Orders) disinkronkan secara berkala langsung oleh tim **Business Development (BD)** dari basis data Google Sheets Master perusahaan.
+*   **Tumbuh Tanpa Ribet**: Cukup fokus membuat konten sekreatif mungkin dan pertahankan konsistensi posting VT TikTok-mu. Akumulasi penjualan dan kemajuan tingkatan levelmu akan terhitung dan diperbarui secara otomatis di halaman dasbormu!
 
 ---
 
