@@ -806,14 +806,7 @@ export class BdService {
       }
 
       const workbook = XLSX.readFile(filePath);
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const rows: any[] = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
-
-      if (rows.length === 0) {
-        throw new BadRequestException('Excel tidak mengandung data atau kosong');
-      }
-
+      
       // Dynamic header mapping helpers
       const findKey = (row: any, patterns: string[]) => {
         const keys = Object.keys(row);
@@ -824,18 +817,60 @@ export class BdService {
         return null;
       };
 
-      const sampleRow = rows[0];
-      const usernameKey = findKey(sampleRow, ['username', 'creator', 'kreator', 'nama']);
-      const gmvKey = findKey(sampleRow, ['gmv', 'omset', 'penjualan', 'salesamount', 'salesvalue']);
-      const ordersKey = findKey(sampleRow, ['order', 'pesanan', 'sales', 'ordercount']);
-      const periodKey = findKey(sampleRow, ['periode', 'bulan', 'month', 'date', 'tanggal']);
+      // Let's find the worksheet that actually contains Creator/Username and GMV columns dynamically!
+      let worksheet = null;
+      let sheetName = "";
+      let rows: any[] = [];
+      let usernameKey: string | null = null;
+      let gmvKey: string | null = null;
+      let ordersKey: string | null = null;
+      let periodKey: string | null = null;
 
-      if (!usernameKey) {
-        throw new BadRequestException('Kolom Username TikTok tidak ditemukan di Excel. Pastikan ada kolom "Username", "Creator", atau "Nama".');
+      for (const name of workbook.SheetNames) {
+        const ws = workbook.Sheets[name];
+        const tempRows: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
+        if (tempRows.length > 0) {
+          const sampleRow = tempRows[0];
+          const uKey = findKey(sampleRow, ['username', 'creator', 'kreator', 'nama']);
+          const gKey = findKey(sampleRow, ['gmv', 'omset', 'penjualan', 'salesamount', 'salesvalue']);
+          
+          // If we found a sheet with both columns, select it!
+          if (uKey && gKey) {
+            worksheet = ws;
+            sheetName = name;
+            rows = tempRows;
+            usernameKey = uKey;
+            gmvKey = gKey;
+            ordersKey = findKey(sampleRow, ['order', 'pesanan', 'sales', 'ordercount']);
+            periodKey = findKey(sampleRow, ['periode', 'bulan', 'month', 'date', 'tanggal']);
+            break;
+          }
+        }
       }
 
-      if (!gmvKey) {
-        throw new BadRequestException('Kolom GMV tidak ditemukan di Excel. Pastikan ada kolom "GMV", "Omset", atau "Penjualan".');
+      if (!worksheet) {
+        // Fallback to the first sheet if no auto-match was found
+        sheetName = workbook.SheetNames[0];
+        worksheet = workbook.Sheets[sheetName];
+        rows = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+
+        if (rows.length === 0) {
+          throw new BadRequestException('Excel tidak mengandung data atau kosong');
+        }
+
+        const sampleRow = rows[0];
+        usernameKey = findKey(sampleRow, ['username', 'creator', 'kreator', 'nama']);
+        gmvKey = findKey(sampleRow, ['gmv', 'omset', 'penjualan', 'salesamount', 'salesvalue']);
+        ordersKey = findKey(sampleRow, ['order', 'pesanan', 'sales', 'ordercount']);
+        periodKey = findKey(sampleRow, ['periode', 'bulan', 'month', 'date', 'tanggal']);
+
+        if (!usernameKey) {
+          throw new BadRequestException('Kolom Username TikTok tidak ditemukan di Excel. Pastikan ada kolom "Username", "Creator", atau "Nama".');
+        }
+
+        if (!gmvKey) {
+          throw new BadRequestException('Kolom GMV tidak ditemukan di Excel. Pastikan ada kolom "GMV", "Omset", atau "Penjualan".');
+        }
       }
 
       // Self-healing default campaign for referential integrity

@@ -70,7 +70,7 @@ export default function BDDashboard() {
         setUploadError(res?.message || 'Gagal memproses file Excel.');
       }
     } catch (err: any) {
-      setUploadError(err?.response?.data?.message || 'Gagal mengunggah file. Pastikan format kolom benar.');
+      setUploadError(err?.message || 'Gagal mengunggah file. Pastikan format kolom benar.');
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
