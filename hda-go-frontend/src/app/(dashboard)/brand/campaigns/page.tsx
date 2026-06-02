@@ -13,7 +13,20 @@ export default function BrandCampaignsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [campaigns, setCampaigns] = useState<any[]>([]);
 
-  const [newCampaign, setNewCampaign] = useState({ title: '', category: 'FNB', budget: '', sow: '', min_level: '0', target_creators_count: '' });
+  const [newCampaign, setNewCampaign] = useState({
+    title: '',
+    category: 'FNB',
+    budget: '',
+    sow: '',
+    min_level: '0',
+    target_creators_count: '',
+    start_date: '',
+    collaboration_type: 'BARTER_STAY',
+    description: '',
+    pic_contact: '',
+    brief_text: '',
+    deadline: '',
+  });
   
   // Campaign detail modal states
   const [selectedCampaign, setSelectedCampaign] = useState<any>(null);
@@ -67,14 +80,32 @@ export default function BrandCampaignsPage() {
         brand_id: user?.id || 'brand-id-fallback',
         sow_total: Number(newCampaign.sow),
         reward_type: 'FIXED',
-        deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        deadline: newCampaign.deadline ? new Date(newCampaign.deadline).toISOString() : undefined,
         slot: 10,
         status: 'PENDING_BD',
         budget: Number(newCampaign.budget) || 0,
         target_creators_count: Number(newCampaign.target_creators_count) || 0,
+        collaboration_type: newCampaign.category === 'HOTEL' ? newCampaign.collaboration_type : null,
+        start_date: newCampaign.category === 'HOTEL' && newCampaign.start_date ? new Date(newCampaign.start_date).toISOString() : null,
+        description: newCampaign.category === 'HOTEL' ? newCampaign.description : null,
+        pic_contact: newCampaign.category === 'HOTEL' ? newCampaign.pic_contact : null,
+        brief_text: newCampaign.category === 'HOTEL' ? newCampaign.brief_text : null,
       });
       setIsModalOpen(false);
-      setNewCampaign({ title: '', category: 'FNB', budget: '', sow: '', min_level: '0', target_creators_count: '' });
+      setNewCampaign({
+        title: '',
+        category: 'FNB',
+        budget: '',
+        sow: '',
+        min_level: '0',
+        target_creators_count: '',
+        start_date: '',
+        collaboration_type: 'BARTER_STAY',
+        description: '',
+        pic_contact: '',
+        brief_text: '',
+        deadline: '',
+      });
       fetchCampaigns();
     } catch (error) {
       console.error(error);
@@ -195,14 +226,13 @@ export default function BrandCampaignsPage() {
               
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Total Budget (Rp)</label>
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Total Budget (Rp) <span className="text-[10px] text-gray-500 font-normal">(Optional)</span></label>
                   <input 
                     type="number" 
                     value={newCampaign.budget}
                     onChange={e => setNewCampaign({...newCampaign, budget: e.target.value})}
                     className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-colors"
-                    placeholder="15000000"
-                    required
+                    placeholder="15000000 (biarkan kosong jika barter stay/dining)"
                   />
                 </div>
                 <div className="space-y-2">
@@ -245,6 +275,83 @@ export default function BrandCampaignsPage() {
                   />
                 </div>
               </div>
+
+              {newCampaign.category === 'HOTEL' && (
+                <div className="space-y-4 p-4 rounded-2xl bg-white/[0.02] border border-white/5 animate-in fade-in slide-in-from-top-4 duration-200 text-left">
+                  <div className="flex items-center gap-2 pb-2 border-b border-white/5">
+                    <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Hotel Campaign Specifications</span>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Tanggal Mulai *</label>
+                      <input 
+                        type="date" 
+                        value={newCampaign.start_date}
+                        onChange={e => setNewCampaign({...newCampaign, start_date: e.target.value})}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-blue-500 transition-colors"
+                        required={newCampaign.category === 'HOTEL'}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Tenggat (Optional)</label>
+                      <input 
+                        type="date" 
+                        value={newCampaign.deadline}
+                        onChange={e => setNewCampaign({...newCampaign, deadline: e.target.value})}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-blue-500 transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Jenis Campaign</label>
+                      <select 
+                        value={newCampaign.collaboration_type}
+                        onChange={e => setNewCampaign({...newCampaign, collaboration_type: e.target.value})}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-blue-500 transition-colors appearance-none cursor-pointer"
+                      >
+                        <option value="BARTER_STAY" className="bg-gray-900">Barter Stay</option>
+                        <option value="BARTER_DINING" className="bg-gray-900">Barter Dining</option>
+                        <option value="VISIT_ONLY" className="bg-gray-900">Visit Only</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">PIC BD Contact</label>
+                      <input 
+                        type="text" 
+                        value={newCampaign.pic_contact}
+                        onChange={e => setNewCampaign({...newCampaign, pic_contact: e.target.value})}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-blue-500 transition-colors"
+                        placeholder="Contoh: WhatsApp 0812..."
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Deskripsi Campaign</label>
+                    <textarea 
+                      value={newCampaign.description}
+                      onChange={e => setNewCampaign({...newCampaign, description: e.target.value})}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-blue-500 transition-colors resize-none"
+                      placeholder="Tuliskan info tentang promosi hotel, alamat, atau benefit khusus kreator..."
+                      rows={3}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Brief Manual (Ketik)</label>
+                    <textarea 
+                      value={newCampaign.brief_text}
+                      onChange={e => setNewCampaign({...newCampaign, brief_text: e.target.value})}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-blue-500 transition-colors resize-none"
+                      placeholder="Ketikan guideline pembuatan video, SOW detil, atau poin penting lainnya di sini..."
+                      rows={3}
+                    />
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Jumlah Kreator Target</label>
@@ -303,7 +410,54 @@ export default function BrandCampaignsPage() {
             <h2 className="text-2xl font-black text-white mb-2 tracking-tight">{selectedCampaign.title}</h2>
             <p className="text-gray-400 text-sm mb-6">Pantau hasil postingan link VT TikTok dari seluruh kreator bimbingan.</p>
             
-            <div className="space-y-4 max-h-[350px] overflow-y-auto pr-2">
+            {selectedCampaign.category === 'HOTEL' && (
+              <div className="grid grid-cols-2 gap-4 p-5 rounded-2xl bg-white/[0.02] border border-white/5 mb-6 text-left">
+                {selectedCampaign.start_date && (
+                  <div>
+                    <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Periode Campaign</span>
+                    <p className="text-xs font-bold text-white mt-0.5">
+                      {new Date(selectedCampaign.start_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} s/d {selectedCampaign.deadline ? new Date(selectedCampaign.deadline).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
+                    </p>
+                  </div>
+                )}
+                {selectedCampaign.collaboration_type && (
+                  <div>
+                    <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Jenis Kerja Sama</span>
+                    <p className="text-xs font-bold text-blue-400 mt-0.5 uppercase tracking-wider">
+                      {selectedCampaign.collaboration_type.replace(/_/g, ' ')}
+                    </p>
+                  </div>
+                )}
+                {selectedCampaign.pic_contact && (
+                  <div>
+                    <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">PIC BD Contact</span>
+                    <p className="text-xs font-bold text-emerald-400 mt-0.5">{selectedCampaign.pic_contact}</p>
+                  </div>
+                )}
+                {selectedCampaign.budget !== undefined && (
+                  <div>
+                    <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Budget</span>
+                    <p className="text-xs font-bold text-[#F6D145] mt-0.5">
+                      {selectedCampaign.budget > 0 ? `Rp ${selectedCampaign.budget.toLocaleString()}` : 'Barter Only (No Budget)'}
+                    </p>
+                  </div>
+                )}
+                {selectedCampaign.description && (
+                  <div className="col-span-2 border-t border-white/5 pt-2.5">
+                    <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Deskripsi Campaign</span>
+                    <p className="text-xs text-gray-300 mt-1 font-medium">{selectedCampaign.description}</p>
+                  </div>
+                )}
+                {selectedCampaign.brief_text && (
+                  <div className="col-span-2 border-t border-white/5 pt-2.5">
+                    <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Brief Manual (Ketik)</span>
+                    <p className="text-xs text-gray-300 mt-1 font-medium whitespace-pre-line bg-black/20 p-3 rounded-xl border border-white/5 max-h-36 overflow-y-auto">{selectedCampaign.brief_text}</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="space-y-4 max-h-[250px] overflow-y-auto pr-2">
               <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Daftar Partisipan & Hasil VT</h3>
               
               {!selectedCampaign.participants || selectedCampaign.participants.length === 0 ? (

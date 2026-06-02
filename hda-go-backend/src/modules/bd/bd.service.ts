@@ -372,13 +372,19 @@ export class BdService {
       brief_url: 'brief_url',
       target_creators_count: 'target_creators_count',
       collaboration_type: 'collaboration_type',
+      start_date: 'start_date',
+      description: 'description',
+      pic_contact: 'pic_contact',
+      brief_text: 'brief_text',
     };
 
     for (const [dtoField, dbField] of Object.entries(fieldMap)) {
       const newValue = (dto as any)[dtoField];
       if (newValue !== undefined && newValue !== null) {
         const oldValue = (campaign as any)[dbField];
-        const processedNew = dbField === 'deadline' ? new Date(newValue) : newValue;
+        const processedNew = (dbField === 'deadline' || dbField === 'start_date') && newValue 
+          ? new Date(newValue) 
+          : newValue;
 
         if (String(oldValue) !== String(newValue)) {
           updateData[dbField] = processedNew;
@@ -606,13 +612,21 @@ export class BdService {
         brand_id: dto.brand_id,
         sow_total: dto.sow_total || 0,
         reward_type: dto.reward_type || 'FIXED',
-        deadline: dto.deadline ? new Date(dto.deadline) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        deadline: dto.deadline 
+          ? new Date(dto.deadline) 
+          : dto.start_date 
+            ? new Date(new Date(dto.start_date).getTime() + 30 * 24 * 60 * 60 * 1000) 
+            : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
         status: 'PENDING_BD',
         budget: dto.budget || 0,
         slot: dto.slot || 0,
         brief_url: dto.brief_url || null,
         collaboration_type: dto.collaboration_type || null,
         target_creators_count: dto.target_creators_count || 0,
+        start_date: dto.start_date ? new Date(dto.start_date) : null,
+        description: dto.description || null,
+        pic_contact: dto.pic_contact || null,
+        brief_text: dto.brief_text || null,
       },
     });
 
@@ -658,12 +672,17 @@ export class BdService {
       const results: any[] = [];
       for (let i = 1; i < lines.length; i++) {
         const cols = lines[i].split(separator).map((c: string) => c.trim());
-        const nameIdx = headers.indexOf('name') !== -1 ? headers.indexOf('name') : 0;
-        const locationIdx = headers.indexOf('location') !== -1 ? headers.indexOf('location') : 1;
-        const cityIdx = headers.indexOf('city') !== -1 ? headers.indexOf('city') : 2;
-        const categoryIdx = headers.indexOf('category') !== -1 ? headers.indexOf('category') : 3;
-        const facilitiesIdx = headers.indexOf('facilities') !== -1 ? headers.indexOf('facilities') : 4;
-        const contactIdx = headers.indexOf('contact') !== -1 ? headers.indexOf('contact') : 5;
+        const nameIdx = headers.indexOf('name') !== -1 ? headers.indexOf('name') : headers.indexOf('nama') !== -1 ? headers.indexOf('nama') : 0;
+        const locationIdx = headers.indexOf('location') !== -1 ? headers.indexOf('location') : headers.indexOf('lokasi') !== -1 ? headers.indexOf('lokasi') : 1;
+        const cityIdx = headers.indexOf('city') !== -1 ? headers.indexOf('city') : headers.indexOf('kota') !== -1 ? headers.indexOf('kota') : 2;
+        const categoryIdx = headers.indexOf('category') !== -1 ? headers.indexOf('category') : headers.indexOf('kategori') !== -1 ? headers.indexOf('kategori') : 3;
+        const facilitiesIdx = headers.indexOf('facilities') !== -1 ? headers.indexOf('facilities') : headers.indexOf('fasilitas') !== -1 ? headers.indexOf('fasilitas') : 4;
+        const contactIdx = headers.indexOf('contact') !== -1 ? headers.indexOf('contact') : headers.indexOf('kontak') !== -1 ? headers.indexOf('kontak') : 5;
+
+        const provinceIdx = headers.indexOf('province') !== -1 ? headers.indexOf('province') : headers.indexOf('provinsi') !== -1 ? headers.indexOf('provinsi') : -1;
+        const quotaIdx = headers.indexOf('quota') !== -1 ? headers.indexOf('quota') : headers.indexOf('kuota') !== -1 ? headers.indexOf('kuota') : -1;
+        const picNameIdx = headers.indexOf('pic_name') !== -1 ? headers.indexOf('pic_name') : headers.indexOf('nama_pic') !== -1 ? headers.indexOf('nama_pic') : headers.indexOf('pic') !== -1 ? headers.indexOf('pic') : -1;
+        const picPhoneIdx = headers.indexOf('pic_phone') !== -1 ? headers.indexOf('pic_phone') : headers.indexOf('no_wa') !== -1 ? headers.indexOf('no_wa') : headers.indexOf('whatsapp') !== -1 ? headers.indexOf('whatsapp') : -1;
 
         if (!cols[nameIdx] || !cols[locationIdx]) continue; // skip empty rows
 
@@ -675,6 +694,10 @@ export class BdService {
             category: cols[categoryIdx] || 'HOTEL',
             facilities: cols[facilitiesIdx] || null,
             contact: cols[contactIdx] || null,
+            province: provinceIdx !== -1 && cols[provinceIdx] ? cols[provinceIdx] : null,
+            quota: quotaIdx !== -1 && cols[quotaIdx] ? Number(cols[quotaIdx]) : 1,
+            pic_name: picNameIdx !== -1 && cols[picNameIdx] ? cols[picNameIdx] : null,
+            pic_phone: picPhoneIdx !== -1 && cols[picPhoneIdx] ? cols[picPhoneIdx] : null,
           },
         });
         results.push(hotel);
@@ -709,6 +732,10 @@ export class BdService {
         category: dto.category || 'HOTEL',
         facilities: dto.facilities ? JSON.stringify(dto.facilities) : null,
         contact: dto.contact || null,
+        province: dto.province || null,
+        quota: dto.quota !== undefined ? Number(dto.quota) : 1,
+        pic_name: dto.pic_name || null,
+        pic_phone: dto.pic_phone || null,
       },
     });
     return { success: true, hotel };

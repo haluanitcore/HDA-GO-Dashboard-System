@@ -157,6 +157,10 @@ model Campaign {
   // ── Phase 2: BD Hotel & FNB ──
   collaboration_type    String?            // VISIT_ONLY, BARTER_STAY, BARTER_DINING (Hotel only)
   target_creators_count Int                @default(0)  // Kuota jumlah kreator (all categories)
+  start_date            DateTime?
+  description           String?
+  pic_contact           String?
+  brief_text            String?
   
   participants      CampaignParticipant[]
   submissions       Submission[]
@@ -391,6 +395,10 @@ model HotelPartner {
   category    String?      // HOTEL, RESORT, VILLA, RESTAURANT
   facilities  String?      // JSON stringified
   contact     String?
+  province    String?
+  quota       Int          @default(1)
+  pic_name    String?
+  pic_phone   String?
   is_active   Boolean      @default(true)
   created_at  DateTime     @default(now())
 

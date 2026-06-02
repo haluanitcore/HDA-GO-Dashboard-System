@@ -25,8 +25,9 @@ export class CreateCampaignDto {
   @IsString()
   reward_type: string; // FIXED, COMMISSION
 
+  @IsOptional()
   @IsDateString()
-  deadline: string;
+  deadline?: string;
 
   @IsInt()
   slot: number; // Max participants
@@ -49,6 +50,22 @@ export class CreateCampaignDto {
   @IsOptional()
   @IsString()
   collaboration_type?: string;
+
+  @IsOptional()
+  @IsDateString()
+  start_date?: string;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @IsOptional()
+  @IsString()
+  pic_contact?: string;
+
+  @IsOptional()
+  @IsString()
+  brief_text?: string;
 }
 
 export class JoinCampaignDto {

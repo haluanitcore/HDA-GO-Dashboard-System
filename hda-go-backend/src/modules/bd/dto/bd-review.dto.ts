@@ -60,6 +60,22 @@ export class BDEditCampaignDto {
   @IsOptional()
   @IsInt()
   target_creators_count?: number;
+
+  @IsOptional()
+  @IsDateString()
+  start_date?: string;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @IsOptional()
+  @IsString()
+  pic_contact?: string;
+
+  @IsOptional()
+  @IsString()
+  brief_text?: string;
 }
 
 export class BDAssignBrandDto {
@@ -121,5 +137,21 @@ export class BDSubmitDealDto {
   @IsOptional()
   @IsInt()
   target_creators_count?: number;
+
+  @IsOptional()
+  @IsDateString()
+  start_date?: string;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @IsOptional()
+  @IsString()
+  pic_contact?: string;
+
+  @IsOptional()
+  @IsString()
+  brief_text?: string;
 }
 

@@ -6,6 +6,16 @@ import { api } from '@/services/api';
 
 const CATEGORY_OPTIONS = ['5 Star', '4 Star', '3 Star', 'Resort', 'Boutique', 'Budget'];
 
+const PROVINCE_OPTIONS = [
+  'DKI Jakarta', 'Jawa Barat', 'Jawa Tengah', 'DI Yogyakarta', 'Jawa Timur',
+  'Banten', 'Bali', 'Nusa Tenggara Barat', 'Nusa Tenggara Timur',
+  'Sumatera Utara', 'Sumatera Barat', 'Riau', 'Kepulauan Riau', 'Jambi',
+  'Sumatera Selatan', 'Bangka Belitung', 'Bengkulu', 'Lampung',
+  'Kalimantan Barat', 'Kalimantan Tengah', 'Kalimantan Selatan', 'Kalimantan Timur', 'Kalimantan Utara',
+  'Sulawesi Utara', 'Gorontalo', 'Sulawesi Tengah', 'Sulawesi Barat', 'Sulawesi Selatan', 'Sulawesi Tenggara',
+  'Maluku', 'Maluku Utara', 'Papua', 'Papua Barat'
+];
+
 interface HotelForm {
   name: string;
   location: string;
@@ -13,6 +23,7 @@ interface HotelForm {
   quota: string;
   pic_name: string;
   pic_phone: string;
+  province: string;
 }
 
 const INITIAL_FORM: HotelForm = {
@@ -22,6 +33,7 @@ const INITIAL_FORM: HotelForm = {
   quota: '1',
   pic_name: '',
   pic_phone: '',
+  province: 'DKI Jakarta',
 };
 
 export default function BDHotelsPage() {
@@ -42,13 +54,23 @@ export default function BDHotelsPage() {
   const fetchHotels = async () => {
     setIsLoading(true);
     try {
-      const res: any = await api.get('/bd/hotels').catch(() => []);
+      const res: any = await api.get('/bd/hotels').catch(() => null);
       const defaultHotels = [
-        { id: '1', name: 'Grand Hyatt Jakarta', location: 'Jakarta Pusat', category: '5 Star', status: 'ACTIVE', quota: 5, pic_name: 'Budi Santoso', pic_phone: '081234567890' },
-        { id: '2', name: 'Alila Seminyak', location: 'Bali', category: 'Resort', status: 'ACTIVE', quota: 3, pic_name: 'Dewi Lestari', pic_phone: '082345678901' },
-        { id: '3', name: 'Pullman Central Park', location: 'Jakarta Barat', category: '5 Star', status: 'ACTIVE', quota: 4, pic_name: 'Arif Budiman', pic_phone: '083456789012' },
+        { id: '1', name: 'Grand Hyatt Jakarta', location: 'Jakarta Pusat', category: '5 Star', status: 'ACTIVE', quota: 5, pic_name: 'Budi Santoso', pic_phone: '081234567890', province: 'DKI Jakarta' },
+        { id: '2', name: 'Alila Seminyak', location: 'Bali', category: 'Resort', status: 'ACTIVE', quota: 3, pic_name: 'Dewi Lestari', pic_phone: '082345678901', province: 'Bali' },
+        { id: '3', name: 'Pullman Central Park', location: 'Jakarta Barat', category: '5 Star', status: 'ACTIVE', quota: 4, pic_name: 'Arif Budiman', pic_phone: '083456789012', province: 'DKI Jakarta' },
       ];
-      setHotels(Array.isArray(res) && res.length > 0 ? res : defaultHotels);
+      
+      let hotelsList: any[] = [];
+      if (res) {
+        if (Array.isArray(res)) {
+          hotelsList = res;
+        } else if (res.hotels && Array.isArray(res.hotels)) {
+          hotelsList = res.hotels;
+        }
+      }
+      
+      setHotels(hotelsList.length > 0 ? hotelsList : defaultHotels);
     } catch (err) {
       console.error(err);
     } finally {
@@ -94,6 +116,7 @@ export default function BDHotelsPage() {
         quota: Number(form.quota),
         pic_name: form.pic_name.trim() || undefined,
         pic_phone: form.pic_phone.trim() || undefined,
+        province: form.province,
         status: 'ACTIVE',
       });
       // Optimistically add to local list as well in case API returns empty list
@@ -105,6 +128,7 @@ export default function BDHotelsPage() {
         quota: Number(form.quota),
         pic_name: form.pic_name.trim(),
         pic_phone: form.pic_phone.trim(),
+        province: form.province,
         status: 'ACTIVE',
       }]);
       setForm(INITIAL_FORM);
@@ -120,6 +144,7 @@ export default function BDHotelsPage() {
         quota: Number(form.quota),
         pic_name: form.pic_name.trim(),
         pic_phone: form.pic_phone.trim(),
+        province: form.province,
         status: 'ACTIVE',
       }]);
       setForm(INITIAL_FORM);
@@ -131,7 +156,8 @@ export default function BDHotelsPage() {
 
   const filteredHotels = hotels.filter(hotel =>
     hotel.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    hotel.location.toLowerCase().includes(searchQuery.toLowerCase())
+    hotel.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (hotel.province && hotel.province.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   return (
@@ -175,7 +201,9 @@ export default function BDHotelsPage() {
             className="w-full bg-white/5 border border-white/10 rounded-xl pl-11 pr-4 py-3 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition-all"
           />
         </div>
-        <p className="text-xs text-gray-600 font-medium">{filteredHotels.length} hotel terdaftar</p>
+        <p className="text-xs text-gray-500 font-medium">
+          {filteredHotels.length} hotel terdaftar &middot; Template mendukung kolom: <b>Name, Location, City, Province, Category, Quota, PIC_Name, PIC_Phone</b>
+        </p>
       </div>
 
       {/* Table */}
@@ -191,6 +219,7 @@ export default function BDHotelsPage() {
                 <tr className="border-b border-white/5 bg-white/[0.02]">
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">Hotel Name</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">Location</th>
+                  <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">Province</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">Category</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">PIC</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">Status</th>
@@ -221,8 +250,17 @@ export default function BDHotelsPage() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-1.5 text-sm text-gray-400">
-                          <MapPin className="h-4 w-4 flex-shrink-0" /> {hotel.location}
+                           <MapPin className="h-4 w-4 flex-shrink-0" /> {hotel.location}
                         </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        {hotel.province ? (
+                          <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded border border-emerald-500/20 uppercase tracking-wider">
+                            {hotel.province}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-600 font-medium">—</span>
+                        )}
                       </td>
                       <td className="px-6 py-4">
                         <span className="text-[10px] font-black px-2.5 py-1 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 uppercase tracking-widest">
@@ -323,6 +361,22 @@ export default function BDHotelsPage() {
                   placeholder="Contoh: Jakarta Pusat"
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition-all"
                 />
+              </div>
+
+              {/* Province */}
+              <div>
+                <label className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2 block">
+                  Provinsi <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={form.province}
+                  onChange={e => handleFormChange('province', e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition-all appearance-none cursor-pointer"
+                >
+                  {PROVINCE_OPTIONS.map(prov => (
+                    <option key={prov} value={prov} className="bg-[#1a1a1a] text-white">{prov}</option>
+                  ))}
+                </select>
               </div>
 
               {/* Category + Quota (2 cols) */}

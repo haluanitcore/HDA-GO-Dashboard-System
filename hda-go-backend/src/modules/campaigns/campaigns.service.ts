@@ -23,13 +23,21 @@ export class CampaignsService {
         brand_id: dto.brand_id,
         sow_total: dto.sow_total,
         reward_type: dto.reward_type,
-        deadline: new Date(dto.deadline),
+        deadline: dto.deadline 
+          ? new Date(dto.deadline) 
+          : dto.start_date 
+            ? new Date(new Date(dto.start_date).getTime() + 30 * 24 * 60 * 60 * 1000) 
+            : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
         slot: dto.slot,
         budget: dto.budget || 0,
         brief_url: dto.brief_url || null,
         status: dto.status || 'PENDING_BD',
         target_creators_count: dto.target_creators_count || 0,
         collaboration_type: dto.collaboration_type || null,
+        start_date: dto.start_date ? new Date(dto.start_date) : null,
+        description: dto.description || null,
+        pic_contact: dto.pic_contact || null,
+        brief_text: dto.brief_text || null,
       },
     });
 

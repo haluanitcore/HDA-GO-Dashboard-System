@@ -52,6 +52,10 @@ export default function BDCampaignDetailPage() {
         slot: campaignDetail.slot,
         target_creators_count: campaignDetail.target_creators_count || 0,
         collaboration_type: campaignDetail.collaboration_type || 'VISIT_ONLY',
+        start_date: campaignDetail.start_date ? new Date(campaignDetail.start_date).toISOString().split('T')[0] : '',
+        description: campaignDetail.description || '',
+        pic_contact: campaignDetail.pic_contact || '',
+        brief_text: campaignDetail.brief_text || '',
       });
     }
   }, [campaignDetail]);
@@ -252,6 +256,39 @@ export default function BDCampaignDetailPage() {
                         </select>
                       </div>
                     </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Tanggal Mulai</label>
+                        <input
+                          type="date" value={editData.start_date || ''} onChange={e => setEditData({ ...editData, start_date: e.target.value })}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">PIC BD Contact</label>
+                        <input
+                          type="text" value={editData.pic_contact || ''} onChange={e => setEditData({ ...editData, pic_contact: e.target.value })}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors"
+                          placeholder="Nama/WA PIC BD"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Deskripsi Campaign</label>
+                      <textarea
+                        value={editData.description || ''} onChange={e => setEditData({ ...editData, description: e.target.value })}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors resize-none"
+                        rows={2}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Brief Manual (Ketik)</label>
+                      <textarea
+                        value={editData.brief_text || ''} onChange={e => setEditData({ ...editData, brief_text: e.target.value })}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors resize-none"
+                        rows={3}
+                      />
+                    </div>
                     <div className="space-y-2">
                       <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Edit Notes (reason)</label>
                       <input
@@ -277,36 +314,60 @@ export default function BDCampaignDetailPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
-                    {[
-                      { label: 'Category', value: c.category, icon: Target },
-                      { label: 'Budget', value: `Rp ${((c.budget || 0) / 1000000).toFixed(1)}M`, icon: DollarSign },
-                      { label: 'SOW / Posts', value: c.sow_total, icon: FileText },
-                      { label: 'Deadline', value: new Date(c.deadline).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }), icon: Calendar },
-                      { label: 'Min Level', value: `Level ${c.min_level}`, icon: Target },
-                      { label: 'Reward Type', value: c.reward_type, icon: DollarSign },
-                      { label: 'Slot', value: c.slot || 'Unlimited', icon: User },
-                      ...(c.category === 'HOTEL' || c.target_creators_count ? [
-                        { label: 'Jumlah Kreator Target', value: c.target_creators_count || 0, icon: User },
-                      ] : []),
-                      ...(c.collaboration_type ? [
-                        { label: 'Jenis Kerja Sama', value: c.collaboration_type.replace(/_/g, ' '), icon: FileText },
-                      ] : []),
-                    ].map((item, i) => {
-                      const Icon = item.icon;
-                      return (
-                        <div key={i} className="flex items-start gap-3">
-                          <div className="p-2 bg-white/5 rounded-lg">
-                            <Icon className="h-4 w-4 text-gray-500" />
+                  <>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
+                      {[
+                        { label: 'Category', value: c.category, icon: Target },
+                        { label: 'Budget', value: c.budget > 0 ? `Rp ${c.budget.toLocaleString()}` : 'Barter Only', icon: DollarSign },
+                        { label: 'SOW / Posts', value: c.sow_total, icon: FileText },
+                        { label: 'Deadline', value: new Date(c.deadline).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }), icon: Calendar },
+                        { label: 'Min Level', value: `Level ${c.min_level}`, icon: Target },
+                        { label: 'Reward Type', value: c.reward_type, icon: DollarSign },
+                        { label: 'Slot', value: c.slot || 'Unlimited', icon: User },
+                        ...(c.category === 'HOTEL' || c.target_creators_count ? [
+                          { label: 'Jumlah Kreator Target', value: c.target_creators_count || 0, icon: User },
+                        ] : []),
+                        ...(c.collaboration_type ? [
+                          { label: 'Jenis Kerja Sama', value: c.collaboration_type.replace(/_/g, ' '), icon: FileText },
+                        ] : []),
+                        ...(c.start_date ? [
+                          { label: 'Tanggal Mulai', value: new Date(c.start_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }), icon: Calendar },
+                        ] : []),
+                        ...(c.pic_contact ? [
+                          { label: 'PIC BD Contact', value: c.pic_contact, icon: User },
+                        ] : []),
+                      ].map((item, i) => {
+                        const Icon = item.icon;
+                        return (
+                          <div key={i} className="flex items-start gap-3">
+                            <div className="p-2 bg-white/5 rounded-lg">
+                              <Icon className="h-4 w-4 text-gray-500" />
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{item.label}</p>
+                              <p className="text-sm font-bold text-white mt-0.5">{item.value}</p>
+                            </div>
                           </div>
+                        );
+                      })}
+                    </div>
+                    {c.category === 'HOTEL' && (
+                      <div className="mt-6 pt-6 border-t border-white/5 space-y-4 text-left">
+                        {c.description && (
                           <div>
-                            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{item.label}</p>
-                            <p className="text-sm font-bold text-white mt-0.5">{item.value}</p>
+                            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Deskripsi Campaign</p>
+                            <p className="text-sm text-gray-300 mt-1 font-medium">{c.description}</p>
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                        )}
+                        {c.brief_text && (
+                          <div>
+                            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Brief Manual (Ketik)</p>
+                            <p className="text-sm text-gray-300 mt-1 font-medium whitespace-pre-line bg-black/20 p-4 rounded-2xl border border-white/5 max-h-48 overflow-y-auto">{c.brief_text}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
 
