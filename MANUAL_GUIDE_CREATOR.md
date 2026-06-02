@@ -111,28 +111,31 @@ Setelah lamaran kampanyemu disetujui oleh BD, saatnya kamu berkreasi membuat vid
 
 ```mermaid
 graph TD
-    A["🎬 Produksi Video mentah sesuai brief"] --> B["🔗 Unggah ke Drive CM & Submit link di dasbor"]
-    B --> C{"🔍 CM melakukan Quality Control (QC)"}
-    C -- "❌ REVISION (Ditolak Sementara)" --> D["📝 Baca catatan perbaikan, edit video, kirim ulang link"]
-    C -- "✅ APPROVED (Disetujui)" --> E["📱 Posting video approved ke TikTok Publik"]
-    E --> F["🔗 Kirim link VT TikTok rill di dasbor"]
+    A["🎬 Produksi Video mentah sesuai brief"] --> B["📤 Upload file video/foto langsung di dashboard HDA GO"]
+    B --> C["🤖 Sistem otomatis mengunggah file ke Google Drive CM-mu"]
+    C --> D{"🔍 CM melakukan Quality Control (QC) langsung di player"}
+    D -- "❌ REVISION (Ditolak Sementara)" --> E["📝 Baca catatan perbaikan, edit video, upload ulang berkas baru"]
+    D -- "✅ APPROVED (Disetujui)" --> F["📱 Posting video approved ke TikTok Publik"]
+    F --> G["🔗 Kirim link VT TikTok rill di dasbor"]
 ```
 
-### 1. Mengunggah Video Mentah ke Dasbor
+### 1. Mengunggah Video Mentah secara Instan
+Kamu **tidak perlu lagi repot** membuka Google Drive, mengunggah video secara manual, menyalin link, dan menempelkannya ke dasbor. Sistem HDA GO yang baru telah mengotomatisasi seluruh proses ini!
 *   Buat videomu terlebih dahulu sesuai taklimat (*brief*) PDF kampanye.
-*   Unggah berkas mentah video berkualitas tinggi tersebut ke folder Google Drive milik CM pengampumu (tautan folder Drive diberikan oleh CM).
 *   Masuk ke menu **"Submissions"** (`/creator/submissions`) di dasbormu.
-*   Pilih nama kampanye yang diikuti, lalu salin (*paste*) tautan link Google Drive videomulah ke kolom **"Tautan Drive Video"**.
-*   Klik **"Kirim ke CM"**. Status tugasmu akan berubah menjadi `'QC_REVIEW'`.
+*   Pada bagian **"Upload Video / Foto"**, seret berkas videomu (`.mp4`, `.mov` maks 100MB) langsung ke kotak area **Drag & Drop** (atau klik area tersebut untuk memilih berkas dari folder komputermu).
+*   Klik **"Submit Konten"**.
+*   Sistem akan menampilkan indikator progress bar pengunggahan. Begitu selesai, sistem HDA GO **secara otomatis mengunggah berkas videomumu langsung ke folder Google Drive CM pengampumu** via integrasi Google API!
+*   Status tugasmu otomatis berubah menjadi `'QC_REVIEW'`.
 
 ### 2. Memantau Status Quality Control (QC)
-*   CM pengampumu akan memeriksa kelayakan video di antrean QC mereka.
-*   **Jika Butuh Perbaikan (`REVISION`)**: Kamu akan melihat teks berwarna merah berisi catatan revisi CM secara jelas (misal: *"Watermark HDA-GO di detik ke-5 kurang terlihat, tolong diperbesar"*). Edit kembali videomumu dan kirimkan tautan baru di kolom yang sama.
-*   **Jika Disetujui (`APPROVED`)**: Kamu akan mendapat notifikasi sukses. Sekarang, saatnya memposting video tersebut ke akun TikTok publikmu!
+*   CM pengampumu akan meninjau video tersebut secara langsung melalui pemutar video dasbor mereka.
+*   **Jika Butuh Perbaikan (`REVISION`)**: Kamu akan melihat teks berwarna merah berisi catatan revisi CM secara jelas (misal: *"Watermark HDA-GO di detik ke-5 kurang terlihat, tolong diperbesar"*). Silakan edit kembali videomumu, lalu unggah kembali berkas video yang baru di kotak unggahan yang sama.
+*   **Jika Disetujui (`APPROVED`)**: Kamu akan mendapat notifikasi sukses dan semburan confetti. Sekarang, saatnya memposting video tersebut ke akun TikTok publikmu!
 
-### 3. Melaporkan Tautan VT TikTok Publik
+### 3. Melaporkan Tautan VT TikTok Publik (Final Step)
 *   Setelah videomu resmi tayang di TikTok, salin tautan link video TikTok-mu (VT Link), contoh: `https://www.tiktok.com/@kreatormu/video/1234567890`.
-*   Masuk ke halaman tugasmu di dasbor, klik tombol **"Kirim VT Link TikTok"**, masukkan tautan yang disalin, dan simpan. Status tugasmu kini berubah menjadi `'COMPLETED'`!
+*   Masuk ke halaman tugasmu di dasbor, klik tombol **"Kirim VT Link TikTok"**, masukkan tautan rill video TikTok-mu tersebut, dan simpan. Status tugasmu kini resmi berubah menjadi `'COMPLETED'`!
 
 ---
 

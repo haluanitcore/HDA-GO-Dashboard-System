@@ -168,8 +168,10 @@ Garda terdepan yang bertugas mendampingi kreator, memastikan kepatuhan video ter
 
 #### 3. Antrean Kontrol Kualitas Video (`/cm/pipeline` atau `/qc`)
 *   **Fungsi**: Wadah peninjauan video taklimat pra-posting sebelum kreator mengunggahnya secara publik ke media sosial.
-*   **Smart QC Layout**:
-    *   Sistem mendeteksi tautan yang dikirim oleh kreator. Jika tautan tersebut merupakan tautan Google Drive, sistem akan memunculkan tombol visual premium berwarna hijau bertuliskan **"Open GDrive Folder"**. Ini memudahkan CM untuk langsung mengakses berkas mentah video berkualitas tinggi tanpa ribet menyalin tautan secara manual.
+*   **Sistem QC Langsung & GDrive Sync**:
+    *   Kreator mengunggah berkas video/foto mentah (`.mp4`, `.mov`, `.png`, `.jpg`) langsung di dasbor mereka. Sistem backend NestJS secara otomatis mengalirkan berkas tersebut langsung ke folder Google Drive CM yang ditunjuk via integrasi API.
+    *   Di halaman QC CM, video/foto tersebut disajikan langsung pada pemutar video terintegrasi (*integrated player*). CM dapat memutar dan mereview video secara instan tanpa perlu mengunduh file secara lokal atau membuka tab eksternal. Tombol premium hijau **"Open GDrive Folder"** juga tetap tersedia jika CM ingin membuka file asli di Google Drive mereka.
+
 *   **Keputusan QC**:
     *   **Approve**: Menyetujui video. Status tugas berubah menjadi `'APPROVED'`. Sistem mengirim notifikasi WebSocket confetti ke kreator untuk segera diposting ke TikTok.
     *   **Revision**: Mengembalikan video dengan pesan revisi terperinci (misal: *"Audio musik latar terlalu keras, suara penjelasan produk tenggelam. Mohon kecilkan 20%"*).
@@ -291,23 +293,23 @@ Berikut adalah visualisasi alur interaksi antarkomponen dalam mengeksekusi opera
 
 ### 2. Alur Quality Control (QC) Konten & Publikasi TikTok
 ```
-[Kreator] Upload video mentah ke Folder GDrive CM
+[Kreator] Upload file video/foto langsung di dashboard HDA GO
    │
    ▼
-[Kreator] Masukkan Tautan Drive di Dashboard (Status: QC_REVIEW)
+[Sistem] Otomatis sync & upload ke Google Drive CM via API (Status: QC_REVIEW)
    │
    ▼
-[CM] Tinjau di Smart QC Queue (GDrive Link dengan Tombol Hijau Premium)
+[CM] Tinjau & putar video langsung di dashboard player (Beri skor & catatan)
    │
    ├─► (Revisi) ──► Beri skor 1-3 & Catatan Revisi ──► Kembali ke [Kreator]
    │
    └─► (Setuju) ──► Beri skor 4-5 ──► Kirim WebSocket Confetti ──► Status: APPROVED
-                                                                         │
-                                                                         ▼
-                                                           [Kreator] Posting ke TikTok
-                                                                         │
-                                                                         ▼
-                                                           [Kreator] Kirim Link VT TikTok rill
+                                                                          │
+                                                                          ▼
+                                                            [Kreator] Posting ke TikTok
+                                                                          │
+                                                                          ▼
+                                                            [Kreator] Kirim Link VT TikTok rill
 ```
 
 ### 3. Alur Verifikasi GMV, Integrasi OCR, & Sinkronisasi Sheets
