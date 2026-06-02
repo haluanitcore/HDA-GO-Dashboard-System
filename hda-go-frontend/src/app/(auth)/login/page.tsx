@@ -8,8 +8,8 @@ import { AlertCircle, Loader2, ArrowRight, Eye, EyeOff } from 'lucide-react';
 export default function LoginPage() {
   const router = useRouter();
   const { login, isLoading, error } = useAuthStore();
-  const [email, setEmail] = useState('alex@creator.com');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -21,14 +21,6 @@ export default function LoginPage() {
       // Error handled by store
     }
   };
-
-  const demoAccounts = [
-    { label: 'Creator', email: 'alex@creator.com', color: 'from-emerald-500 to-green-600' },
-    { label: 'Brand', email: 'dominos@brand.com', color: 'from-blue-500 to-cyan-600' },
-    { label: 'BD', email: 'rina@hdago.com', color: 'from-amber-500 to-yellow-500' },
-    { label: 'CM', email: 'sarah@hdago.com', color: 'from-purple-500 to-violet-600' },
-    { label: 'Admin', email: 'admin@hdago.com', color: 'from-red-500 to-rose-600' },
-  ];
 
   return (
     <div className="min-h-screen flex items-center justify-center glass-bg p-4 font-sans">
@@ -146,30 +138,6 @@ export default function LoginPage() {
                 )}
               </button>
             </form>
-
-            {/* Divider */}
-            <div className="flex items-center gap-3 my-6">
-              <div className="flex-1 h-px bg-white/5" />
-              <span className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">Quick Access</span>
-              <div className="flex-1 h-px bg-white/5" />
-            </div>
-
-            {/* Demo Account Pills */}
-            <div className="flex flex-wrap gap-2 justify-center">
-              {demoAccounts.map((acc) => (
-                <button
-                  key={acc.label}
-                  onClick={() => { setEmail(acc.email); setPassword('password123'); }}
-                  className={`text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full border transition-all ${
-                    email === acc.email
-                      ? 'bg-[#F6D145]/10 text-[#F6D145] border-[#F6D145]/30'
-                      : 'bg-white/3 text-gray-500 border-white/5 hover:border-white/15 hover:text-gray-300'
-                  }`}
-                >
-                  {acc.label}
-                </button>
-              ))}
-            </div>
 
             {/* Register Link */}
             <div className="mt-6 text-center">
