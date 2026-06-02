@@ -200,10 +200,10 @@ export default function BrandCampaignsPage() {
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsModalOpen(false)} />
-          <div className="glass-panel-solid w-full max-w-lg rounded-3xl p-8 relative z-10 animate-in fade-in zoom-in-95 duration-200">
+          <div className="glass-panel-solid w-full max-w-lg rounded-3xl p-8 relative z-10 animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col overflow-hidden">
             <button 
               onClick={() => setIsModalOpen(false)}
-              className="absolute top-6 right-6 text-gray-400 hover:text-white transition-colors"
+              className="absolute top-6 right-6 text-gray-400 hover:text-white transition-colors z-20"
             >
               <X className="h-6 w-6" />
             </button>
@@ -211,7 +211,7 @@ export default function BrandCampaignsPage() {
             <h2 className="text-2xl font-black text-white mb-2 tracking-tight">Submit New Deal</h2>
             <p className="text-gray-400 text-sm mb-6">Create a new campaign brief to be matched with our creators.</p>
             
-            <form onSubmit={handleSumbit} className="space-y-5">
+            <form onSubmit={handleSumbit} className="space-y-5 overflow-y-auto flex-1 pr-2 text-left scrollbar-thin">
               <div className="space-y-2">
                 <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Campaign Title</label>
                 <input 
@@ -391,7 +391,7 @@ export default function BrandCampaignsPage() {
       {isDetailModalOpen && selectedCampaign && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsDetailModalOpen(false)} />
-          <div className="glass-panel-solid w-full max-w-2xl rounded-3xl p-8 relative z-10 animate-in fade-in zoom-in-95 duration-200">
+          <div className="glass-panel-solid w-full max-w-2xl rounded-3xl p-8 relative z-10 animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto scrollbar-thin">
             <button 
               onClick={() => setIsDetailModalOpen(false)}
               className="absolute top-6 right-6 text-gray-400 hover:text-white transition-colors"
