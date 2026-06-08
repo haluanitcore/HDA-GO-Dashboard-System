@@ -22,6 +22,11 @@ echo "  ================================================================"
 echo -e "\e[0m"
 
 # ------------------------------------------------------------------------------
+# 0. SCRIPT ARGUMENTS & DEFAULT REPO
+# ------------------------------------------------------------------------------
+REPO_URL=${1:-"https://github.com/haluanitcore/HDA-GO-Dashboard-System.git"}
+
+# ------------------------------------------------------------------------------
 # 1. INPUT USER CONFIGURATION
 # ------------------------------------------------------------------------------
 read -p "🎯 Enter your domain name (e.g., dashboardhdago.com): " DOMAIN
@@ -66,7 +71,14 @@ ufw --force enable
 # 4. INSTALL NODE.JS (V20 LTS) & PM2
 # ------------------------------------------------------------------------------
 echo -e "\n\e[33m[3/8] Installing Node.js LTS (v20) & Process Manager (PM2)...\e[0m"
-curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+curl -fsSL https://deb.nodesource.com/setup_20.x -o /tmp/node_setup.sh
+if [ -f /tmp/node_setup.sh ]; then
+  bash /tmp/node_setup.sh
+  rm /tmp/node_setup.sh
+else
+  echo -e "\e[31m[ERROR] Failed to download Node.js setup script!\e[0m"
+  exit 1
+fi
 apt install -y nodejs
 
 # Verify Node installation
@@ -79,15 +91,22 @@ npm install -g pm2
 pm2 --version
 
 # ------------------------------------------------------------------------------
-# 5. CLONE REPOSITORY
+# 5. CLONE REPOSITORY & CREATE SYSTEM USER
 # ------------------------------------------------------------------------------
 echo -e "\n\e[33m[4/8] Preparing directories & cloning HDA GO repository...\e[0m"
+
+# Create hdago system user if it doesn't exist
+if ! id -u hdago >/dev/null 2>&1; then
+  echo -e "\e[33mCreating system user 'hdago' for running services...\e[0m"
+  useradd -m -s /bin/bash hdago
+fi
+
 rm -rf /var/www/hda-go
 mkdir -p /var/www/hda-go
 cd /var/www
 
 # We clone the code here. If the repo is private, git will ask for credentials.
-git clone https://github.com/haluanitcore/HDA-GO-Dashboard-System.git hda-go
+git clone "$REPO_URL" hda-go
 cd /var/www/hda-go
 
 # ------------------------------------------------------------------------------
@@ -125,9 +144,12 @@ npx prisma db seed
 # Build backend
 npm run build
 
-# Start backend using PM2
-pm2 delete hda-go-backend 2>/dev/null || true
-pm2 start dist/src/main.js --name "hda-go-backend"
+# Change ownership of /var/www/hda-go to hdago user before running PM2
+chown -R hdago:hdago /var/www/hda-go
+
+# Start backend using PM2 as hdago user
+sudo -u hdago pm2 delete hda-go-backend 2>/dev/null || true
+sudo -u hdago pm2 start dist/src/main.js --name "hda-go-backend"
 
 # ------------------------------------------------------------------------------
 # 7. BUILD & DEPLOY NEXTJS FRONTEND (PORT 3000)
@@ -150,13 +172,18 @@ EOT
 # Build frontend
 npm run build
 
-# Start frontend using PM2
-pm2 delete hda-go-frontend 2>/dev/null || true
-pm2 start npm --name "hda-go-frontend" -- start -- -p 3000
+# Ensure all files are owned by hdago user
+chown -R hdago:hdago /var/www/hda-go
 
-# Save PM2 processes & configure startup
-pm2 save
-pm2 startup systemd -u root --hp /root
+# Start frontend using PM2 as hdago user
+sudo -u hdago pm2 delete hda-go-frontend 2>/dev/null || true
+sudo -u hdago pm2 start npm --name "hda-go-frontend" -- start -- -p 3000
+
+# Save PM2 processes as hdago user
+sudo -u hdago pm2 save
+
+# Configure PM2 startup to run as hdago user
+pm2 startup systemd -u hdago --hp /home/hdago
 
 # ------------------------------------------------------------------------------
 # 8. CONFIGURE NGINX REVERSE PROXY
@@ -239,5 +266,5 @@ echo "  💻 Frontend PM2:  Running (Port 3000)"
 echo "  📁 DB Location:   /var/www/hda-go/hda-go-backend/prisma/dev.db"
 echo "  🛡️ SSL status:     Let's Encrypt HTTPS (Auto-renew active)"
 echo -e "\n\e[36mPM2 Processes Status:\e[0m"
-pm2 status
+sudo -u hdago pm2 status
 echo -e "\n\e[35mEnjoy your secure & ultra-fast Go Live website! 🚀\e[0m\n"
