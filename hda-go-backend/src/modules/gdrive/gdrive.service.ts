@@ -16,7 +16,9 @@ export class GDriveService {
     try {
       const keyJson = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
       if (!keyJson) {
-        this.logger.warn('GOOGLE_SERVICE_ACCOUNT_KEY not set — GDrive upload disabled');
+        this.logger.warn(
+          'GOOGLE_SERVICE_ACCOUNT_KEY not set — GDrive upload disabled',
+        );
         return;
       }
 
@@ -61,7 +63,9 @@ export class GDriveService {
     }
 
     try {
-      this.logger.log(`📤 Uploading "${fileName}" to GDrive folder: ${folderId}`);
+      this.logger.log(
+        `📤 Uploading "${fileName}" to GDrive folder: ${folderId}`,
+      );
 
       const fileMetadata: drive_v3.Schema$File = {
         name: fileName,
@@ -100,7 +104,8 @@ export class GDriveService {
 
       return {
         fileId,
-        webViewLink: webViewLink || `https://drive.google.com/file/d/${fileId}/view`,
+        webViewLink:
+          webViewLink || `https://drive.google.com/file/d/${fileId}/view`,
       };
     } catch (error) {
       this.logger.error(`❌ GDrive upload failed for "${fileName}"`, error);

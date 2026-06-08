@@ -1,6 +1,11 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
+import { BCRYPT_ROUNDS } from '../../common/constants';
 
 @Injectable()
 export class SettingsService {
@@ -31,23 +36,34 @@ export class SettingsService {
             sow_per_month: true,
             gmv_target_monthly: true,
             cm_notes: true,
-          }
-        }
-      }
+          },
+        },
+      },
     });
 
     if (!user) throw new NotFoundException('User not found');
     return user;
   }
 
-  async updateProfile(userId: string, data: { name?: string; bio?: string; phone?: string; avatar_url?: string; gdrive_url?: string }) {
+  async updateProfile(
+    userId: string,
+    data: {
+      name?: string;
+      bio?: string;
+      phone?: string;
+      avatar_url?: string;
+      gdrive_url?: string;
+    },
+  ) {
     // Build update object — only include fields that were sent
     const updateData: any = {};
     if (data.name !== undefined) updateData.name = data.name;
     if (data.bio !== undefined) updateData.bio = data.bio || null;
     if (data.phone !== undefined) updateData.phone = data.phone || null;
-    if (data.avatar_url !== undefined) updateData.avatar_url = data.avatar_url || null;
-    if (data.gdrive_url !== undefined) updateData.gdrive_url = data.gdrive_url || null;
+    if (data.avatar_url !== undefined)
+      updateData.avatar_url = data.avatar_url || null;
+    if (data.gdrive_url !== undefined)
+      updateData.gdrive_url = data.gdrive_url || null;
 
     const updated = await this.prisma.user.update({
       where: { id: userId },
@@ -61,13 +77,16 @@ export class SettingsService {
         bio: true,
         phone: true,
         gdrive_url: true,
-      }
+      },
     });
 
     return updated;
   }
 
-  async updatePassword(userId: string, data: { oldPassword?: string; newPassword?: string }) {
+  async updatePassword(
+    userId: string,
+    data: { oldPassword?: string; newPassword?: string },
+  ) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new NotFoundException('User not found');
 
@@ -81,14 +100,16 @@ export class SettingsService {
     }
 
     if (data.oldPassword === data.newPassword) {
-      throw new BadRequestException('New password must be different from old password');
+      throw new BadRequestException(
+        'New password must be different from old password',
+      );
     }
 
-    const hashedPassword = await bcrypt.hash(data.newPassword, 10);
-    
+    const hashedPassword = await bcrypt.hash(data.newPassword, BCRYPT_ROUNDS);
+
     await this.prisma.user.update({
       where: { id: userId },
-      data: { password: hashedPassword }
+      data: { password: hashedPassword },
     });
 
     return { message: 'Password updated successfully' };

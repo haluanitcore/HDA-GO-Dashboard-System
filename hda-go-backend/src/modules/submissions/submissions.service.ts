@@ -1,7 +1,16 @@
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  Logger,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { GDriveService } from '../gdrive/gdrive.service';
-import { CreateSubmissionUploadDto, ReviewSubmissionDto, BulkReviewDto } from './dto/submission.dto';
+import {
+  CreateSubmissionUploadDto,
+  ReviewSubmissionDto,
+  BulkReviewDto,
+} from './dto/submission.dto';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -18,7 +27,11 @@ export class SubmissionsService {
   // SUBMISSION WORKFLOW — Direct File Upload
   // Creator Upload File → Save to VPS → Upload to GDrive CM → Auto-Delete from VPS
   // ══════════════════════════════════════════════
-  async createWithUpload(creatorId: string, file: Express.Multer.File, dto: CreateSubmissionUploadDto) {
+  async createWithUpload(
+    creatorId: string,
+    file: Express.Multer.File,
+    dto: CreateSubmissionUploadDto,
+  ) {
     const totalSow = parseInt(dto.total_sow, 10) || 1;
 
     // 1. Verify creator is participant of this campaign
@@ -83,32 +96,51 @@ export class SubmissionsService {
         });
       }
     } catch (err) {
-      this.logger.error(`Failed to notify CM for submission ${submission.id} upload`, err);
+      this.logger.error(
+        `Failed to notify CM for submission ${submission.id} upload`,
+        err,
+      );
     }
 
     // 6. Return immediately (saved locally, GDrive upload will happen on Approval)
     return {
       ...submission,
-      message: 'File berhasil diupload! Menunggu proses verifikasi oleh QC Team...',
+      message:
+        'File berhasil diupload! Menunggu proses verifikasi oleh QC Team...',
     };
   }
 
   /**
    * Helper to upload local VPS file to GDrive and delete local file after success
    */
-  private async uploadLocalFileToGDrive(submission: any): Promise<{ url: string; fileId: string | null }> {
+  private async uploadLocalFileToGDrive(
+    submission: any,
+  ): Promise<{ url: string; fileId: string | null }> {
     try {
-      if (!submission.tiktok_url || !submission.tiktok_url.startsWith('/api/uploads/')) {
-        this.logger.warn(`Submission ${submission.id} does not have a local path: ${submission.tiktok_url}`);
-        return { url: submission.tiktok_url, fileId: submission.gdrive_file_id };
+      if (
+        !submission.tiktok_url ||
+        !submission.tiktok_url.startsWith('/api/uploads/')
+      ) {
+        this.logger.warn(
+          `Submission ${submission.id} does not have a local path: ${submission.tiktok_url}`,
+        );
+        return {
+          url: submission.tiktok_url,
+          fileId: submission.gdrive_file_id,
+        };
       }
 
       const filename = submission.tiktok_url.replace('/api/uploads/', '');
       const filePath = path.join(process.cwd(), 'tmp_uploads', filename);
 
       if (!fs.existsSync(filePath)) {
-        this.logger.warn(`Local file not found at ${filePath} for submission ${submission.id}`);
-        return { url: submission.tiktok_url, fileId: submission.gdrive_file_id };
+        this.logger.warn(
+          `Local file not found at ${filePath} for submission ${submission.id}`,
+        );
+        return {
+          url: submission.tiktok_url,
+          fileId: submission.gdrive_file_id,
+        };
       }
 
       // Get CM GDrive folder
@@ -127,24 +159,36 @@ export class SubmissionsService {
         },
       });
 
-      const folderId = creator?.cm_user?.gdrive_folder_id
-        || GDriveService.extractFolderId(creator?.cm_user?.gdrive_url || '');
+      const folderId =
+        creator?.cm_user?.gdrive_folder_id ||
+        GDriveService.extractFolderId(creator?.cm_user?.gdrive_url || '');
 
       if (!folderId) {
-        this.logger.warn(`CM GDrive folder not found for creator ${submission.creator_id} — keeping file local`);
-        return { url: submission.tiktok_url, fileId: submission.gdrive_file_id };
+        this.logger.warn(
+          `CM GDrive folder not found for creator ${submission.creator_id} — keeping file local`,
+        );
+        return {
+          url: submission.tiktok_url,
+          fileId: submission.gdrive_file_id,
+        };
       }
 
       if (!this.gdriveService.isAvailable()) {
         this.logger.warn(`GDriveService not initialized — keeping file local`);
-        return { url: submission.tiktok_url, fileId: submission.gdrive_file_id };
+        return {
+          url: submission.tiktok_url,
+          fileId: submission.gdrive_file_id,
+        };
       }
 
-      const creatorName = creator?.user?.name?.replace(/[^a-zA-Z0-9]/g, '_') || 'creator';
+      const creatorName =
+        creator?.user?.name?.replace(/[^a-zA-Z0-9]/g, '_') || 'creator';
       const timestamp = new Date().toISOString().split('T')[0];
       const gdriveFileName = `${creatorName}_${timestamp}_${submission.file_name || filename}`;
 
-      this.logger.log(`📤 Uploading approved file to GDrive for submission ${submission.id}...`);
+      this.logger.log(
+        `📤 Uploading approved file to GDrive for submission ${submission.id}...`,
+      );
       const result = await this.gdriveService.uploadFile(
         filePath,
         gdriveFileName,
@@ -156,14 +200,19 @@ export class SubmissionsService {
         // Delete local temp file
         if (fs.existsSync(filePath)) {
           fs.unlinkSync(filePath);
-          this.logger.log(`🗑️ Temp file deleted from VPS after GDrive upload: ${filePath}`);
+          this.logger.log(
+            `🗑️ Temp file deleted from VPS after GDrive upload: ${filePath}`,
+          );
         }
         return { url: result.webViewLink, fileId: result.fileId };
       }
 
       return { url: submission.tiktok_url, fileId: submission.gdrive_file_id };
     } catch (error) {
-      this.logger.error(`Failed uploading file to GDrive on approval for submission ${submission.id}`, error);
+      this.logger.error(
+        `Failed uploading file to GDrive on approval for submission ${submission.id}`,
+        error,
+      );
       return { url: submission.tiktok_url, fileId: submission.gdrive_file_id };
     }
   }
@@ -183,16 +232,25 @@ export class SubmissionsService {
     const updateData: any = {
       status: dto.status,
       qc_notes: dto.qc_notes,
-      quality_score: dto.quality_score !== undefined ? dto.quality_score : undefined,
-      checked_items: dto.checked_items !== undefined ? dto.checked_items : undefined,
+      quality_score:
+        dto.quality_score !== undefined ? dto.quality_score : undefined,
+      checked_items:
+        dto.checked_items !== undefined ? dto.checked_items : undefined,
       qc_issues: dto.qc_issues !== undefined ? dto.qc_issues : undefined,
-      internal_tags: dto.internal_tags !== undefined ? dto.internal_tags : undefined,
-      schedule_posting: dto.schedule_posting ? new Date(dto.schedule_posting) : undefined,
+      internal_tags:
+        dto.internal_tags !== undefined ? dto.internal_tags : undefined,
+      schedule_posting: dto.schedule_posting
+        ? new Date(dto.schedule_posting)
+        : undefined,
       reviewer_id: dto.reviewer_id !== undefined ? dto.reviewer_id : undefined,
     };
 
     // Set review timestamp
-    if (dto.status === 'APPROVED' || dto.status === 'REVISION' || dto.status === 'REJECTED') {
+    if (
+      dto.status === 'APPROVED' ||
+      dto.status === 'REVISION' ||
+      dto.status === 'REJECTED'
+    ) {
       updateData.reviewed_at = new Date();
     }
 
@@ -304,7 +362,14 @@ export class SubmissionsService {
     return this.prisma.submission.findMany({
       where: { creator_id: creatorId },
       include: {
-        campaign: { select: { title: true, category: true, deadline: true, sow_total: true } },
+        campaign: {
+          select: {
+            title: true,
+            category: true,
+            deadline: true,
+            sow_total: true,
+          },
+        },
         deliverable: true,
       },
       orderBy: { submitted_at: 'desc' },
@@ -327,18 +392,21 @@ export class SubmissionsService {
 
   // ── SYNC DELIVERABLES ACROSS SIBLINGS ──
   private async syncDeliverables(creatorId: string, campaignId: string) {
-    const totalSow = (await this.prisma.campaign.findUnique({
-      where: { id: campaignId },
-      select: { sow_total: true },
-    }))?.sow_total || 1;
+    const totalSow =
+      (
+        await this.prisma.campaign.findUnique({
+          where: { id: campaignId },
+          select: { sow_total: true },
+        })
+      )?.sow_total || 1;
 
     const siblingSubmissions = await this.prisma.submission.findMany({
       where: { creator_id: creatorId, campaign_id: campaignId },
       select: { id: true, status: true },
     });
 
-    const approvedCount = siblingSubmissions.filter(s =>
-      ['APPROVED', 'POSTED', 'COMPLETED'].includes(s.status)
+    const approvedCount = siblingSubmissions.filter((s) =>
+      ['APPROVED', 'POSTED', 'COMPLETED'].includes(s.status),
     ).length;
 
     for (const sib of siblingSubmissions) {
@@ -366,7 +434,9 @@ export class SubmissionsService {
         creator: {
           include: { user: { select: { name: true } } },
         },
-        campaign: { select: { title: true, category: true, qc_checklist: true } },
+        campaign: {
+          select: { title: true, category: true, qc_checklist: true },
+        },
         deliverable: true,
       },
       orderBy: { submitted_at: 'asc' },
@@ -487,12 +557,16 @@ export class SubmissionsService {
 
     if (!submission) throw new NotFoundException('Submission not found');
     if (submission.creator_id !== creatorId) {
-      throw new BadRequestException('Anda tidak memiliki akses ke submission ini');
+      throw new BadRequestException(
+        'Anda tidak memiliki akses ke submission ini',
+      );
     }
 
     // Only allow VT link on approved/posted/completed submissions
     if (!['APPROVED', 'POSTED', 'COMPLETED'].includes(submission.status)) {
-      throw new BadRequestException('VT link hanya bisa disubmit setelah konten disetujui');
+      throw new BadRequestException(
+        'VT link hanya bisa disubmit setelah konten disetujui',
+      );
     }
 
     const updated = await this.prisma.submission.update({

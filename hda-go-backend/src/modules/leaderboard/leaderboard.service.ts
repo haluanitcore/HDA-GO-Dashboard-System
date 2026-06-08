@@ -57,6 +57,11 @@ export class LeaderboardService {
     const rank = allCreators.findIndex((c) => c.user_id === creatorId) + 1;
     const total = allCreators.length;
 
-    return { creatorId, rank, total, percentile: Math.round(((total - rank) / total) * 100) };
+    return {
+      creatorId,
+      rank,
+      total,
+      percentile: Math.round(((total - rank) / total) * 100),
+    };
   }
 }

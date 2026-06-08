@@ -1,8 +1,13 @@
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  ConflictException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RegisterDto, LoginDto } from './dto/auth.dto';
 import * as bcrypt from 'bcryptjs';
+import { BCRYPT_ROUNDS } from '../../common/constants';
 
 @Injectable()
 export class AuthService {
@@ -17,50 +22,50 @@ export class AuthService {
   // ──────────────────────────────────────────────
   async register(dto: RegisterDto) {
     // Check if email already exists
-    const existing = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    const existing = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
     if (existing) {
       throw new ConflictException('Email already registered');
     }
 
-    const hashedPassword = await bcrypt.hash(dto.password, 12);
+    const hashedPassword = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
 
     const user = await this.prisma.user.create({
       data: {
         name: dto.name,
         email: dto.email,
         password: hashedPassword,
-        role: dto.role,
+        role: 'CREATOR',
       },
     });
 
-    // If role is CREATOR, auto-create Creator profile + progress
-    if (dto.role === 'CREATOR') {
-      await this.prisma.creator.create({
-        data: {
-          user_id: user.id,
-          creator_level: 0,
-          gmv_total: 0,
-          gmv_monthly: 0,
-          total_orders: 0,
-          total_campaigns: 0,
-          total_posts: 0,
-          streak_days: 0,
-          cm_id: dto.cm_id || null, // CM assignment from self-registration dropdown
-        },
-      });
+    // Auto-create Creator profile + progress
+    await this.prisma.creator.create({
+      data: {
+        user_id: user.id,
+        creator_level: 0,
+        gmv_total: 0,
+        gmv_monthly: 0,
+        total_orders: 0,
+        total_campaigns: 0,
+        total_posts: 0,
+        streak_days: 0,
+        cm_id: dto.cm_id || null, // CM assignment from self-registration dropdown
+      },
+    });
 
-      await this.prisma.creatorProgress.create({
-        data: {
-          creator_id: user.id,
-          current_level: 0,
-          target_level: 1,
-          progress_percentage: 0,
-          gmv_progress: 0,
-          campaign_progress: 0,
-          order_progress: 0,
-        },
-      });
-    }
+    await this.prisma.creatorProgress.create({
+      data: {
+        creator_id: user.id,
+        current_level: 0,
+        target_level: 1,
+        progress_percentage: 0,
+        gmv_progress: 0,
+        campaign_progress: 0,
+        order_progress: 0,
+      },
+    });
 
     // Generate tokens
     const tokens = await this.generateTokens(user.id, user.role);
@@ -82,7 +87,9 @@ export class AuthService {
   // Validate Credential → Generate JWT + Refresh → Role Detection → Redirect
   // ──────────────────────────────────────────────
   async login(dto: LoginDto) {
-    const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
@@ -112,10 +119,12 @@ export class AuthService {
   async refreshToken(refreshToken: string) {
     try {
       const payload = this.jwtService.verify(refreshToken, {
-        secret: process.env.JWT_REFRESH_SECRET || 'hda-go-refresh-secret',
+        secret: process.env.JWT_REFRESH_SECRET,
       });
 
-      const user = await this.prisma.user.findUnique({ where: { id: payload.sub } });
+      const user = await this.prisma.user.findUnique({
+        where: { id: payload.sub },
+      });
       if (!user) {
         throw new UnauthorizedException('User not found');
       }
@@ -134,11 +143,11 @@ export class AuthService {
 
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, {
-        secret: process.env.JWT_SECRET || 'hda-go-secret',
+        secret: process.env.JWT_SECRET,
         expiresIn: '15m',
       }),
       this.jwtService.signAsync(payload, {
-        secret: process.env.JWT_REFRESH_SECRET || 'hda-go-refresh-secret',
+        secret: process.env.JWT_REFRESH_SECRET,
         expiresIn: '7d',
       }),
     ]);

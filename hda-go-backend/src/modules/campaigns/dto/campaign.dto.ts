@@ -1,6 +1,20 @@
-import { IsNotEmpty, IsString, IsInt, IsDateString, IsOptional, IsIn } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsString,
+  IsInt,
+  IsDateString,
+  IsOptional,
+  IsIn,
+} from 'class-validator';
 
-export const CAMPAIGN_CATEGORIES = ['HOTEL', 'FNB', 'TTD', 'LIVE', 'BEAUTY', 'TECH'] as const;
+export const CAMPAIGN_CATEGORIES = [
+  'HOTEL',
+  'FNB',
+  'TTD',
+  'LIVE',
+  'BEAUTY',
+  'TECH',
+] as const;
 
 export class CreateCampaignDto {
   @IsNotEmpty()

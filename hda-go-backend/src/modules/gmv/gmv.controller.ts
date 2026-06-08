@@ -1,4 +1,16 @@
-import { Controller, Get, Post, Patch, Param, Body, Req, UseGuards, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Param,
+  Body,
+  Req,
+  UseGuards,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../../common/roles.guard';
 import { Roles } from '../../common/roles.decorator';
@@ -34,8 +46,21 @@ export class GmvController {
   // POST /gmv/record — Record new order (CM/Admin direct legacy)
   @Post('record')
   @Roles(Role.CM, Role.ADMIN, Role.QC)
-  recordOrder(@Body() body: { creator_id: string; campaign_id: string; order_count: number; gmv_amount: number }) {
-    return this.gmvService.recordOrder(body.creator_id, body.campaign_id, body.order_count, body.gmv_amount);
+  recordOrder(
+    @Body()
+    body: {
+      creator_id: string;
+      campaign_id: string;
+      order_count: number;
+      gmv_amount: number;
+    },
+  ) {
+    return this.gmvService.recordOrder(
+      body.creator_id,
+      body.campaign_id,
+      body.order_count,
+      body.gmv_amount,
+    );
   }
 
   // GET /gmv/pending — Get all pending GMV verifications

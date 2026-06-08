@@ -30,6 +30,13 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# Test Coverage
+coverage/
+
+# Temporary utility scripts
+get_users.js
+create_*.js
+
 # Misc
 *.py
 *.tsbuildinfo

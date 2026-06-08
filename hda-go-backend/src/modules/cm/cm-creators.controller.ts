@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Patch, Param, Body, Req, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Param,
+  Body,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../../common/roles.guard';
 import { Roles } from '../../common/roles.decorator';
@@ -53,6 +62,11 @@ export class CmCreatorsController {
     @Param('id') creatorId: string,
     @Body() body: { target_cm_id: string; reason: string },
   ) {
-    return this.cmCreatorsService.transferCreator(creatorId, req.user.userId, body.target_cm_id, body.reason);
+    return this.cmCreatorsService.transferCreator(
+      creatorId,
+      req.user.userId,
+      body.target_cm_id,
+      body.reason,
+    );
   }
 }

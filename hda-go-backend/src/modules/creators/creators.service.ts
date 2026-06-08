@@ -55,49 +55,50 @@ export class CreatorsService {
   // Frontend Request Dashboard API → Backend Aggregate → Return all data
   // ──────────────────────────────────────────────
   async getDashboardData(userId: string) {
-    const [creator, campaigns, submissions, orders, progress] = await Promise.all([
-      // Creator Profile + Stats
-      this.prisma.creator.findUnique({
-        where: { user_id: userId },
-        include: {
-          user: { select: { id: true, name: true, email: true, role: true } },
-        },
-      }),
+    const [creator, campaigns, submissions, orders, progress] =
+      await Promise.all([
+        // Creator Profile + Stats
+        this.prisma.creator.findUnique({
+          where: { user_id: userId },
+          include: {
+            user: { select: { id: true, name: true, email: true, role: true } },
+          },
+        }),
 
-      // Campaign Joined
-      this.prisma.campaignParticipant.findMany({
-        where: { creator_id: userId },
-        include: {
-          campaign: true,
-        },
-        orderBy: { joined_at: 'desc' },
-        take: 10,
-      }),
+        // Campaign Joined
+        this.prisma.campaignParticipant.findMany({
+          where: { creator_id: userId },
+          include: {
+            campaign: true,
+          },
+          orderBy: { joined_at: 'desc' },
+          take: 10,
+        }),
 
-      // Pending Submissions + SOW Progress
-      this.prisma.submission.findMany({
-        where: { creator_id: userId },
-        include: {
-          campaign: { select: { title: true, category: true } },
-          deliverable: true,
-        },
-        orderBy: { submitted_at: 'desc' },
-        take: 10,
-      }),
+        // Pending Submissions + SOW Progress
+        this.prisma.submission.findMany({
+          where: { creator_id: userId },
+          include: {
+            campaign: { select: { title: true, category: true } },
+            deliverable: true,
+          },
+          orderBy: { submitted_at: 'desc' },
+          take: 10,
+        }),
 
-      // GMV & Orders
-      this.prisma.creatorOrder.findMany({
-        where: { creator_id: userId },
-        include: {
-          campaign: { select: { title: true } },
-        },
-      }),
+        // GMV & Orders
+        this.prisma.creatorOrder.findMany({
+          where: { creator_id: userId },
+          include: {
+            campaign: { select: { title: true } },
+          },
+        }),
 
-      // Level Progress
-      this.prisma.creatorProgress.findUnique({
-        where: { creator_id: userId },
-      }),
-    ]);
+        // Level Progress
+        this.prisma.creatorProgress.findUnique({
+          where: { creator_id: userId },
+        }),
+      ]);
 
     // Calculate aggregated GMV
     const totalGMV = orders.reduce((sum, o) => sum + o.gmv_amount, 0);
@@ -115,7 +116,9 @@ export class CreatorsService {
         list: campaigns,
       },
       submissions: {
-        pending: submissions.filter((s) => ['DRAFT', 'QC_REVIEW', 'REVISION'].includes(s.status)).length,
+        pending: submissions.filter((s) =>
+          ['DRAFT', 'QC_REVIEW', 'REVISION'].includes(s.status),
+        ).length,
         approved: submissions.filter((s) => s.status === 'APPROVED').length,
         list: submissions,
       },

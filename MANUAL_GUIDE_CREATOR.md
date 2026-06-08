@@ -29,24 +29,27 @@ Di platform HDA GO, kamu memiliki **2 cara praktis** untuk mendapatkan akun logi
 Kamu bisa melakukan registrasi secara mandiri langsung melalui situs web:
 1. Buka peramban (*browser*) dan pergi ke halaman: `https://dashboardhdago.com/register`.
 2. Isi formulir pendaftaran secara lengkap:
-   * **Nama Lengkap**, **Email**, dan buat **Kata Sandi (Password)** pribadimu.
-   * Hubungkan akun media sosialmu (Username TikTok, Tautan Profil TikTok, Jumlah Followers, dan Rata-rata Penonton).
-   * Lengkapi data biodata dasar (Nomor WhatsApp, Kota Domisili, Niche kontenmu seperti F&B/Beauty/Fashion, dan Pengalaman Afiliasimu).
-3. **PILIH CREATOR MANAGER (CM) ANDALANMU**: Di bagian bawah formulir, terdapat pilihan menu tarik-turun (*dropdown*) untuk memilih **Creator Manager (CM)** bimbinganmu. Pilih CM yang kamu inginkan untuk memandu perjalanan suksesmu di HDA GO!
-4. Klik **"Register Account"** untuk menyelesaikan proses pendaftaran.
+   * **Nama Lengkap** — Masukkan nama lengkapmu.
+   * **Email** — Gunakan email aktif sebagai username login.
+   * **Kata Sandi (Password)** — Buat kata sandi pribadimu sendiri (minimal 6 karakter).
+3. **PILIH CREATOR MANAGER (CM) ANDALANMU** *(opsional)*: Di bagian bawah formulir, terdapat pilihan menu tarik-turun (*dropdown*) untuk memilih **Creator Manager (CM)** bimbinganmu. Pilih CM yang kamu inginkan untuk memandu perjalanan suksesmu di HDA GO!
+4. Klik **"Daftar Sekarang"** untuk menyelesaikan proses pendaftaran.
+
+> [!NOTE]
+> Formulir pendaftaran mandiri sengaja dibuat singkat dan sederhana agar kamu bisa langsung masuk ke dashboard. Data tambahan seperti profil TikTok, nomor WhatsApp, kota domisili, niche konten, dan lainnya akan dilengkapi oleh Creator Manager (CM)-mu melalui panel admin setelah akunmu terbuat.
 
 ### 🏢 Opsi B: Didaftarkan oleh Creator Manager (CM)
 Jika kamu sudah berkomunikasi langsung dengan CM pengampu atau terdaftar melalui onboarding massal:
-* Creator Manager (CM)-mu akan menginput biodata dan akun media sosialmu langsung dari sistem admin.
-* Akunmu akan dibuat secara otomatis dengan **Email** pilihanmu dan **Kata Sandi Bawaan (Default Password)**: `HdaGo123!`.
-* Hubungi CM-mu untuk meminta detail email dan sandi tersebut.
+* Creator Manager (CM)-mu akan menginput biodata lengkap dan akun media sosialmu langsung dari sistem admin melalui formulir onboarding 3 tahap (Identitas Dasar → Profil Konten → Kontrak & Komitmen).
+* Akunmu akan dibuat secara otomatis dengan **Email** pilihanmu dan **Kata Sandi Sementara** unik yang di-generate oleh sistem (format: `HDA-XXXX`, contoh: `HDA-4821`).
+* CM-mu akan langsung **mengirimkan detail email dan kata sandi sementara** tersebut kepadamu (biasanya melalui WhatsApp atau pesan langsung). Setiap creator mendapatkan kata sandi yang **berbeda-beda**.
 
 ---
 
 ### 🚪 Cara Masuk (Login) ke Dashboard
 1. Buka peramban (*browser*) di handphone atau laptopmu, lalu masuk ke alamat: `https://dashboardhdago.com/login`.
 2. Masukkan **Email** yang terdaftar.
-3. Masukkan **Kata Sandi** (Gunakan kata sandi buatanmu sendiri jika menggunakan Opsi A, atau sandi default `HdaGo123!` jika menggunakan Opsi B).
+3. Masukkan **Kata Sandi** (Gunakan kata sandi buatanmu sendiri jika menggunakan Opsi A, atau kata sandi sementara `HDA-XXXX` yang diberikan oleh CM-mu jika menggunakan Opsi B).
 4. Klik tombol **"Sign In"**.
 
 ### 🔒 Wajib bagi Opsi B: Ganti Password Default-mu!
@@ -54,7 +57,7 @@ Jika kamu sudah berkomunikasi langsung dengan CM pengampu atau terdaftar melalui
 > Jika akunmu didaftarkan lewat **Opsi B (Dibuatkan oleh CM)**, demi keamanan komisi penjualan dan privasimu, kamu **sangat disarankan segera mengganti password bawaan** setelah berhasil login pertama kali.
 * **Cara Mengganti Password**:
   1. Di menu navigasi sebelah kiri (sidebar), klik **"Settings"** (Pengaturan Akun).
-  2. Masukkan password lama: `HdaGo123!`.
+  2. Masukkan password lama (kata sandi sementara `HDA-XXXX` yang diberikan oleh CM-mu, contoh: `HDA-4821`).
   3. Masukkan password barumu yang unik, kuat, dan mudah diingat.
   4. Klik **"Save Changes"** (Simpan Perubahan).
 

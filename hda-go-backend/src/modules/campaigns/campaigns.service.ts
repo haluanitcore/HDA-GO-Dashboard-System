@@ -1,4 +1,8 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EventsGateway } from '../notifications/events.gateway';
 import { CreateCampaignDto, JoinCampaignDto } from './dto/campaign.dto';
@@ -23,10 +27,12 @@ export class CampaignsService {
         brand_id: dto.brand_id,
         sow_total: dto.sow_total,
         reward_type: dto.reward_type,
-        deadline: dto.deadline 
-          ? new Date(dto.deadline) 
-          : dto.start_date 
-            ? new Date(new Date(dto.start_date).getTime() + 30 * 24 * 60 * 60 * 1000) 
+        deadline: dto.deadline
+          ? new Date(dto.deadline)
+          : dto.start_date
+            ? new Date(
+                new Date(dto.start_date).getTime() + 30 * 24 * 60 * 60 * 1000,
+              )
             : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
         slot: dto.slot,
         budget: dto.budget || 0,
@@ -67,7 +73,7 @@ export class CampaignsService {
         select: { bd_user_id: true },
       });
 
-      const bdUserIds = bdAssignments.map(a => a.bd_user_id);
+      const bdUserIds = bdAssignments.map((a) => a.bd_user_id);
 
       // Persistent notification
       for (const bdId of bdUserIds) {
@@ -99,7 +105,9 @@ export class CampaignsService {
   // ══════════════════════════════════════════════
   async publish(campaignId: string) {
     // Validate: campaign must be BD_APPROVED before publishing
-    const existing = await this.prisma.campaign.findUnique({ where: { id: campaignId } });
+    const existing = await this.prisma.campaign.findUnique({
+      where: { id: campaignId },
+    });
     if (!existing) throw new NotFoundException('Campaign not found');
     if (existing.status !== 'BD_APPROVED') {
       throw new BadRequestException(
@@ -189,7 +197,9 @@ export class CampaignsService {
 
     if (!campaign) throw new NotFoundException('Campaign not found');
     if (!['ACTIVE', 'BD_APPROVED'].includes(campaign.status)) {
-      throw new BadRequestException(`Campaign belum bisa diikuti. Status: "${campaign.status}"`);
+      throw new BadRequestException(
+        `Campaign belum bisa diikuti. Status: "${campaign.status}"`,
+      );
     }
 
     // Check slot availability
@@ -219,7 +229,8 @@ export class CampaignsService {
         },
       },
     });
-    if (existing) throw new BadRequestException('Kamu sudah bergabung di campaign ini');
+    if (existing)
+      throw new BadRequestException('Kamu sudah bergabung di campaign ini');
 
     // ── Join campaign ──
     const participant = await this.prisma.campaignParticipant.create({
@@ -264,7 +275,7 @@ export class CampaignsService {
     const where: any = {};
     if (filters?.status) where.status = filters.status;
     if (filters?.category) where.category = filters.category;
-    
+
     // If user is a BRAND, they can only see their own campaigns
     if (user && user.role === 'BRAND') {
       where.brand_id = user.userId;
@@ -293,7 +304,9 @@ export class CampaignsService {
           },
         },
         submissions: { include: { deliverable: true } },
-        _count: { select: { participants: true, submissions: true, orders: true } },
+        _count: {
+          select: { participants: true, submissions: true, orders: true },
+        },
       },
     });
   }

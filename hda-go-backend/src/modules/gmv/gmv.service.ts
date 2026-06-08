@@ -1,4 +1,8 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LevelsService } from '../levels/levels.service';
 import * as Tesseract from 'tesseract.js';
@@ -15,8 +19,10 @@ export class GmvService {
   // ══════════════════════════════════════════════
   async parseScreenshot(fileBuffer: Buffer) {
     try {
-      const { data: { text } } = await Tesseract.recognize(fileBuffer, 'ind+eng');
-      
+      const {
+        data: { text },
+      } = await Tesseract.recognize(fileBuffer, 'ind+eng');
+
       // Simple Regex patterns to extract GMV and Orders
       const gmvMatch = text.match(/Rp[\s]?([\d.,]+)/i);
       const ordersMatch = text.match(/(\d+)[\s]?(pesanan|order|orders)/i);
@@ -53,16 +59,20 @@ export class GmvService {
     const day = now.getDay();
     const deadline = new Date(now);
 
-    if (day === 5 && now.getHours() >= 17) { // Friday evening
+    if (day === 5 && now.getHours() >= 17) {
+      // Friday evening
       deadline.setDate(deadline.getDate() + 3);
       deadline.setHours(9, 0, 0, 0);
-    } else if (day === 6) { // Saturday
+    } else if (day === 6) {
+      // Saturday
       deadline.setDate(deadline.getDate() + 2);
       deadline.setHours(9, 0, 0, 0);
-    } else if (day === 0) { // Sunday
+    } else if (day === 0) {
+      // Sunday
       deadline.setDate(deadline.getDate() + 1);
       deadline.setHours(9, 0, 0, 0);
-    } else { // Mon-Thu or Friday morning
+    } else {
+      // Mon-Thu or Friday morning
       deadline.setHours(deadline.getHours() + 24);
     }
 
@@ -81,7 +91,10 @@ export class GmvService {
     });
 
     // Notify CM
-    const creator = await this.prisma.creator.findUnique({ where: { user_id: creatorId }, select: { cm_id: true } });
+    const creator = await this.prisma.creator.findUnique({
+      where: { user_id: creatorId },
+      select: { cm_id: true },
+    });
     if (creator?.cm_id) {
       await this.prisma.notification.create({
         data: {
@@ -99,10 +112,17 @@ export class GmvService {
   // ══════════════════════════════════════════════
   // 3. CM VERIFY GMV
   // ══════════════════════════════════════════════
-  async verifyGmv(recordId: string, cmId: string, dto: { action: string, adjustedAmount?: number, rejectReason?: string }) {
-    const record = await this.prisma.creatorOrder.findUnique({ where: { id: recordId } });
+  async verifyGmv(
+    recordId: string,
+    cmId: string,
+    dto: { action: string; adjustedAmount?: number; rejectReason?: string },
+  ) {
+    const record = await this.prisma.creatorOrder.findUnique({
+      where: { id: recordId },
+    });
     if (!record) throw new NotFoundException('GMV Record not found');
-    if (record.status !== 'PENDING_VERIFICATION') throw new BadRequestException('Record is already processed');
+    if (record.status !== 'PENDING_VERIFICATION')
+      throw new BadRequestException('Record is already processed');
 
     let newStatus = 'VERIFIED';
     let finalGmv = record.gmv_amount;
@@ -111,7 +131,12 @@ export class GmvService {
       newStatus = 'REJECTED';
       await this.prisma.creatorOrder.update({
         where: { id: recordId },
-        data: { status: newStatus, reject_reason: dto.rejectReason, verified_by: cmId, verified_at: new Date() }
+        data: {
+          status: newStatus,
+          reject_reason: dto.rejectReason,
+          verified_by: cmId,
+          verified_at: new Date(),
+        },
       });
       return { success: true, status: newStatus };
     }
@@ -128,8 +153,8 @@ export class GmvService {
         status: newStatus,
         adjusted_amount: newStatus === 'ADJUSTED' ? finalGmv : null,
         verified_by: cmId,
-        verified_at: new Date()
-      }
+        verified_at: new Date(),
+      },
     });
 
     // ── Update creator aggregate stats ──
@@ -152,11 +177,16 @@ export class GmvService {
 
     // ── Check if all SOW is completed to trigger level engine ──
     const deliveries = await this.prisma.submissionDeliverable.findMany({
-      where: { submission: { campaign_id: record.campaign_id, creator_id: record.creator_id } }
+      where: {
+        submission: {
+          campaign_id: record.campaign_id,
+          creator_id: record.creator_id,
+        },
+      },
     });
-    
-    const isSowFinished = deliveries.every(d => d.remaining_sow === 0);
-    
+
+    const isSowFinished = deliveries.every((d) => d.remaining_sow === 0);
+
     if (isSowFinished) {
       await this.levelsService.evaluateLevel(record.creator_id);
     }
@@ -167,7 +197,12 @@ export class GmvService {
   // ══════════════════════════════════════════════
   // OLD API / CM DIRECT RECORD (LEGACY COMPAT)
   // ══════════════════════════════════════════════
-  async recordOrder(creatorId: string, campaignId: string, orderCount: number, gmvAmount: number) {
+  async recordOrder(
+    creatorId: string,
+    campaignId: string,
+    orderCount: number,
+    gmvAmount: number,
+  ) {
     const order = await this.prisma.creatorOrder.create({
       data: {
         creator_id: creatorId,
@@ -213,10 +248,17 @@ export class GmvService {
     const totalOrders = orders.reduce((sum, o) => sum + o.order_count, 0);
 
     // Group by campaign
-    const byCampaign: Record<string, { title: string; gmv: number; orders: number }> = {};
+    const byCampaign: Record<
+      string,
+      { title: string; gmv: number; orders: number }
+    > = {};
     orders.forEach((o) => {
       if (!byCampaign[o.campaign_id]) {
-        byCampaign[o.campaign_id] = { title: o.campaign.title, gmv: 0, orders: 0 };
+        byCampaign[o.campaign_id] = {
+          title: o.campaign.title,
+          gmv: 0,
+          orders: 0,
+        };
       }
       byCampaign[o.campaign_id].gmv += o.gmv_amount;
       byCampaign[o.campaign_id].orders += o.order_count;

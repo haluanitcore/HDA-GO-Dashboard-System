@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EventsGateway } from '../notifications/events.gateway';
 import { BDEditCampaignDto } from './dto/bd-review.dto';
@@ -33,38 +37,45 @@ export class BdService {
     // Get assigned brand IDs for this BD user
     const assignedBrands = await this.getAssignedBrandIds(bdUserId);
 
-    const whereClause = assignedBrands.length > 0
-      ? { brand_id: { in: assignedBrands } }
-      : {}; // Admin sees all
+    const whereClause =
+      assignedBrands.length > 0 ? { brand_id: { in: assignedBrands } } : {}; // Admin sees all
 
     const allCampaigns = await this.prisma.campaign.findMany({
       where: whereClause,
       orderBy: { created_at: 'desc' },
     });
 
-    const pendingCount = allCampaigns.filter(c => c.status === 'PENDING_BD').length;
-    const approvedCount = allCampaigns.filter(c => c.status === 'BD_APPROVED').length;
-    const revisionCount = allCampaigns.filter(c => c.status === 'BD_REVISION').length;
-    const activeCount = allCampaigns.filter(c => c.status === 'ACTIVE').length;
+    const pendingCount = allCampaigns.filter(
+      (c) => c.status === 'PENDING_BD',
+    ).length;
+    const approvedCount = allCampaigns.filter(
+      (c) => c.status === 'BD_APPROVED',
+    ).length;
+    const revisionCount = allCampaigns.filter(
+      (c) => c.status === 'BD_REVISION',
+    ).length;
+    const activeCount = allCampaigns.filter(
+      (c) => c.status === 'ACTIVE',
+    ).length;
 
     const totalBudget = allCampaigns
-      .filter(c => ['BD_APPROVED', 'ACTIVE', 'COMPLETED'].includes(c.status))
+      .filter((c) => ['BD_APPROVED', 'ACTIVE', 'COMPLETED'].includes(c.status))
       .reduce((sum, c) => sum + c.budget, 0);
 
     // Recent pending campaigns (top 5 for dashboard)
     const recentPending = allCampaigns
-      .filter(c => c.status === 'PENDING_BD')
+      .filter((c) => c.status === 'PENDING_BD')
       .slice(0, 5);
 
     // Fetch brand info for pending campaigns
-    const brandIds = [...new Set(recentPending.map(c => c.brand_id))];
+    const brandIds = [...new Set(recentPending.map((c) => c.brand_id))];
     const brands = await this.prisma.user.findMany({
       where: { id: { in: brandIds } },
       select: { id: true, name: true, email: true },
     });
-    const brandMap = new Map(brands.map(b => [b.id, b]));
+    const brandMap = new Map(brands.map((b) => [b.id, b]));
 
-    const pendingWithBrand = recentPending.map(c => ({
+    const pendingWithBrand = recentPending.map((c) => ({
       ...c,
       brand: brandMap.get(c.brand_id) || { name: 'Unknown Brand' },
     }));
@@ -82,9 +93,10 @@ export class BdService {
     // Category breakdown for approved/active
     const categoryBreakdown: Record<string, number> = {};
     allCampaigns
-      .filter(c => ['BD_APPROVED', 'ACTIVE', 'COMPLETED'].includes(c.status))
-      .forEach(c => {
-        categoryBreakdown[c.category] = (categoryBreakdown[c.category] || 0) + 1;
+      .filter((c) => ['BD_APPROVED', 'ACTIVE', 'COMPLETED'].includes(c.status))
+      .forEach((c) => {
+        categoryBreakdown[c.category] =
+          (categoryBreakdown[c.category] || 0) + 1;
       });
 
     return {
@@ -125,14 +137,14 @@ export class BdService {
     });
 
     // Enrich with brand info
-    const brandIds = [...new Set(campaigns.map(c => c.brand_id))];
+    const brandIds = [...new Set(campaigns.map((c) => c.brand_id))];
     const brands = await this.prisma.user.findMany({
       where: { id: { in: brandIds } },
       select: { id: true, name: true, email: true },
     });
-    const brandMap = new Map(brands.map(b => [b.id, b]));
+    const brandMap = new Map(brands.map((b) => [b.id, b]));
 
-    return campaigns.map(c => ({
+    return campaigns.map((c) => ({
       ...c,
       brand: brandMap.get(c.brand_id) || { name: 'Unknown Brand' },
     }));
@@ -173,14 +185,14 @@ export class BdService {
     }
 
     // Enrich edit logs with editor names
-    const editorIds = [...new Set(campaign.editLogs.map(l => l.editor_id))];
+    const editorIds = [...new Set(campaign.editLogs.map((l) => l.editor_id))];
     const editors = await this.prisma.user.findMany({
       where: { id: { in: editorIds } },
       select: { id: true, name: true },
     });
-    const editorMap = new Map(editors.map(e => [e.id, e.name]));
+    const editorMap = new Map(editors.map((e) => [e.id, e.name]));
 
-    const enrichedLogs = campaign.editLogs.map(log => ({
+    const enrichedLogs = campaign.editLogs.map((log) => ({
       ...log,
       editor_name: editorMap.get(log.editor_id) || 'Unknown',
     }));
@@ -199,10 +211,14 @@ export class BdService {
   // Notify all CM users that a new campaign is ready
   // ──────────────────────────────────────────────
   async approveCampaign(campaignId: string, bdUserId: string, notes?: string) {
-    const campaign = await this.prisma.campaign.findUnique({ where: { id: campaignId } });
+    const campaign = await this.prisma.campaign.findUnique({
+      where: { id: campaignId },
+    });
     if (!campaign) throw new NotFoundException('Campaign not found');
     if (campaign.status !== 'PENDING_BD' && campaign.status !== 'BD_REVISION') {
-      throw new BadRequestException(`Campaign status is "${campaign.status}", can only approve PENDING_BD or BD_REVISION`);
+      throw new BadRequestException(
+        `Campaign status is "${campaign.status}", can only approve PENDING_BD or BD_REVISION`,
+      );
     }
 
     // Update campaign status
@@ -288,10 +304,14 @@ export class BdService {
   // Notify Brand with feedback/notes
   // ──────────────────────────────────────────────
   async requestRevision(campaignId: string, bdUserId: string, notes: string) {
-    const campaign = await this.prisma.campaign.findUnique({ where: { id: campaignId } });
+    const campaign = await this.prisma.campaign.findUnique({
+      where: { id: campaignId },
+    });
     if (!campaign) throw new NotFoundException('Campaign not found');
     if (campaign.status !== 'PENDING_BD') {
-      throw new BadRequestException(`Campaign status is "${campaign.status}", can only request revision from PENDING_BD`);
+      throw new BadRequestException(
+        `Campaign status is "${campaign.status}", can only request revision from PENDING_BD`,
+      );
     }
 
     if (!notes || notes.trim().length === 0) {
@@ -354,8 +374,14 @@ export class BdService {
   // EDIT CAMPAIGN — BD can modify before approving
   // Creates audit trail for every field changed
   // ──────────────────────────────────────────────
-  async editCampaign(campaignId: string, bdUserId: string, dto: BDEditCampaignDto) {
-    const campaign = await this.prisma.campaign.findUnique({ where: { id: campaignId } });
+  async editCampaign(
+    campaignId: string,
+    bdUserId: string,
+    dto: BDEditCampaignDto,
+  ) {
+    const campaign = await this.prisma.campaign.findUnique({
+      where: { id: campaignId },
+    });
     if (!campaign) throw new NotFoundException('Campaign not found');
 
     // Build update data and create edit logs
@@ -384,9 +410,10 @@ export class BdService {
       const newValue = (dto as any)[dtoField];
       if (newValue !== undefined && newValue !== null) {
         const oldValue = (campaign as any)[dbField];
-        const processedNew = (dbField === 'deadline' || dbField === 'start_date') && newValue 
-          ? new Date(newValue) 
-          : newValue;
+        const processedNew =
+          (dbField === 'deadline' || dbField === 'start_date') && newValue
+            ? new Date(newValue)
+            : newValue;
 
         if (String(oldValue) !== String(newValue)) {
           updateData[dbField] = processedNew;
@@ -420,7 +447,11 @@ export class BdService {
     return {
       campaign: updated,
       fieldsChanged: editLogs.length,
-      changes: editLogs.map(l => ({ field: l.field_name, from: l.old_value, to: l.new_value })),
+      changes: editLogs.map((l) => ({
+        field: l.field_name,
+        from: l.old_value,
+        to: l.new_value,
+      })),
     };
   }
 
@@ -431,7 +462,9 @@ export class BdService {
     const assignedBrands = await this.getAssignedBrandIds(bdUserId);
 
     const whereClause: any = {
-      status: { in: ['BD_APPROVED', 'BD_REVISION', 'ACTIVE', 'COMPLETED', 'CANCELLED'] },
+      status: {
+        in: ['BD_APPROVED', 'BD_REVISION', 'ACTIVE', 'COMPLETED', 'CANCELLED'],
+      },
       bd_reviewer_id: { not: null },
     };
     if (assignedBrands.length > 0) {
@@ -446,20 +479,24 @@ export class BdService {
     // Enrich with brand and BD reviewer names
     const userIds = [
       ...new Set([
-        ...campaigns.map(c => c.brand_id),
-        ...campaigns.filter(c => c.bd_reviewer_id).map(c => c.bd_reviewer_id!),
+        ...campaigns.map((c) => c.brand_id),
+        ...campaigns
+          .filter((c) => c.bd_reviewer_id)
+          .map((c) => c.bd_reviewer_id!),
       ]),
     ];
     const users = await this.prisma.user.findMany({
       where: { id: { in: userIds } },
       select: { id: true, name: true },
     });
-    const userMap = new Map(users.map(u => [u.id, u.name]));
+    const userMap = new Map(users.map((u) => [u.id, u.name]));
 
-    return campaigns.map(c => ({
+    return campaigns.map((c) => ({
       ...c,
       brand_name: userMap.get(c.brand_id) || 'Unknown',
-      bd_reviewer_name: c.bd_reviewer_id ? (userMap.get(c.bd_reviewer_id) || 'Unknown') : null,
+      bd_reviewer_name: c.bd_reviewer_id
+        ? userMap.get(c.bd_reviewer_id) || 'Unknown'
+        : null,
     }));
   }
 
@@ -474,54 +511,73 @@ export class BdService {
       whereClause.brand_id = { in: assignedBrands };
     }
 
-    const allCampaigns = await this.prisma.campaign.findMany({ where: whereClause });
+    const allCampaigns = await this.prisma.campaign.findMany({
+      where: whereClause,
+    });
 
     // Approval rate
-    const reviewed = allCampaigns.filter(c => ['BD_APPROVED', 'BD_REVISION', 'ACTIVE', 'COMPLETED'].includes(c.status));
-    const approved = reviewed.filter(c => ['BD_APPROVED', 'ACTIVE', 'COMPLETED'].includes(c.status));
-    const approvalRate = reviewed.length > 0 ? (approved.length / reviewed.length) * 100 : 0;
+    const reviewed = allCampaigns.filter((c) =>
+      ['BD_APPROVED', 'BD_REVISION', 'ACTIVE', 'COMPLETED'].includes(c.status),
+    );
+    const approved = reviewed.filter((c) =>
+      ['BD_APPROVED', 'ACTIVE', 'COMPLETED'].includes(c.status),
+    );
+    const approvalRate =
+      reviewed.length > 0 ? (approved.length / reviewed.length) * 100 : 0;
 
     // Budget by category
     const budgetByCategory: Record<string, number> = {};
-    allCampaigns.forEach(c => {
-      budgetByCategory[c.category] = (budgetByCategory[c.category] || 0) + c.budget;
+    allCampaigns.forEach((c) => {
+      budgetByCategory[c.category] =
+        (budgetByCategory[c.category] || 0) + c.budget;
     });
 
     // Campaigns by status
     const campaignsByStatus: Record<string, number> = {};
-    allCampaigns.forEach(c => {
+    allCampaigns.forEach((c) => {
       campaignsByStatus[c.status] = (campaignsByStatus[c.status] || 0) + 1;
     });
 
     // Brand performance
-    const brandIds = [...new Set(allCampaigns.map(c => c.brand_id))];
+    const brandIds = [...new Set(allCampaigns.map((c) => c.brand_id))];
     const brands = await this.prisma.user.findMany({
       where: { id: { in: brandIds } },
       select: { id: true, name: true },
     });
-    const brandMap = new Map(brands.map(b => [b.id, b.name]));
+    const brandMap = new Map(brands.map((b) => [b.id, b.name]));
 
-    const brandPerformance = brandIds.map(bid => {
-      const brandCampaigns = allCampaigns.filter(c => c.brand_id === bid);
+    const brandPerformance = brandIds.map((bid) => {
+      const brandCampaigns = allCampaigns.filter((c) => c.brand_id === bid);
       return {
         brand_id: bid,
         brand_name: brandMap.get(bid) || 'Unknown',
         totalCampaigns: brandCampaigns.length,
         totalBudget: brandCampaigns.reduce((sum, c) => sum + c.budget, 0),
-        approvedCount: brandCampaigns.filter(c => ['BD_APPROVED', 'ACTIVE', 'COMPLETED'].includes(c.status)).length,
-        pendingCount: brandCampaigns.filter(c => c.status === 'PENDING_BD').length,
+        approvedCount: brandCampaigns.filter((c) =>
+          ['BD_APPROVED', 'ACTIVE', 'COMPLETED'].includes(c.status),
+        ).length,
+        pendingCount: brandCampaigns.filter((c) => c.status === 'PENDING_BD')
+          .length,
       };
     });
 
     // Monthly trend (last 6 months)
     const now = new Date();
-    const monthlyTrend: { month: string; total: number; approved: number; budget: number }[] = [];
+    const monthlyTrend: {
+      month: string;
+      total: number;
+      approved: number;
+      budget: number;
+    }[] = [];
     for (let i = 5; i >= 0; i--) {
       const month = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
-      const monthStr = month.toLocaleDateString('id-ID', { month: 'short', year: '2-digit' });
+      const monthStr = month.toLocaleDateString('id-ID', {
+        month: 'short',
+        year: '2-digit',
+      });
 
-      const monthCampaigns = allCampaigns.filter(c => {
+      const monthCampaigns = allCampaigns.filter((c) => {
         const d = new Date(c.created_at);
         return d >= month && d <= monthEnd;
       });
@@ -529,7 +585,9 @@ export class BdService {
       monthlyTrend.push({
         month: monthStr,
         total: monthCampaigns.length,
-        approved: monthCampaigns.filter(c => ['BD_APPROVED', 'ACTIVE', 'COMPLETED'].includes(c.status)).length,
+        approved: monthCampaigns.filter((c) =>
+          ['BD_APPROVED', 'ACTIVE', 'COMPLETED'].includes(c.status),
+        ).length,
         budget: monthCampaigns.reduce((sum, c) => sum + c.budget, 0),
       });
     }
@@ -551,7 +609,12 @@ export class BdService {
   // ──────────────────────────────────────────────
   async assignBrand(bdUserId: string, brandUserId: string) {
     const existing = await this.prisma.brandBDAssignment.findUnique({
-      where: { bd_user_id_brand_user_id: { bd_user_id: bdUserId, brand_user_id: brandUserId } },
+      where: {
+        bd_user_id_brand_user_id: {
+          bd_user_id: bdUserId,
+          brand_user_id: brandUserId,
+        },
+      },
     });
 
     if (existing) {
@@ -575,15 +638,17 @@ export class BdService {
       where: { bd_user_id: bdUserId, is_active: true },
     });
 
-    const brandIds = assignments.map(a => a.brand_user_id);
+    const brandIds = assignments.map((a) => a.brand_user_id);
     const brands = await this.prisma.user.findMany({
       where: { id: { in: brandIds } },
       select: { id: true, name: true, email: true },
     });
 
-    return assignments.map(a => ({
+    return assignments.map((a) => ({
       ...a,
-      brand: brands.find(b => b.id === a.brand_user_id) || { name: 'Unknown' },
+      brand: brands.find((b) => b.id === a.brand_user_id) || {
+        name: 'Unknown',
+      },
     }));
   }
 
@@ -600,7 +665,7 @@ export class BdService {
       where: { bd_user_id: bdUserId, is_active: true },
       select: { brand_user_id: true },
     });
-    return assignments.map(a => a.brand_user_id);
+    return assignments.map((a) => a.brand_user_id);
   }
 
   // ══════════════════════════════════════════════════
@@ -614,10 +679,12 @@ export class BdService {
         brand_id: dto.brand_id,
         sow_total: dto.sow_total || 0,
         reward_type: dto.reward_type || 'FIXED',
-        deadline: dto.deadline 
-          ? new Date(dto.deadline) 
-          : dto.start_date 
-            ? new Date(new Date(dto.start_date).getTime() + 30 * 24 * 60 * 60 * 1000) 
+        deadline: dto.deadline
+          ? new Date(dto.deadline)
+          : dto.start_date
+            ? new Date(
+                new Date(dto.start_date).getTime() + 30 * 24 * 60 * 60 * 1000,
+              )
             : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
         status: 'PENDING_BD',
         budget: dto.budget || 0,
@@ -660,31 +727,94 @@ export class BdService {
       // Read file and parse CSV/Tab-separated format
       // Expected columns: name, location, city, category, facilities, contact
       const content = fs.readFileSync(filePath, 'utf-8');
-      const lines = content.split('\n').filter((line: string) => line.trim().length > 0);
+      const lines = content
+        .split('\n')
+        .filter((line: string) => line.trim().length > 0);
 
       if (lines.length < 2) {
-        throw new BadRequestException('File harus memiliki header dan minimal 1 baris data');
+        throw new BadRequestException(
+          'File harus memiliki header dan minimal 1 baris data',
+        );
       }
 
       // Detect separator (tab or comma)
       const header = lines[0];
       const separator = header.includes('\t') ? '\t' : ',';
-      const headers = header.split(separator).map((h: string) => h.trim().toLowerCase().replace(/[^a-z_]/g, ''));
+      const headers = header.split(separator).map((h: string) =>
+        h
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z_]/g, ''),
+      );
 
       const results: any[] = [];
       for (let i = 1; i < lines.length; i++) {
         const cols = lines[i].split(separator).map((c: string) => c.trim());
-        const nameIdx = headers.indexOf('name') !== -1 ? headers.indexOf('name') : headers.indexOf('nama') !== -1 ? headers.indexOf('nama') : 0;
-        const locationIdx = headers.indexOf('location') !== -1 ? headers.indexOf('location') : headers.indexOf('lokasi') !== -1 ? headers.indexOf('lokasi') : 1;
-        const cityIdx = headers.indexOf('city') !== -1 ? headers.indexOf('city') : headers.indexOf('kota') !== -1 ? headers.indexOf('kota') : 2;
-        const categoryIdx = headers.indexOf('category') !== -1 ? headers.indexOf('category') : headers.indexOf('kategori') !== -1 ? headers.indexOf('kategori') : 3;
-        const facilitiesIdx = headers.indexOf('facilities') !== -1 ? headers.indexOf('facilities') : headers.indexOf('fasilitas') !== -1 ? headers.indexOf('fasilitas') : 4;
-        const contactIdx = headers.indexOf('contact') !== -1 ? headers.indexOf('contact') : headers.indexOf('kontak') !== -1 ? headers.indexOf('kontak') : 5;
+        const nameIdx =
+          headers.indexOf('name') !== -1
+            ? headers.indexOf('name')
+            : headers.indexOf('nama') !== -1
+              ? headers.indexOf('nama')
+              : 0;
+        const locationIdx =
+          headers.indexOf('location') !== -1
+            ? headers.indexOf('location')
+            : headers.indexOf('lokasi') !== -1
+              ? headers.indexOf('lokasi')
+              : 1;
+        const cityIdx =
+          headers.indexOf('city') !== -1
+            ? headers.indexOf('city')
+            : headers.indexOf('kota') !== -1
+              ? headers.indexOf('kota')
+              : 2;
+        const categoryIdx =
+          headers.indexOf('category') !== -1
+            ? headers.indexOf('category')
+            : headers.indexOf('kategori') !== -1
+              ? headers.indexOf('kategori')
+              : 3;
+        const facilitiesIdx =
+          headers.indexOf('facilities') !== -1
+            ? headers.indexOf('facilities')
+            : headers.indexOf('fasilitas') !== -1
+              ? headers.indexOf('fasilitas')
+              : 4;
+        const contactIdx =
+          headers.indexOf('contact') !== -1
+            ? headers.indexOf('contact')
+            : headers.indexOf('kontak') !== -1
+              ? headers.indexOf('kontak')
+              : 5;
 
-        const provinceIdx = headers.indexOf('province') !== -1 ? headers.indexOf('province') : headers.indexOf('provinsi') !== -1 ? headers.indexOf('provinsi') : -1;
-        const quotaIdx = headers.indexOf('quota') !== -1 ? headers.indexOf('quota') : headers.indexOf('kuota') !== -1 ? headers.indexOf('kuota') : -1;
-        const picNameIdx = headers.indexOf('pic_name') !== -1 ? headers.indexOf('pic_name') : headers.indexOf('nama_pic') !== -1 ? headers.indexOf('nama_pic') : headers.indexOf('pic') !== -1 ? headers.indexOf('pic') : -1;
-        const picPhoneIdx = headers.indexOf('pic_phone') !== -1 ? headers.indexOf('pic_phone') : headers.indexOf('no_wa') !== -1 ? headers.indexOf('no_wa') : headers.indexOf('whatsapp') !== -1 ? headers.indexOf('whatsapp') : -1;
+        const provinceIdx =
+          headers.indexOf('province') !== -1
+            ? headers.indexOf('province')
+            : headers.indexOf('provinsi') !== -1
+              ? headers.indexOf('provinsi')
+              : -1;
+        const quotaIdx =
+          headers.indexOf('quota') !== -1
+            ? headers.indexOf('quota')
+            : headers.indexOf('kuota') !== -1
+              ? headers.indexOf('kuota')
+              : -1;
+        const picNameIdx =
+          headers.indexOf('pic_name') !== -1
+            ? headers.indexOf('pic_name')
+            : headers.indexOf('nama_pic') !== -1
+              ? headers.indexOf('nama_pic')
+              : headers.indexOf('pic') !== -1
+                ? headers.indexOf('pic')
+                : -1;
+        const picPhoneIdx =
+          headers.indexOf('pic_phone') !== -1
+            ? headers.indexOf('pic_phone')
+            : headers.indexOf('no_wa') !== -1
+              ? headers.indexOf('no_wa')
+              : headers.indexOf('whatsapp') !== -1
+                ? headers.indexOf('whatsapp')
+                : -1;
 
         if (!cols[nameIdx] || !cols[locationIdx]) continue; // skip empty rows
 
@@ -696,10 +826,18 @@ export class BdService {
             category: cols[categoryIdx] || 'HOTEL',
             facilities: cols[facilitiesIdx] || null,
             contact: cols[contactIdx] || null,
-            province: provinceIdx !== -1 && cols[provinceIdx] ? cols[provinceIdx] : null,
-            quota: quotaIdx !== -1 && cols[quotaIdx] ? Number(cols[quotaIdx]) : 1,
-            pic_name: picNameIdx !== -1 && cols[picNameIdx] ? cols[picNameIdx] : null,
-            pic_phone: picPhoneIdx !== -1 && cols[picPhoneIdx] ? cols[picPhoneIdx] : null,
+            province:
+              provinceIdx !== -1 && cols[provinceIdx]
+                ? cols[provinceIdx]
+                : null,
+            quota:
+              quotaIdx !== -1 && cols[quotaIdx] ? Number(cols[quotaIdx]) : 1,
+            pic_name:
+              picNameIdx !== -1 && cols[picNameIdx] ? cols[picNameIdx] : null,
+            pic_phone:
+              picPhoneIdx !== -1 && cols[picPhoneIdx]
+                ? cols[picPhoneIdx]
+                : null,
           },
         });
         results.push(hotel);
@@ -764,8 +902,14 @@ export class BdService {
     return { success: true, visit };
   }
 
-  async updateHotelVisitStatus(visitId: string, status: string, notes?: string) {
-    const visit = await this.prisma.hotelVisit.findUnique({ where: { id: visitId } });
+  async updateHotelVisitStatus(
+    visitId: string,
+    status: string,
+    notes?: string,
+  ) {
+    const visit = await this.prisma.hotelVisit.findUnique({
+      where: { id: visitId },
+    });
     if (!visit) throw new NotFoundException('Hotel visit not found');
 
     const updated = await this.prisma.hotelVisit.update({
@@ -806,12 +950,17 @@ export class BdService {
       }
 
       const workbook = XLSX.readFile(filePath);
-      
+
       // Dynamic header mapping helpers
       const findKey = (row: any, patterns: string[]) => {
         const keys = Object.keys(row);
         for (const pattern of patterns) {
-          const matchedKey = keys.find(k => k.toLowerCase().replace(/[^a-z0-9]/g, '').includes(pattern));
+          const matchedKey = keys.find((k) =>
+            k
+              .toLowerCase()
+              .replace(/[^a-z0-9]/g, '')
+              .includes(pattern),
+          );
           if (matchedKey) return matchedKey;
         }
         return null;
@@ -819,7 +968,7 @@ export class BdService {
 
       // Let's find the worksheet that actually contains Creator/Username and GMV columns dynamically!
       let worksheet = null;
-      let sheetName = "";
+      let sheetName = '';
       let rows: any[] = [];
       let usernameKey: string | null = null;
       let gmvKey: string | null = null;
@@ -828,12 +977,23 @@ export class BdService {
 
       for (const name of workbook.SheetNames) {
         const ws = workbook.Sheets[name];
-        const tempRows: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
+        const tempRows: any[] = XLSX.utils.sheet_to_json(ws, { defval: '' });
         if (tempRows.length > 0) {
           const sampleRow = tempRows[0];
-          const uKey = findKey(sampleRow, ['username', 'creator', 'kreator', 'nama']);
-          const gKey = findKey(sampleRow, ['gmv', 'omset', 'penjualan', 'salesamount', 'salesvalue']);
-          
+          const uKey = findKey(sampleRow, [
+            'username',
+            'creator',
+            'kreator',
+            'nama',
+          ]);
+          const gKey = findKey(sampleRow, [
+            'gmv',
+            'omset',
+            'penjualan',
+            'salesamount',
+            'salesvalue',
+          ]);
+
           // If we found a sheet with both columns, select it!
           if (uKey && gKey) {
             worksheet = ws;
@@ -841,8 +1001,19 @@ export class BdService {
             rows = tempRows;
             usernameKey = uKey;
             gmvKey = gKey;
-            ordersKey = findKey(sampleRow, ['order', 'pesanan', 'sales', 'ordercount']);
-            periodKey = findKey(sampleRow, ['periode', 'bulan', 'month', 'date', 'tanggal']);
+            ordersKey = findKey(sampleRow, [
+              'order',
+              'pesanan',
+              'sales',
+              'ordercount',
+            ]);
+            periodKey = findKey(sampleRow, [
+              'periode',
+              'bulan',
+              'month',
+              'date',
+              'tanggal',
+            ]);
             break;
           }
         }
@@ -852,25 +1023,53 @@ export class BdService {
         // Fallback to the first sheet if no auto-match was found
         sheetName = workbook.SheetNames[0];
         worksheet = workbook.Sheets[sheetName];
-        rows = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+        rows = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
 
         if (rows.length === 0) {
-          throw new BadRequestException('Excel tidak mengandung data atau kosong');
+          throw new BadRequestException(
+            'Excel tidak mengandung data atau kosong',
+          );
         }
 
         const sampleRow = rows[0];
-        usernameKey = findKey(sampleRow, ['username', 'creator', 'kreator', 'nama']);
-        gmvKey = findKey(sampleRow, ['gmv', 'omset', 'penjualan', 'salesamount', 'salesvalue']);
-        ordersKey = findKey(sampleRow, ['order', 'pesanan', 'sales', 'ordercount']);
-        periodKey = findKey(sampleRow, ['periode', 'bulan', 'month', 'date', 'tanggal']);
+        usernameKey = findKey(sampleRow, [
+          'username',
+          'creator',
+          'kreator',
+          'nama',
+        ]);
+        gmvKey = findKey(sampleRow, [
+          'gmv',
+          'omset',
+          'penjualan',
+          'salesamount',
+          'salesvalue',
+        ]);
+        ordersKey = findKey(sampleRow, [
+          'order',
+          'pesanan',
+          'sales',
+          'ordercount',
+        ]);
+        periodKey = findKey(sampleRow, [
+          'periode',
+          'bulan',
+          'month',
+          'date',
+          'tanggal',
+        ]);
       }
 
       if (!usernameKey) {
-        throw new BadRequestException('Kolom Username TikTok tidak ditemukan di Excel. Pastikan ada kolom "Username", "Creator", atau "Nama".');
+        throw new BadRequestException(
+          'Kolom Username TikTok tidak ditemukan di Excel. Pastikan ada kolom "Username", "Creator", atau "Nama".',
+        );
       }
 
       if (!gmvKey) {
-        throw new BadRequestException('Kolom GMV tidak ditemukan di Excel. Pastikan ada kolom "GMV", "Omset", atau "Penjualan".');
+        throw new BadRequestException(
+          'Kolom GMV tidak ditemukan di Excel. Pastikan ada kolom "GMV", "Omset", atau "Penjualan".',
+        );
       }
 
       const uKey = usernameKey;
@@ -880,7 +1079,7 @@ export class BdService {
 
       // Self-healing default campaign for referential integrity
       let campaign = await this.prisma.campaign.findFirst({
-        where: { status: 'ACTIVE' }
+        where: { status: 'ACTIVE' },
       });
       if (!campaign) {
         campaign = await this.prisma.campaign.findFirst();
@@ -895,7 +1094,7 @@ export class BdService {
             deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
             status: 'ACTIVE',
             brand_id: 'default-brand-id',
-          }
+          },
         });
       }
       const campaignId = campaign.id;
@@ -914,7 +1113,7 @@ export class BdService {
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
         let username = String(row[uKey]).trim();
-        
+
         // Clean username from @ prefix and spaces
         if (username.startsWith('@')) {
           username = username.substring(1).trim();
@@ -924,13 +1123,13 @@ export class BdService {
           skippedRows.push({
             row: i + 2,
             username: '',
-            reason: 'Username kosong'
+            reason: 'Username kosong',
           });
           continue;
         }
 
         // Parse GMV
-        let rawGmv = String(row[gKey] || '0').trim();
+        const rawGmv = String(row[gKey] || '0').trim();
         let cleanedGmvStr = rawGmv.replace(/[^\d.,]/g, '');
         let parsedGmv = 0;
 
@@ -982,16 +1181,16 @@ export class BdService {
               { tiktok_username: username },
               { tiktok_username: username.toLowerCase() },
               { tiktok_username: username.toUpperCase() },
-            ]
+            ],
           },
-          include: { user: true }
+          include: { user: true },
         });
 
         if (!creator) {
           skippedRows.push({
             row: i + 2,
             username: username,
-            reason: `Username TikTok "${username}" tidak terdaftar di sistem HDA-GO`
+            reason: `Username TikTok "${username}" tidak terdaftar di sistem HDA-GO`,
           });
           continue;
         }
@@ -1007,7 +1206,7 @@ export class BdService {
             status: 'VERIFIED',
             period_date: new Date(),
             notes: `Bulk GMV Excel upload by BD for period ${parsedPeriod}. Row ${i + 2}`,
-          }
+          },
         });
 
         // Record monthly stats
@@ -1016,7 +1215,7 @@ export class BdService {
             creator_id_month: {
               creator_id: creator.user_id,
               month: parsedPeriod,
-            }
+            },
           },
           update: {
             gmv: { increment: parsedGmv },
@@ -1027,7 +1226,7 @@ export class BdService {
             month: parsedPeriod,
             gmv: parsedGmv,
             orders: parsedOrders,
-          }
+          },
         });
 
         // Update aggregates on Creator table
@@ -1037,11 +1236,13 @@ export class BdService {
             gmv_total: { increment: parsedGmv },
             gmv_monthly: { increment: parsedGmv },
             total_orders: { increment: parsedOrders },
-          }
+          },
         });
 
         // Recalculate levels using the Level Up Engine
-        const evalResult = await this.levelsService.evaluateLevel(creator.user_id);
+        const evalResult = await this.levelsService.evaluateLevel(
+          creator.user_id,
+        );
         if (evalResult && evalResult.leveledUp) {
           leveledUpCreators.push({
             id: creator.user_id,
@@ -1090,7 +1291,6 @@ export class BdService {
         leveled_up_creators: leveledUpCreators,
         skipped_rows: skippedRows,
       };
-
     } catch (err) {
       // Clean up temp file on error
       const fs2 = require('fs');
@@ -1106,13 +1306,16 @@ export class BdService {
   // ══════════════════════════════════════════════════
   async syncGoogleSpreadsheet() {
     try {
-      const url = 'https://docs.google.com/spreadsheets/d/1Alp1XHgQtK8CnIW3fFD7p-8HXGDsA5IbYM4Da97btGc/export?format=csv&gid=1505444998';
+      const url =
+        'https://docs.google.com/spreadsheets/d/1Alp1XHgQtK8CnIW3fFD7p-8HXGDsA5IbYM4Da97btGc/export?format=csv&gid=1505444998';
       const response = await fetch(url);
-      
+
       if (!response.ok) {
-        throw new BadRequestException('Gagal mengunduh data dari Google Sheets. Pastikan Spreadsheet dibagikan secara publik (Anyone with the link can view).');
+        throw new BadRequestException(
+          'Gagal mengunduh data dari Google Sheets. Pastikan Spreadsheet dibagikan secara publik (Anyone with the link can view).',
+        );
       }
-      
+
       const csvContent = await response.text();
       if (!csvContent || csvContent.trim().length === 0) {
         throw new BadRequestException('Data dari Google Sheets kosong');
@@ -1139,43 +1342,63 @@ export class BdService {
             }
           }
           row.push(currentField.trim());
-          result.push(row.map(r => r.replace(/^"|"$/g, '').trim()));
+          result.push(row.map((r) => r.replace(/^"|"$/g, '').trim()));
         }
         return result;
       };
 
       const parsedRows = parseCSV(csvContent);
       if (parsedRows.length < 2) {
-        throw new BadRequestException('Format Google Sheets tidak valid. Harus memiliki minimal 1 baris tajuk dan 1 baris data.');
+        throw new BadRequestException(
+          'Format Google Sheets tidak valid. Harus memiliki minimal 1 baris tajuk dan 1 baris data.',
+        );
       }
 
-      const headers = parsedRows[0].map(h => h.toLowerCase().replace(/[^a-z0-9]/g, ''));
-      
+      const headers = parsedRows[0].map((h) =>
+        h.toLowerCase().replace(/[^a-z0-9]/g, ''),
+      );
+
       // Look for Username and GMV columns
       const findIndex = (patterns: string[]) => {
         for (const pattern of patterns) {
-          const idx = headers.findIndex(h => h.includes(pattern));
+          const idx = headers.findIndex((h) => h.includes(pattern));
           if (idx !== -1) return idx;
         }
         return -1;
       };
 
       const usernameIdx = findIndex(['username', 'creator', 'kreator', 'nama']);
-      const gmvIdx = findIndex(['gmv', 'omset', 'penjualan', 'salesamount', 'salesvalue']);
+      const gmvIdx = findIndex([
+        'gmv',
+        'omset',
+        'penjualan',
+        'salesamount',
+        'salesvalue',
+      ]);
       const ordersIdx = findIndex(['order', 'pesanan', 'sales', 'ordercount']);
-      const periodIdx = findIndex(['periode', 'bulan', 'month', 'date', 'tanggal']);
+      const periodIdx = findIndex([
+        'periode',
+        'bulan',
+        'month',
+        'date',
+        'tanggal',
+      ]);
 
       if (usernameIdx === -1) {
-        throw new BadRequestException('Kolom Username TikTok tidak ditemukan pada Google Sheets. Pastikan ada kolom "Username", "Creator", atau "Nama".');
+        throw new BadRequestException(
+          'Kolom Username TikTok tidak ditemukan pada Google Sheets. Pastikan ada kolom "Username", "Creator", atau "Nama".',
+        );
       }
 
       if (gmvIdx === -1) {
-        throw new BadRequestException('Kolom GMV tidak ditemukan pada Google Sheets. Pastikan ada kolom "GMV", "Omset", atau "Penjualan".');
+        throw new BadRequestException(
+          'Kolom GMV tidak ditemukan pada Google Sheets. Pastikan ada kolom "GMV", "Omset", atau "Penjualan".',
+        );
       }
 
       // Self-healing default campaign for referential integrity
       let campaign = await this.prisma.campaign.findFirst({
-        where: { status: 'ACTIVE' }
+        where: { status: 'ACTIVE' },
       });
       if (!campaign) {
         campaign = await this.prisma.campaign.findFirst();
@@ -1190,7 +1413,7 @@ export class BdService {
             deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
             status: 'ACTIVE',
             brand_id: 'default-brand-id',
-          }
+          },
         });
       }
       const campaignId = campaign.id;
@@ -1209,7 +1432,7 @@ export class BdService {
       for (let i = 1; i < parsedRows.length; i++) {
         const cols = parsedRows[i];
         let username = String(cols[usernameIdx] || '').trim();
-        
+
         // Clean username from @ prefix and spaces
         if (username.startsWith('@')) {
           username = username.substring(1).trim();
@@ -1219,13 +1442,13 @@ export class BdService {
           skippedRows.push({
             row: i + 1,
             username: '',
-            reason: 'Username kosong'
+            reason: 'Username kosong',
           });
           continue;
         }
 
         // Parse GMV
-        let rawGmv = String(cols[gmvIdx] || '0').trim();
+        const rawGmv = String(cols[gmvIdx] || '0').trim();
         let cleanedGmvStr = rawGmv.replace(/[^\d.,]/g, '');
         let parsedGmv = 0;
 
@@ -1252,7 +1475,11 @@ export class BdService {
 
         // Parse Orders
         let parsedOrders = 0;
-        if (ordersIdx !== -1 && cols[ordersIdx] !== undefined && cols[ordersIdx] !== '') {
+        if (
+          ordersIdx !== -1 &&
+          cols[ordersIdx] !== undefined &&
+          cols[ordersIdx] !== ''
+        ) {
           const rawOrders = String(cols[ordersIdx]).replace(/[^\d]/g, '');
           parsedOrders = parseInt(rawOrders, 10) || 0;
         } else {
@@ -1277,16 +1504,16 @@ export class BdService {
               { tiktok_username: username },
               { tiktok_username: username.toLowerCase() },
               { tiktok_username: username.toUpperCase() },
-            ]
+            ],
           },
-          include: { user: true }
+          include: { user: true },
         });
 
         if (!creator) {
           skippedRows.push({
             row: i + 1,
             username: username,
-            reason: `Username TikTok "${username}" tidak terdaftar di sistem HDA-GO`
+            reason: `Username TikTok "${username}" tidak terdaftar di sistem HDA-GO`,
           });
           continue;
         }
@@ -1302,7 +1529,7 @@ export class BdService {
             status: 'VERIFIED',
             period_date: new Date(),
             notes: `Auto Sync with Google Sheets for period ${parsedPeriod}. Row ${i + 1}`,
-          }
+          },
         });
 
         // Record monthly stats
@@ -1311,7 +1538,7 @@ export class BdService {
             creator_id_month: {
               creator_id: creator.user_id,
               month: parsedPeriod,
-            }
+            },
           },
           update: {
             gmv: { increment: parsedGmv },
@@ -1322,7 +1549,7 @@ export class BdService {
             month: parsedPeriod,
             gmv: parsedGmv,
             orders: parsedOrders,
-          }
+          },
         });
 
         // Update aggregates on Creator table
@@ -1332,11 +1559,13 @@ export class BdService {
             gmv_total: { increment: parsedGmv },
             gmv_monthly: { increment: parsedGmv },
             total_orders: { increment: parsedOrders },
-          }
+          },
         });
 
         // Recalculate levels using the Level Up Engine
-        const evalResult = await this.levelsService.evaluateLevel(creator.user_id);
+        const evalResult = await this.levelsService.evaluateLevel(
+          creator.user_id,
+        );
         if (evalResult && evalResult.leveledUp) {
           leveledUpCreators.push({
             id: creator.user_id,
@@ -1380,7 +1609,6 @@ export class BdService {
         leveled_up_creators: leveledUpCreators,
         skipped_rows: skippedRows,
       };
-
     } catch (err) {
       throw err;
     }

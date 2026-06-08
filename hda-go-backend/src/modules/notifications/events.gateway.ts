@@ -54,7 +54,10 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const userId = client.handshake.query.userId as string;
     if (userId) {
       const sockets = this.userSocketMap.get(userId) || [];
-      this.userSocketMap.set(userId, sockets.filter((s) => s !== client.id));
+      this.userSocketMap.set(
+        userId,
+        sockets.filter((s) => s !== client.id),
+      );
       if (this.userSocketMap.get(userId)?.length === 0) {
         this.userSocketMap.delete(userId);
       }
@@ -67,7 +70,10 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   // ══════════════════════════════════════════════
 
   // Submission approved by QC
-  emitSubmissionApproved(userId: string, data: { campaignTitle: string; qcNotes?: string }) {
+  emitSubmissionApproved(
+    userId: string,
+    data: { campaignTitle: string; qcNotes?: string },
+  ) {
     this.server.to(`user:${userId}`).emit('submission:approved', {
       type: 'submission:approved',
       title: '✅ Submission Approved!',
@@ -78,7 +84,10 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   // New campaign published
-  emitNewCampaign(userIds: string[], data: { campaignId: string; title: string; category: string }) {
+  emitNewCampaign(
+    userIds: string[],
+    data: { campaignId: string; title: string; category: string },
+  ) {
     userIds.forEach((uid) => {
       this.server.to(`user:${uid}`).emit('campaign:new', {
         type: 'campaign:new',
@@ -104,7 +113,10 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   // CM pushes campaign recommendation
-  emitCampaignPush(userId: string, data: { campaignId: string; campaignTitle: string }) {
+  emitCampaignPush(
+    userId: string,
+    data: { campaignId: string; campaignTitle: string },
+  ) {
     this.server.to(`user:${userId}`).emit('campaign:push', {
       type: 'campaign:push',
       title: '💡 Rekomendasi Campaign',
@@ -126,7 +138,10 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   // Generic notification push
-  emitNotification(userId: string, notification: { title: string; message: string; type: string }) {
+  emitNotification(
+    userId: string,
+    notification: { title: string; message: string; type: string },
+  ) {
     this.server.to(`user:${userId}`).emit('notification', {
       ...notification,
       timestamp: new Date(),
@@ -138,7 +153,10 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   // ══════════════════════════════════════════════
 
   // Brand submits new campaign → Notify assigned BD users
-  emitBDNewCampaign(bdUserIds: string[], data: { campaignId: string; title: string; brandName: string }) {
+  emitBDNewCampaign(
+    bdUserIds: string[],
+    data: { campaignId: string; title: string; brandName: string },
+  ) {
     bdUserIds.forEach((uid) => {
       this.server.to(`user:${uid}`).emit('bd:new-campaign', {
         type: 'bd:new-campaign',
@@ -151,7 +169,10 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   // BD approves campaign → Notify CM users
-  emitBDApproved(cmUserIds: string[], data: { campaignId: string; title: string; bdName: string }) {
+  emitBDApproved(
+    cmUserIds: string[],
+    data: { campaignId: string; title: string; bdName: string },
+  ) {
     cmUserIds.forEach((uid) => {
       this.server.to(`user:${uid}`).emit('bd:campaign-approved', {
         type: 'bd:campaign-approved',

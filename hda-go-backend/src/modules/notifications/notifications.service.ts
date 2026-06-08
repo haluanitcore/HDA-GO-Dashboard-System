@@ -17,7 +17,12 @@ export class NotificationsService {
   // ──────────────────────────────────────────────
   // BULK SEND (for campaign pushes to all participants)
   // ──────────────────────────────────────────────
-  async sendBulk(userIds: string[], title: string, message: string, type: string) {
+  async sendBulk(
+    userIds: string[],
+    title: string,
+    message: string,
+    type: string,
+  ) {
     return this.prisma.notification.createMany({
       data: userIds.map((uid) => ({
         user_id: uid,

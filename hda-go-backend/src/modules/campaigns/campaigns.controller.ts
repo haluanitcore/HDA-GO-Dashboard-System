@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Patch, Param, Body, Query, Req, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Param,
+  Body,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../../common/roles.guard';
 import { Roles } from '../../common/roles.decorator';
@@ -47,7 +57,11 @@ export class CampaignsController {
 
   // GET /campaigns?status=ACTIVE&category=HOTEL — List campaigns
   @Get()
-  findAll(@Req() req: any, @Query('status') status?: string, @Query('category') category?: string) {
+  findAll(
+    @Req() req: any,
+    @Query('status') status?: string,
+    @Query('category') category?: string,
+  ) {
     return this.campaignsService.findAll({ status, category }, req.user);
   }
 

@@ -12,18 +12,74 @@ export interface LevelThreshold {
   minGMV: number;
   minCampaigns: number;
   minOrders: number;
-  minConsistency: number;   // % posting consistency
-  minLive: number;          // LIVE participation count
+  minConsistency: number; // % posting consistency
+  minLive: number; // LIVE participation count
 }
 
 const LEVEL_THRESHOLDS: LevelThreshold[] = [
-  { level: 0, name: 'Newcomer', minGMV: 0,         minCampaigns: 0,   minOrders: 0,    minConsistency: 0,  minLive: 0 },
-  { level: 1, name: 'Starter',  minGMV: 1000000,   minCampaigns: 2,   minOrders: 10,   minConsistency: 20, minLive: 0 },
-  { level: 2, name: 'Rising',   minGMV: 5000000,   minCampaigns: 5,   minOrders: 50,   minConsistency: 40, minLive: 2 },
-  { level: 3, name: 'Pro',      minGMV: 15000000,  minCampaigns: 10,  minOrders: 150,  minConsistency: 55, minLive: 5 },
-  { level: 4, name: 'Expert',   minGMV: 50000000,  minCampaigns: 25,  minOrders: 500,  minConsistency: 70, minLive: 10 },
-  { level: 5, name: 'Master',   minGMV: 100000000, minCampaigns: 50,  minOrders: 1000, minConsistency: 80, minLive: 20 },
-  { level: 6, name: 'Legend',   minGMV: 250000000, minCampaigns: 100, minOrders: 2500, minConsistency: 90, minLive: 50 },
+  {
+    level: 0,
+    name: 'Newcomer',
+    minGMV: 0,
+    minCampaigns: 0,
+    minOrders: 0,
+    minConsistency: 0,
+    minLive: 0,
+  },
+  {
+    level: 1,
+    name: 'Starter',
+    minGMV: 1000000,
+    minCampaigns: 2,
+    minOrders: 10,
+    minConsistency: 20,
+    minLive: 0,
+  },
+  {
+    level: 2,
+    name: 'Rising',
+    minGMV: 5000000,
+    minCampaigns: 5,
+    minOrders: 50,
+    minConsistency: 40,
+    minLive: 2,
+  },
+  {
+    level: 3,
+    name: 'Pro',
+    minGMV: 15000000,
+    minCampaigns: 10,
+    minOrders: 150,
+    minConsistency: 55,
+    minLive: 5,
+  },
+  {
+    level: 4,
+    name: 'Expert',
+    minGMV: 50000000,
+    minCampaigns: 25,
+    minOrders: 500,
+    minConsistency: 70,
+    minLive: 10,
+  },
+  {
+    level: 5,
+    name: 'Master',
+    minGMV: 100000000,
+    minCampaigns: 50,
+    minOrders: 1000,
+    minConsistency: 80,
+    minLive: 20,
+  },
+  {
+    level: 6,
+    name: 'Legend',
+    minGMV: 250000000,
+    minCampaigns: 100,
+    minOrders: 2500,
+    minConsistency: 90,
+    minLive: 50,
+  },
 ];
 
 @Injectable()
@@ -60,13 +116,25 @@ export class LevelsService {
     }
 
     // ── Calculate progress % toward next level ──
-    const nextThreshold = LEVEL_THRESHOLDS[newLevel + 1] || LEVEL_THRESHOLDS[LEVEL_THRESHOLDS.length - 1];
+    const nextThreshold =
+      LEVEL_THRESHOLDS[newLevel + 1] ||
+      LEVEL_THRESHOLDS[LEVEL_THRESHOLDS.length - 1];
     const factors = [
-      nextThreshold.minGMV > 0 ? (creator.gmv_total / nextThreshold.minGMV) * 100 : 100,
-      nextThreshold.minCampaigns > 0 ? (creator.total_campaigns / nextThreshold.minCampaigns) * 100 : 100,
-      nextThreshold.minOrders > 0 ? (creator.total_orders / nextThreshold.minOrders) * 100 : 100,
-      nextThreshold.minConsistency > 0 ? (creator.posting_consistency / nextThreshold.minConsistency) * 100 : 100,
-      nextThreshold.minLive > 0 ? (creator.live_participation / nextThreshold.minLive) * 100 : 100,
+      nextThreshold.minGMV > 0
+        ? (creator.gmv_total / nextThreshold.minGMV) * 100
+        : 100,
+      nextThreshold.minCampaigns > 0
+        ? (creator.total_campaigns / nextThreshold.minCampaigns) * 100
+        : 100,
+      nextThreshold.minOrders > 0
+        ? (creator.total_orders / nextThreshold.minOrders) * 100
+        : 100,
+      nextThreshold.minConsistency > 0
+        ? (creator.posting_consistency / nextThreshold.minConsistency) * 100
+        : 100,
+      nextThreshold.minLive > 0
+        ? (creator.live_participation / nextThreshold.minLive) * 100
+        : 100,
     ];
     const progressPercentage = Math.min(
       factors.reduce((sum, f) => sum + Math.min(f, 100), 0) / factors.length,
@@ -146,10 +214,22 @@ export class LevelsService {
       leveledUp,
       factors: {
         gmv: { current: creator.gmv_total, required: nextThreshold.minGMV },
-        campaigns: { current: creator.total_campaigns, required: nextThreshold.minCampaigns },
-        orders: { current: creator.total_orders, required: nextThreshold.minOrders },
-        consistency: { current: creator.posting_consistency, required: nextThreshold.minConsistency },
-        live: { current: creator.live_participation, required: nextThreshold.minLive },
+        campaigns: {
+          current: creator.total_campaigns,
+          required: nextThreshold.minCampaigns,
+        },
+        orders: {
+          current: creator.total_orders,
+          required: nextThreshold.minOrders,
+        },
+        consistency: {
+          current: creator.posting_consistency,
+          required: nextThreshold.minConsistency,
+        },
+        live: {
+          current: creator.live_participation,
+          required: nextThreshold.minLive,
+        },
       },
     };
   }
@@ -176,7 +256,9 @@ export class LevelsService {
     if (!progress || !creator) return null;
 
     const currentThreshold = LEVEL_THRESHOLDS[progress.current_level];
-    const nextThreshold = LEVEL_THRESHOLDS[progress.target_level] || LEVEL_THRESHOLDS[LEVEL_THRESHOLDS.length - 1];
+    const nextThreshold =
+      LEVEL_THRESHOLDS[progress.target_level] ||
+      LEVEL_THRESHOLDS[LEVEL_THRESHOLDS.length - 1];
 
     return {
       ...progress,
@@ -184,10 +266,22 @@ export class LevelsService {
       nextLevelName: nextThreshold?.name,
       factors: {
         gmv: { current: creator.gmv_total, required: nextThreshold.minGMV },
-        campaigns: { current: creator.total_campaigns, required: nextThreshold.minCampaigns },
-        orders: { current: creator.total_orders, required: nextThreshold.minOrders },
-        consistency: { current: creator.posting_consistency, required: nextThreshold.minConsistency },
-        live: { current: creator.live_participation, required: nextThreshold.minLive },
+        campaigns: {
+          current: creator.total_campaigns,
+          required: nextThreshold.minCampaigns,
+        },
+        orders: {
+          current: creator.total_orders,
+          required: nextThreshold.minOrders,
+        },
+        consistency: {
+          current: creator.posting_consistency,
+          required: nextThreshold.minConsistency,
+        },
+        live: {
+          current: creator.live_participation,
+          required: nextThreshold.minLive,
+        },
       },
     };
   }

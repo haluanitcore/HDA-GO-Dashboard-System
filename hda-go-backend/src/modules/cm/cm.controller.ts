@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Param, Body, Query, Req, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Param,
+  Body,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../../common/roles.guard';
 import { Roles } from '../../common/roles.decorator';
@@ -41,7 +50,11 @@ export class CmController {
     @Req() req: any,
     @Body() body: { creator_id: string; campaign_id: string },
   ) {
-    return this.cmService.pushCampaignRecommendation(req.user.userId, body.creator_id, body.campaign_id);
+    return this.cmService.pushCampaignRecommendation(
+      req.user.userId,
+      body.creator_id,
+      body.campaign_id,
+    );
   }
 
   // GET /cm/smart-recommendations — Auto-generate recommendations

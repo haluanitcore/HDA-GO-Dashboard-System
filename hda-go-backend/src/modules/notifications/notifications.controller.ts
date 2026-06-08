@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Patch, Param, Body, Req, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Param,
+  Body,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../../common/roles.guard';
 import { Roles } from '../../common/roles.decorator';
@@ -13,15 +22,41 @@ export class NotificationsController {
   // POST /notifications/send — Send single notification (CM/Admin)
   @Post('send')
   @Roles(Role.CM, Role.ADMIN)
-  send(@Body() body: { user_id: string; title: string; message: string; type: string }) {
-    return this.notificationsService.send(body.user_id, body.title, body.message, body.type);
+  send(
+    @Body()
+    body: {
+      user_id: string;
+      title: string;
+      message: string;
+      type: string;
+    },
+  ) {
+    return this.notificationsService.send(
+      body.user_id,
+      body.title,
+      body.message,
+      body.type,
+    );
   }
 
   // POST /notifications/bulk — Bulk send (CM/Admin)
   @Post('bulk')
   @Roles(Role.CM, Role.ADMIN)
-  sendBulk(@Body() body: { user_ids: string[]; title: string; message: string; type: string }) {
-    return this.notificationsService.sendBulk(body.user_ids, body.title, body.message, body.type);
+  sendBulk(
+    @Body()
+    body: {
+      user_ids: string[];
+      title: string;
+      message: string;
+      type: string;
+    },
+  ) {
+    return this.notificationsService.sendBulk(
+      body.user_ids,
+      body.title,
+      body.message,
+      body.type,
+    );
   }
 
   // GET /notifications — My notifications

@@ -1,10 +1,26 @@
-import { Controller, Get, Post, Patch, Param, Body, Req, UseGuards, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Param,
+  Body,
+  Req,
+  UseGuards,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../../common/roles.guard';
 import { Roles } from '../../common/roles.decorator';
 import { Role } from '../../common/roles.enum';
 import { SubmissionsService } from './submissions.service';
-import { CreateSubmissionUploadDto, ReviewSubmissionDto, BulkReviewDto } from './dto/submission.dto';
+import {
+  CreateSubmissionUploadDto,
+  ReviewSubmissionDto,
+  BulkReviewDto,
+} from './dto/submission.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { multerConfig, validateFileSize } from '../../config/upload.config';
 
@@ -103,6 +119,10 @@ export class SubmissionsController {
     @Param('id') id: string,
     @Body() body: { tiktok_vt_link: string },
   ) {
-    return this.submissionsService.submitVtLink(id, req.user.userId, body.tiktok_vt_link);
+    return this.submissionsService.submitVtLink(
+      id,
+      req.user.userId,
+      body.tiktok_vt_link,
+    );
   }
 }

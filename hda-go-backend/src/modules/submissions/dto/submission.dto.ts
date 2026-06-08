@@ -1,4 +1,10 @@
-import { IsNotEmpty, IsString, IsOptional, IsNumber, IsArray } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsString,
+  IsOptional,
+  IsNumber,
+  IsArray,
+} from 'class-validator';
 
 export class CreateSubmissionUploadDto {
   @IsNotEmpty()
@@ -74,4 +80,3 @@ export class BulkReviewDto {
   @IsString()
   reviewer_id?: string;
 }
-

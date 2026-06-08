@@ -29,7 +29,6 @@ export default function RegisterPage() {
         name,
         email,
         password,
-        role: 'CREATOR',
         cm_id: cmId || undefined,
       });
       router.push(redirectUrl);

@@ -24,22 +24,28 @@ export class BrandService {
       },
     });
 
-    const activeCampaigns = allCampaigns.filter(c => ['ACTIVE', 'COMPLETED'].includes(c.status));
-    
+    const activeCampaigns = allCampaigns.filter((c) =>
+      ['ACTIVE', 'COMPLETED'].includes(c.status),
+    );
+
     const totalSpend = allCampaigns
-      .filter(c => ['BD_APPROVED', 'ACTIVE', 'COMPLETED'].includes(c.status))
+      .filter((c) => ['BD_APPROVED', 'ACTIVE', 'COMPLETED'].includes(c.status))
       .reduce((sum, c) => sum + c.budget, 0);
 
-    const generatedGmv = activeCampaigns.reduce((sum, c) => sum + c.orders.reduce((orderSum, o) => orderSum + o.gmv_amount, 0), 0);
-    
+    const generatedGmv = activeCampaigns.reduce(
+      (sum, c) =>
+        sum + c.orders.reduce((orderSum, o) => orderSum + o.gmv_amount, 0),
+      0,
+    );
+
     let roi = 0;
     if (totalSpend > 0) {
       roi = Math.round((generatedGmv / totalSpend) * 100);
     }
 
     const uniqueCreators = new Set();
-    allCampaigns.forEach(c => {
-      c.participants.forEach(p => {
+    allCampaigns.forEach((c) => {
+      c.participants.forEach((p) => {
         uniqueCreators.add(p.creator_id);
       });
     });
@@ -65,9 +71,14 @@ export class BrandService {
     });
 
     const totalSpend = allCampaigns.reduce((sum, c) => sum + c.budget, 0);
-    const generatedGmv = allCampaigns.reduce((sum, c) => sum + c.orders.reduce((orderSum, o) => orderSum + o.gmv_amount, 0), 0);
-    const roi = totalSpend > 0 ? Math.round((generatedGmv / totalSpend) * 100) : 0;
-    
+    const generatedGmv = allCampaigns.reduce(
+      (sum, c) =>
+        sum + c.orders.reduce((orderSum, o) => orderSum + o.gmv_amount, 0),
+      0,
+    );
+    const roi =
+      totalSpend > 0 ? Math.round((generatedGmv / totalSpend) * 100) : 0;
+
     const assumedTraffic = generatedGmv / 50000;
     const funnel = {
       views: Math.round(assumedTraffic * 100),

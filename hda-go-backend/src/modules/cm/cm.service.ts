@@ -64,9 +64,13 @@ export class CmService {
     const totalGMV = creators.reduce((sum, c) => sum + c.gmv_monthly, 0);
     const totalOrders = creators.reduce((sum, c) => sum + c.total_orders, 0);
     const activeCount = pipeline.filter((c) => c.status === 'ACTIVE').length;
-    const lowActivityCount = pipeline.filter((c) => c.status === 'LOW_ACTIVITY').length;
+    const lowActivityCount = pipeline.filter(
+      (c) => c.status === 'LOW_ACTIVITY',
+    ).length;
     const dormantCount = pipeline.filter((c) => c.status === 'DORMANT').length;
-    const nearLevelUpCount = pipeline.filter((c) => c.status === 'NEAR_LEVEL_UP').length;
+    const nearLevelUpCount = pipeline.filter(
+      (c) => c.status === 'NEAR_LEVEL_UP',
+    ).length;
 
     // Pending submissions for QC
     const pendingSubmissions = await this.prisma.submission.count({
@@ -102,7 +106,11 @@ export class CmService {
     }
 
     // Dormant — zero activity this month
-    if (creator.gmv_monthly === 0 && creator.streak_days === 0 && creator.total_posts === 0) {
+    if (
+      creator.gmv_monthly === 0 &&
+      creator.streak_days === 0 &&
+      creator.total_posts === 0
+    ) {
       return 'DORMANT';
     }
 
@@ -148,8 +156,14 @@ export class CmService {
   // CM clicks Recommend → System generates recommendation
   // → Send notification → Creator receives push → Opens → Joins
   // ──────────────────────────────────────────────
-  async pushCampaignRecommendation(cmUserId: string, creatorId: string, campaignId: string) {
-    const campaign = await this.prisma.campaign.findUnique({ where: { id: campaignId } });
+  async pushCampaignRecommendation(
+    cmUserId: string,
+    creatorId: string,
+    campaignId: string,
+  ) {
+    const campaign = await this.prisma.campaign.findUnique({
+      where: { id: campaignId },
+    });
     const creator = await this.prisma.creator.findUnique({
       where: { user_id: creatorId },
       include: { user: { select: { name: true } } },
@@ -186,7 +200,10 @@ export class CmService {
   // AUTO-GENERATE RECOMMENDATIONS for Near Level Up creators
   // ──────────────────────────────────────────────
   async generateSmartRecommendations(cmUserId: string) {
-    const nearLevelUp = await this.getCreatorsByStatus(cmUserId, 'NEAR_LEVEL_UP');
+    const nearLevelUp = await this.getCreatorsByStatus(
+      cmUserId,
+      'NEAR_LEVEL_UP',
+    );
 
     const activeCampaigns = await this.prisma.campaign.findMany({
       where: { status: 'ACTIVE' },
@@ -198,19 +215,26 @@ export class CmService {
     for (const creator of nearLevelUp) {
       // Find campaigns matching creator's level
       const eligible = activeCampaigns.filter(
-        (c) => c.min_level <= creator.level && (c.slot === 0 || c._count.participants < c.slot),
+        (c) =>
+          c.min_level <= creator.level &&
+          (c.slot === 0 || c._count.participants < c.slot),
       );
 
       if (eligible.length > 0) {
         recommendations.push({
-          creator: { id: creator.userId, name: creator.name, level: creator.level },
+          creator: {
+            id: creator.userId,
+            name: creator.name,
+            level: creator.level,
+          },
           suggestedCampaigns: eligible.slice(0, 3).map((c) => ({
             id: c.id,
             title: c.title,
             category: c.category,
-            slotsRemaining: c.slot > 0 ? c.slot - c._count.participants : 'Unlimited',
+            slotsRemaining:
+              c.slot > 0 ? c.slot - c._count.participants : 'Unlimited',
           })),
-          reason: `Near Level Up (${creator.progress?.progress_percentage?.toFixed(1)}% → Level ${(creator.progress?.target_level)})`,
+          reason: `Near Level Up (${creator.progress?.progress_percentage?.toFixed(1)}% → Level ${creator.progress?.target_level})`,
         });
       }
     }
@@ -269,7 +293,8 @@ export class CmService {
 
     const levelDistribution: Record<number, number> = {};
     creators.forEach((c) => {
-      levelDistribution[c.creator_level] = (levelDistribution[c.creator_level] || 0) + 1;
+      levelDistribution[c.creator_level] =
+        (levelDistribution[c.creator_level] || 0) + 1;
     });
 
     return { levelDistribution, creators };

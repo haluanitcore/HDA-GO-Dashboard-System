@@ -16,7 +16,9 @@ export class AnalyticsService {
     });
 
     // Get live counts for real-time accuracy
-    const pendingSubmissions = await this.prisma.submission.count({ where: { status: 'QC_REVIEW' } });
+    const pendingSubmissions = await this.prisma.submission.count({
+      where: { status: 'QC_REVIEW' },
+    });
 
     return {
       ...latest,
@@ -40,7 +42,9 @@ export class AnalyticsService {
   async getCampaignAnalytics() {
     return this.prisma.campaignAnalytics.findMany({
       include: {
-        campaign: { select: { title: true, category: true, status: true, deadline: true } },
+        campaign: {
+          select: { title: true, category: true, status: true, deadline: true },
+        },
       },
       orderBy: { total_gmv: 'desc' },
     });

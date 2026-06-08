@@ -1,4 +1,12 @@
-import { IsNotEmpty, IsString, IsOptional, IsInt, IsDateString, IsIn, IsNumber } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsString,
+  IsOptional,
+  IsInt,
+  IsDateString,
+  IsIn,
+  IsNumber,
+} from 'class-validator';
 
 // ══════════════════════════════════════════════════
 // BD REVIEW DTOs
@@ -50,7 +58,7 @@ export class BDEditCampaignDto {
 
   @IsOptional()
   @IsString()
-  notes?: string;  // Edit reason / notes
+  notes?: string; // Edit reason / notes
 
   // Phase 2 fields
   @IsOptional()
@@ -154,4 +162,3 @@ export class BDSubmitDealDto {
   @IsString()
   brief_text?: string;
 }
-

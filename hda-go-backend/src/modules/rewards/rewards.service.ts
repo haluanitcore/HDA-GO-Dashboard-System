@@ -12,9 +12,19 @@ export class RewardsService {
     // In production, this queries a rewards table filtered by min_level
     const rewardCatalog = [
       { id: 'r1', name: 'Voucher Shopee 50K', min_level: 1, type: 'VOUCHER' },
-      { id: 'r2', name: 'Bonus Commission +2%', min_level: 2, type: 'COMMISSION' },
+      {
+        id: 'r2',
+        name: 'Bonus Commission +2%',
+        min_level: 2,
+        type: 'COMMISSION',
+      },
       { id: 'r3', name: 'Voucher GoPay 100K', min_level: 3, type: 'VOUCHER' },
-      { id: 'r4', name: 'Priority Campaign Access', min_level: 4, type: 'PERK' },
+      {
+        id: 'r4',
+        name: 'Priority Campaign Access',
+        min_level: 4,
+        type: 'PERK',
+      },
       { id: 'r5', name: 'Exclusive Brand Deal', min_level: 5, type: 'DEAL' },
     ];
 

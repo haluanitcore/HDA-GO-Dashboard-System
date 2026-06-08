@@ -59,23 +59,34 @@ export class AnalyticsCronService {
       const orders = creator.orders.reduce((sum, o) => sum + o.order_count, 0);
       const campaignsJoined = creator.participants.length;
       const completedSubs = creator.submissions.filter(
-        (s) => s.status === 'COMPLETED' || s.status === 'APPROVED' || s.status === 'POSTED',
+        (s) =>
+          s.status === 'COMPLETED' ||
+          s.status === 'APPROVED' ||
+          s.status === 'POSTED',
       ).length;
-      const completionRate = creator.submissions.length > 0
-        ? (completedSubs / creator.submissions.length) * 100
-        : 0;
+      const completionRate =
+        creator.submissions.length > 0
+          ? (completedSubs / creator.submissions.length) * 100
+          : 0;
 
       // Posting consistency = unique active days / total days in month
-      const totalDays = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+      const totalDays = new Date(
+        now.getFullYear(),
+        now.getMonth() + 1,
+        0,
+      ).getDate();
       const activeDays = new Set(
-        creator.submissions.map((s) => s.submitted_at.toISOString().split('T')[0]),
+        creator.submissions.map(
+          (s) => s.submitted_at.toISOString().split('T')[0],
+        ),
       ).size;
       const consistency = (activeDays / totalDays) * 100;
 
       await this.prisma.creatorMonthlyStats.upsert({
         where: { creator_id_month: { creator_id: creator.user_id, month } },
         update: {
-          gmv, orders,
+          gmv,
+          orders,
           campaigns_joined: campaignsJoined,
           campaigns_completed: completedSubs,
           posts_count: creator.submissions.length,
@@ -83,7 +94,10 @@ export class AnalyticsCronService {
           calculated_at: now,
         },
         create: {
-          creator_id: creator.user_id, month, gmv, orders,
+          creator_id: creator.user_id,
+          month,
+          gmv,
+          orders,
           campaigns_joined: campaignsJoined,
           campaigns_completed: completedSubs,
           posts_count: creator.submissions.length,
@@ -98,7 +112,9 @@ export class AnalyticsCronService {
       });
     }
 
-    this.logger.log(`  📊 Creator monthly stats: ${creators.length} creators processed.`);
+    this.logger.log(
+      `  📊 Creator monthly stats: ${creators.length} creators processed.`,
+    );
   }
 
   // ──────────────────────────────────────────────
@@ -107,21 +123,30 @@ export class AnalyticsCronService {
   async aggregateCampaignAnalytics() {
     const campaigns = await this.prisma.campaign.findMany({
       include: {
-        _count: { select: { participants: true, submissions: true, orders: true } },
+        _count: {
+          select: { participants: true, submissions: true, orders: true },
+        },
         submissions: { select: { status: true } },
         orders: { select: { gmv_amount: true, order_count: true } },
       },
     });
 
     for (const campaign of campaigns) {
-      const approved = campaign.submissions.filter(
-        (s) => ['APPROVED', 'POSTED', 'COMPLETED'].includes(s.status),
+      const approved = campaign.submissions.filter((s) =>
+        ['APPROVED', 'POSTED', 'COMPLETED'].includes(s.status),
       ).length;
-      const totalGMV = campaign.orders.reduce((sum, o) => sum + o.gmv_amount, 0);
-      const totalOrders = campaign.orders.reduce((sum, o) => sum + o.order_count, 0);
-      const rate = campaign._count.submissions > 0
-        ? (approved / campaign._count.submissions) * 100
-        : 0;
+      const totalGMV = campaign.orders.reduce(
+        (sum, o) => sum + o.gmv_amount,
+        0,
+      );
+      const totalOrders = campaign.orders.reduce(
+        (sum, o) => sum + o.order_count,
+        0,
+      );
+      const rate =
+        campaign._count.submissions > 0
+          ? (approved / campaign._count.submissions) * 100
+          : 0;
 
       await this.prisma.campaignAnalytics.upsert({
         where: { campaign_id: campaign.id },
@@ -146,7 +171,9 @@ export class AnalyticsCronService {
       });
     }
 
-    this.logger.log(`  📢 Campaign analytics: ${campaigns.length} campaigns processed.`);
+    this.logger.log(
+      `  📢 Campaign analytics: ${campaigns.length} campaigns processed.`,
+    );
   }
 
   // ──────────────────────────────────────────────
@@ -155,15 +182,21 @@ export class AnalyticsCronService {
   async aggregatePlatformMetrics() {
     const today = new Date().toISOString().split('T')[0];
 
-    const [totalCreators, activeCreators, totalCampaigns, activeCampaigns, totalSubmissions, orders] =
-      await Promise.all([
-        this.prisma.creator.count(),
-        this.prisma.creator.count({ where: { gmv_monthly: { gt: 0 } } }),
-        this.prisma.campaign.count(),
-        this.prisma.campaign.count({ where: { status: 'ACTIVE' } }),
-        this.prisma.submission.count(),
-        this.prisma.creatorOrder.findMany(),
-      ]);
+    const [
+      totalCreators,
+      activeCreators,
+      totalCampaigns,
+      activeCampaigns,
+      totalSubmissions,
+      orders,
+    ] = await Promise.all([
+      this.prisma.creator.count(),
+      this.prisma.creator.count({ where: { gmv_monthly: { gt: 0 } } }),
+      this.prisma.campaign.count(),
+      this.prisma.campaign.count({ where: { status: 'ACTIVE' } }),
+      this.prisma.submission.count(),
+      this.prisma.creatorOrder.findMany(),
+    ]);
 
     const totalGMV = orders.reduce((sum, o) => sum + o.gmv_amount, 0);
     const totalOrders = orders.reduce((sum, o) => sum + o.order_count, 0);
@@ -171,15 +204,24 @@ export class AnalyticsCronService {
     await this.prisma.platformMetrics.upsert({
       where: { date: today },
       update: {
-        total_creators: totalCreators, active_creators: activeCreators,
-        total_campaigns: totalCampaigns, active_campaigns: activeCampaigns,
-        total_gmv: totalGMV, total_orders: totalOrders,
-        total_submissions: totalSubmissions, calculated_at: new Date(),
+        total_creators: totalCreators,
+        active_creators: activeCreators,
+        total_campaigns: totalCampaigns,
+        active_campaigns: activeCampaigns,
+        total_gmv: totalGMV,
+        total_orders: totalOrders,
+        total_submissions: totalSubmissions,
+        calculated_at: new Date(),
       },
       create: {
-        date: today, total_creators: totalCreators, active_creators: activeCreators,
-        total_campaigns: totalCampaigns, active_campaigns: activeCampaigns,
-        total_gmv: totalGMV, total_orders: totalOrders, total_submissions: totalSubmissions,
+        date: today,
+        total_creators: totalCreators,
+        active_creators: activeCreators,
+        total_campaigns: totalCampaigns,
+        active_campaigns: activeCampaigns,
+        total_gmv: totalGMV,
+        total_orders: totalOrders,
+        total_submissions: totalSubmissions,
       },
     });
 
@@ -214,7 +256,9 @@ export class AnalyticsCronService {
       });
     }
 
-    this.logger.log(`  ⭐ Level progress recalculated for ${creators.length} creators.`);
+    this.logger.log(
+      `  ⭐ Level progress recalculated for ${creators.length} creators.`,
+    );
   }
 
   // ──────────────────────────────────────────────
@@ -252,7 +296,9 @@ export class AnalyticsCronService {
       });
     }
 
-    this.logger.log(`  ⚠️ Dormant detection: ${dormant.length} creators flagged, ${Object.keys(byCM).length} CMs notified.`);
+    this.logger.log(
+      `  ⚠️ Dormant detection: ${dormant.length} creators flagged, ${Object.keys(byCM).length} CMs notified.`,
+    );
   }
 
   // ──────────────────────────────────────────────

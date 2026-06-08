@@ -39,7 +39,9 @@ export class AnalyticsController {
   @Get('creators')
   @Roles(Role.ADMIN, Role.EXECUTIVE, Role.CM)
   getCreatorPerformance(@Query('limit') limit?: string) {
-    return this.analyticsService.getCreatorPerformance(limit ? parseInt(limit) : 20);
+    return this.analyticsService.getCreatorPerformance(
+      limit ? parseInt(limit) : 20,
+    );
   }
 
   // GET /analytics/creator/:id/history — Creator monthly stats history

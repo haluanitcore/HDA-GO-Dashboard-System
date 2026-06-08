@@ -1,17 +1,38 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, Logger } from '@nestjs/common';
 import { AppModule } from './app.module';
-import * as express from 'express';
-import * as path from 'path';
+import helmet from 'helmet';
+import { rateLimit } from 'express-rate-limit';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const logger = new Logger('Bootstrap');
+
+  // Validate critical env variables loaded via ConfigModule
+  if (!process.env.JWT_SECRET) {
+    throw new Error('FATAL: JWT_SECRET environment variable is missing!');
+  }
+  if (!process.env.JWT_REFRESH_SECRET) {
+    throw new Error('FATAL: JWT_REFRESH_SECRET environment variable is missing!');
+  }
 
   // Global prefix: all routes start with /api
   app.setGlobalPrefix('api');
 
-  // Serve static files from tmp_uploads at /api/uploads route
-  app.use('/api/uploads', express.static(path.join(process.cwd(), 'tmp_uploads')));
+  // Enable helmet for security headers (disable crossOriginResourcePolicy to allow local files rendering)
+  app.use(helmet({ crossOriginResourcePolicy: false }));
+
+  // Apply rate limiting specifically to /api/auth/* endpoints
+  app.use(
+    '/api/auth',
+    rateLimit({
+      windowMs: 15 * 60 * 1000, // 15 minutes
+      max: 100, // limit each IP to 100 requests per windowMs
+      message: { message: 'Terlalu banyak permintaan dari IP ini, silakan coba lagi setelah 15 menit.' },
+      standardHeaders: true,
+      legacyHeaders: false,
+    }),
+  );
 
   // Enable CORS for frontend — reads from env or defaults to localhost:3000
   const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:3000')
@@ -36,17 +57,9 @@ async function bootstrap() {
     }),
   );
 
-  await app.listen(process.env.PORT ?? 4000);
-  console.log(`
-  ╔══════════════════════════════════════════════════╗
-  ║     🚀 HDA Go Backend API — Running!            ║
-  ║     📍 http://localhost:${process.env.PORT ?? 4000}/api            ║
-  ║     🔐 Auth:  POST /api/auth/login               ║
-  ║     🔐 Auth:  POST /api/auth/register             ║
-  ║     👤 Creator: GET /api/creators/dashboard       ║
-  ║     📦 Campaigns: GET /api/campaigns              ║
-  ║     📊 Analytics: GET /api/analytics/kpi          ║
-  ╚══════════════════════════════════════════════════╝
-  `);
+  const port = process.env.PORT ?? 4000;
+  await app.listen(port);
+  
+  logger.log(`HDA Go Backend API — Running on http://localhost:${port}/api`);
 }
 bootstrap();

@@ -5,13 +5,18 @@ import * as fs from 'fs';
 import { randomUUID } from 'crypto';
 
 // Allowed MIME types
-const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/webm'];
+const ALLOWED_VIDEO_TYPES = [
+  'video/mp4',
+  'video/quicktime',
+  'video/x-msvideo',
+  'video/webm',
+];
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const ALL_ALLOWED_TYPES = [...ALLOWED_VIDEO_TYPES, ...ALLOWED_IMAGE_TYPES];
 
 // Max file sizes
 const MAX_VIDEO_SIZE = 200 * 1024 * 1024; // 200MB
-const MAX_IMAGE_SIZE = 50 * 1024 * 1024;  // 50MB
+const MAX_IMAGE_SIZE = 50 * 1024 * 1024; // 50MB
 
 // Temp upload directory
 const UPLOAD_DIR = path.join(process.cwd(), 'tmp_uploads');

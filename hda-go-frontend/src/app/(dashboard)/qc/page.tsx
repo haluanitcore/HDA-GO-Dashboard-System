@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { submissionService } from '@/services';
+import { submissionService, getUploadUrl } from '@/services';
 import { api } from '@/services/api';
 import { Card, CardContent } from '@/components/ui/card';
 import { 
@@ -890,7 +890,7 @@ export default function QCQueuePage() {
               <div className="relative bg-[#07090F] rounded-3xl overflow-hidden aspect-video flex items-center justify-center border border-white/5 shadow-2xl">
                 <video 
                   ref={videoRef}
-                  src={activeItem.tiktok_url}
+                  src={getUploadUrl(activeItem.tiktok_url)}
                   className="w-full h-full object-contain"
                   controls={false}
                   onClick={() => setVideoPlaying(!videoPlaying)}
@@ -978,7 +978,7 @@ export default function QCQueuePage() {
                   </div>
                 </div>
                 <a 
-                  href={activeItem.tiktok_url}
+                  href={getUploadUrl(activeItem.tiktok_url)}
                   target="_blank"
                   rel="noreferrer"
                   className="p-2.5 rounded-2xl bg-blue-600/15 border border-blue-500/20 text-blue-400 hover:bg-blue-600/25 transition-all text-xs font-black"

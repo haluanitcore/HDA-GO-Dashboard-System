@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { submissionService, campaignService, creatorService } from '@/services';
+import { submissionService, campaignService, creatorService, getUploadUrl } from '@/services';
 import { Card, CardContent } from '@/components/ui/card';
 import { Video, Clock, CheckCircle2, AlertCircle, Send, Loader2, ExternalLink, Plus, BarChart3, UploadCloud, FolderOpen, FileVideo, ImageIcon, X, CloudUpload, Link2 } from 'lucide-react';
 import { api } from '@/services/api';
@@ -503,7 +503,7 @@ export default function SubmissionsPage() {
                           {/* Link to file */}
                           {sub.tiktok_url && sub.status !== 'UPLOADING' && (
                             <a
-                              href={sub.tiktok_url}
+                              href={getUploadUrl(sub.tiktok_url)}
                               target="_blank"
                               rel="noreferrer"
                               className="text-xs text-emerald-400 hover:text-emerald-300 hover:underline mt-1 flex items-center gap-1 truncate max-w-[280px]"

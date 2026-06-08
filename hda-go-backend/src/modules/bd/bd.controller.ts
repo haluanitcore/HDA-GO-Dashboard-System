@@ -1,10 +1,28 @@
-import { Controller, Get, Patch, Post, Param, Body, Query, Req, UseGuards, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Patch,
+  Post,
+  Param,
+  Body,
+  Query,
+  Req,
+  UseGuards,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../../common/roles.guard';
 import { Roles } from '../../common/roles.decorator';
 import { Role } from '../../common/roles.enum';
 import { BdService } from './bd.service';
-import { BDReviewDto, BDEditCampaignDto, BDAssignBrandDto, BDSubmitDealDto } from './dto/bd-review.dto';
+import {
+  BDReviewDto,
+  BDEditCampaignDto,
+  BDAssignBrandDto,
+  BDSubmitDealDto,
+} from './dto/bd-review.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { multerConfig } from '../../config/upload.config';
 
@@ -189,4 +207,3 @@ export class BdController {
     return this.bdService.getHotelVisits(campaignId);
   }
 }
-
