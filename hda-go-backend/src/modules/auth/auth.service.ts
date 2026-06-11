@@ -161,6 +161,7 @@ export class AuthService {
       CM: '/cm',
       BRAND: '/brand',
       BD: '/bd',
+      QC: '/qc',
       ADMIN: '/admin',
       EXECUTIVE: '/executive',
     };
