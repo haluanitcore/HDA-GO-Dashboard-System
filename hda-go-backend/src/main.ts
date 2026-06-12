@@ -1,11 +1,15 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  
+  // Trust proxy for express-rate-limit behind Nginx reverse proxy
+  app.set('trust proxy', 1);
   const logger = new Logger('Bootstrap');
 
   // Validate critical env variables loaded via ConfigModule
