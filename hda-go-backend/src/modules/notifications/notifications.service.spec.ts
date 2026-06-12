@@ -94,7 +94,10 @@ describe('NotificationsService', () => {
 
   describe('markAsRead', () => {
     it('updates single notification read_status to true', async () => {
-      mockPrisma.notification.update.mockResolvedValue({ id: 'n1', read_status: true });
+      mockPrisma.notification.update.mockResolvedValue({
+        id: 'n1',
+        read_status: true,
+      });
 
       const result = await service.markAsRead('n1');
 

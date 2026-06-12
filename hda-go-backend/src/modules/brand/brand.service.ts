@@ -9,10 +9,29 @@ export class BrandService {
     const campaigns = await this.prisma.campaign.findMany({
       where: { brand_id: brandId },
       include: {
-        _count: { select: { participants: true, submissions: true } },
+        submissions: { select: { status: true } },
+        orders: { select: { gmv_amount: true } },
       },
       orderBy: { created_at: 'desc' },
       take: 5,
+    });
+
+    const mappedCampaigns = campaigns.map((camp) => {
+      const sowCompleted = (camp.submissions || []).filter((s) =>
+        ['APPROVED', 'POSTED', 'COMPLETED'].includes(s.status),
+      ).length;
+
+      const gmv = (camp.orders || []).reduce((sum, o) => sum + o.gmv_amount, 0);
+
+      return {
+        id: camp.id,
+        title: camp.title,
+        status: camp.status,
+        budget: camp.budget,
+        sowTotal: camp.sow_total,
+        sowCompleted,
+        gmv,
+      };
     });
 
     const allCampaigns = await this.prisma.campaign.findMany({
@@ -57,7 +76,7 @@ export class BrandService {
         roi,
         activeCreators: uniqueCreators.size,
       },
-      campaigns,
+      campaigns: mappedCampaigns,
     };
   }
 

@@ -13,7 +13,9 @@ async function bootstrap() {
     throw new Error('FATAL: JWT_SECRET environment variable is missing!');
   }
   if (!process.env.JWT_REFRESH_SECRET) {
-    throw new Error('FATAL: JWT_REFRESH_SECRET environment variable is missing!');
+    throw new Error(
+      'FATAL: JWT_REFRESH_SECRET environment variable is missing!',
+    );
   }
 
   // Global prefix: all routes start with /api
@@ -22,13 +24,29 @@ async function bootstrap() {
   // Enable helmet for security headers (disable crossOriginResourcePolicy to allow local files rendering)
   app.use(helmet({ crossOriginResourcePolicy: false }));
 
-  // Apply rate limiting specifically to /api/auth/* endpoints
+  // Apply global rate limiting to all endpoints (500 requests per 15 minutes)
+  app.use(
+    rateLimit({
+      windowMs: 15 * 60 * 1000, // 15 minutes
+      max: 500, // limit each IP to 500 requests per windowMs
+      message: {
+        message: 'Batas permintaan terlampaui. Silakan coba lagi setelah beberapa saat.',
+      },
+      standardHeaders: true,
+      legacyHeaders: false,
+    }),
+  );
+
+  // Apply strict rate limiting specifically to /api/auth/* endpoints
   app.use(
     '/api/auth',
     rateLimit({
       windowMs: 15 * 60 * 1000, // 15 minutes
       max: 100, // limit each IP to 100 requests per windowMs
-      message: { message: 'Terlalu banyak permintaan dari IP ini, silakan coba lagi setelah 15 menit.' },
+      message: {
+        message:
+          'Terlalu banyak permintaan dari IP ini, silakan coba lagi setelah 15 menit.',
+      },
       standardHeaders: true,
       legacyHeaders: false,
     }),
@@ -59,7 +77,7 @@ async function bootstrap() {
 
   const port = process.env.PORT ?? 4000;
   await app.listen(port);
-  
+
   logger.log(`HDA Go Backend API — Running on http://localhost:${port}/api`);
 }
 bootstrap();

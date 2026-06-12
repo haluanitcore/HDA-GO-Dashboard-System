@@ -5,6 +5,7 @@ import { useCreatorStore } from '@/store';
 import { gmvService, levelService, leaderboardService } from '@/services';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   TrendingUp,
   ShoppingBag,
@@ -25,7 +26,10 @@ export default function CreatorAnalytics() {
   const [gmvData, setGmvData] = useState<any>(null);
   const [levelData, setLevelData] = useState<any>(null);
   const [rankData, setRankData] = useState<any>(null);
-  const [leaderboard, setLeaderboard] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<'gmv' | 'orders' | 'streak'>('gmv');
+  const [gmvList, setGmvList] = useState<any[]>([]);
+  const [ordersList, setOrdersList] = useState<any[]>([]);
+  const [streakList, setStreakList] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -35,17 +39,21 @@ export default function CreatorAnalytics() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [gmv, level, rank, top, _] = await Promise.all([
+      const [gmv, level, rank, topGmv, topOrders, topStreak, _] = await Promise.all([
         gmvService.getMyGMV(),
         levelService.getProgress(),
         leaderboardService.getMyRank(),
         leaderboardService.getTopGMV(10),
+        leaderboardService.getTopOrders(10),
+        leaderboardService.getTopStreak(10),
         fetchAll(),
       ]);
       setGmvData(gmv);
       setLevelData(level);
       setRankData(rank);
-      setLeaderboard(top);
+      setGmvList(topGmv || []);
+      setOrdersList(topOrders || []);
+      setStreakList(topStreak || []);
     } catch (err) {
       console.error('Failed to load analytics:', err);
     } finally {
@@ -104,6 +112,44 @@ export default function CreatorAnalytics() {
     { name: 'Consistency', current: factors.consistency?.current || 0, required: factors.consistency?.required || 1, icon: Flame, color: 'bg-orange-500', format: (v: number) => `${v}%` },
     { name: 'LIVE Sessions', current: factors.live?.current || 0, required: factors.live?.required || 1, icon: Video, color: 'bg-pink-500', format: (v: number) => v.toString() },
   ];
+
+  const getActiveList = () => {
+    switch (activeTab) {
+      case 'orders':
+        return ordersList;
+      case 'streak':
+        return streakList;
+      case 'gmv':
+      default:
+        return gmvList;
+    }
+  };
+
+  const getMetricHeader = () => {
+    switch (activeTab) {
+      case 'orders':
+        return 'Total Orders';
+      case 'streak':
+        return 'Active Streak';
+      case 'gmv':
+      default:
+        return 'Monthly GMV';
+    }
+  };
+
+  const formatMetricValue = (creator: any) => {
+    switch (activeTab) {
+      case 'orders':
+        return `${(creator.total_orders || 0).toLocaleString('id-ID')} orders`;
+      case 'streak':
+        return `${creator.streak_days || 0} days`;
+      case 'gmv':
+      default:
+        return `Rp ${(creator.gmv_monthly || 0).toLocaleString('id-ID')}`;
+    }
+  };
+
+  const activeList = getActiveList();
 
   return (
     <div className="space-y-8 pb-12">
@@ -232,18 +278,45 @@ export default function CreatorAnalytics() {
         <div className="space-y-6">
           {/* Leaderboard */}
           <div className="glass-panel rounded-[24px] overflow-hidden">
-            <div className="p-5 border-b border-white/5">
+            <div className="p-5 border-b border-white/5 space-y-4">
               <div className="flex items-center gap-2">
                 <Crown className="h-5 w-5 text-amber-400" />
                 <h3 className="text-lg font-bold text-white">Top Creators</h3>
               </div>
-              <p className="text-xs text-gray-500 mt-1">Monthly GMV Leaderboard</p>
+              <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl">
+                <button
+                  onClick={() => setActiveTab('gmv')}
+                  className={`flex-1 text-[10px] font-black py-2 rounded-lg transition-all uppercase tracking-widest ${
+                    activeTab === 'gmv' ? 'bg-[#F6D145] text-black shadow-lg shadow-[#F6D145]/15' : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  GMV
+                </button>
+                <button
+                  onClick={() => setActiveTab('orders')}
+                  className={`flex-1 text-[10px] font-black py-2 rounded-lg transition-all uppercase tracking-widest ${
+                    activeTab === 'orders' ? 'bg-[#F6D145] text-black shadow-lg shadow-[#F6D145]/15' : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  Orders
+                </button>
+                <button
+                  onClick={() => setActiveTab('streak')}
+                  className={`flex-1 text-[10px] font-black py-2 rounded-lg transition-all uppercase tracking-widest ${
+                    activeTab === 'streak' ? 'bg-[#F6D145] text-black shadow-lg shadow-[#F6D145]/15' : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  Streak
+                </button>
+              </div>
             </div>
             <div className="divide-y divide-white/5">
-              {leaderboard.slice(0, 10).map((creator: any, idx: number) => {
+              {activeList.map((creator: any, idx: number) => {
                 const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : null;
+                const name = creator.user?.name || 'Unknown Creator';
+                const level = creator.creator_level ?? 0;
                 return (
-                  <div key={creator.user_id} className="flex items-center gap-3 px-5 py-3 hover:bg-white/[0.02] transition-colors">
+                  <div key={creator.user_id} className="flex items-center gap-3 px-5 py-3 hover:bg-white/[0.02] transition-colors group">
                     <div className="w-7 text-center">
                       {medal ? (
                         <span className="text-lg">{medal}</span>
@@ -251,25 +324,29 @@ export default function CreatorAnalytics() {
                         <span className="text-xs font-black text-gray-600">{idx + 1}</span>
                       )}
                     </div>
+                    <Avatar className="h-8 w-8 border border-white/10">
+                      <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`} />
+                      <AvatarFallback className="bg-white/10 text-white font-bold">{name[0]}</AvatarFallback>
+                    </Avatar>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-white truncate">{creator.user?.name}</p>
-                      <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">Lv.{creator.creator_level}</p>
+                      <p className="text-sm font-semibold text-white truncate group-hover:text-blue-400 transition-colors">{name}</p>
+                      <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">Lv.{level}</p>
                     </div>
-                    <p className="text-xs font-bold text-emerald-400">
-                      Rp {(creator.gmv_monthly || 0).toLocaleString('id-ID')}
+                    <p className={`text-xs font-bold ${activeTab === 'gmv' ? 'text-emerald-400' : activeTab === 'orders' ? 'text-blue-400' : 'text-amber-400'}`}>
+                      {formatMetricValue(creator)}
                     </p>
                   </div>
                 );
               })}
-              {leaderboard.length === 0 && (
+              {activeList.length === 0 && (
                 <div className="text-center py-8">
                   <Trophy className="h-8 w-8 text-gray-700 mx-auto mb-2" />
                   <p className="text-xs text-gray-500">No leaderboard data yet.</p>
                 </div>
               )}
             </div>
-            {rankData && (
-              <div className="bg-blue-600/10 border-t border-blue-500/20 p-4 flex items-center justify-between">
+            {rankData && activeTab === 'gmv' && (
+              <div className="bg-blue-600/10 border-t border-blue-500/20 p-4 flex-1 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <ChevronUp className="h-4 w-4 text-blue-400" />
                   <span className="text-xs font-bold text-blue-400">Your Rank</span>

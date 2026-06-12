@@ -87,7 +87,12 @@ describe('AnalyticsService', () => {
       mockPrisma.campaignAnalytics.findMany.mockResolvedValue([
         {
           total_gmv: 1000000,
-          campaign: { title: 'Camp A', category: 'FNB', status: 'ACTIVE', deadline: new Date() },
+          campaign: {
+            title: 'Camp A',
+            category: 'FNB',
+            status: 'ACTIVE',
+            deadline: new Date(),
+          },
         },
       ]);
 

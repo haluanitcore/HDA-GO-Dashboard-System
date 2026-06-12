@@ -67,7 +67,7 @@ describe('CampaignsService', () => {
       ]);
       mockPrisma.notification.create.mockResolvedValue({});
 
-      const result = await service.create(dto as any);
+      const result = await service.create(dto);
 
       expect(result.id).toBe('c1');
       expect(mockPrisma.campaignEditLog.create).toHaveBeenCalledWith(
@@ -88,7 +88,7 @@ describe('CampaignsService', () => {
       ]);
       mockPrisma.notification.create.mockResolvedValue({});
 
-      await service.create(dto as any);
+      await service.create(dto);
 
       expect(mockPrisma.notification.create).toHaveBeenCalledTimes(2);
       expect(mockEventsGateway.emitBDNewCampaign).toHaveBeenCalledWith(
@@ -99,10 +99,13 @@ describe('CampaignsService', () => {
 
     it('uses default deadline if not provided', async () => {
       const noDeadlineDto = { ...dto, deadline: undefined };
-      mockPrisma.campaign.create.mockResolvedValue({ id: 'c2', status: 'DRAFT' });
+      mockPrisma.campaign.create.mockResolvedValue({
+        id: 'c2',
+        status: 'DRAFT',
+      });
       mockPrisma.campaignEditLog.create.mockResolvedValue({});
 
-      await service.create(noDeadlineDto as any);
+      await service.create(noDeadlineDto);
 
       expect(mockPrisma.campaign.create).toHaveBeenCalled();
     });
@@ -163,8 +166,18 @@ describe('CampaignsService', () => {
         creator_level: 2,
       });
       mockPrisma.campaign.findMany.mockResolvedValue([
-        { id: 'c1', min_level: 1, slot: 5, _count: { participants: 2, submissions: 0 } },
-        { id: 'c2', min_level: 3, slot: 5, _count: { participants: 0, submissions: 0 } },
+        {
+          id: 'c1',
+          min_level: 1,
+          slot: 5,
+          _count: { participants: 2, submissions: 0 },
+        },
+        {
+          id: 'c2',
+          min_level: 3,
+          slot: 5,
+          _count: { participants: 0, submissions: 0 },
+        },
       ]);
       mockPrisma.campaignParticipant.findMany.mockResolvedValue([
         { campaign_id: 'c1' },
@@ -180,7 +193,9 @@ describe('CampaignsService', () => {
 
     it('throws NotFoundException when creator not found', async () => {
       mockPrisma.creator.findUnique.mockResolvedValue(null);
-      await expect(service.findForCreator('ghost')).rejects.toThrow(NotFoundException);
+      await expect(service.findForCreator('ghost')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -213,7 +228,9 @@ describe('CampaignsService', () => {
       mockPrisma.creator.update.mockResolvedValue({});
       mockPrisma.notification.create.mockResolvedValue({});
 
-      const result = await service.joinCampaign('u1', { campaign_id: 'c1' } as any);
+      const result = await service.joinCampaign('u1', {
+        campaign_id: 'c1',
+      });
 
       expect(result.participant.status).toBe('JOINED');
       expect(result.slotRemaining).toBe(6);
@@ -268,7 +285,10 @@ describe('CampaignsService', () => {
     it('returns campaigns with filters', async () => {
       mockPrisma.campaign.findMany.mockResolvedValue([{ id: 'c1' }]);
 
-      const result = await service.findAll({ status: 'ACTIVE', category: 'HOTEL' });
+      const result = await service.findAll({
+        status: 'ACTIVE',
+        category: 'HOTEL',
+      });
 
       expect(result).toHaveLength(1);
     });
@@ -290,9 +310,12 @@ describe('CampaignsService', () => {
 
   describe('findOne', () => {
     it('returns campaign detail', async () => {
-      mockPrisma.campaign.findUnique.mockResolvedValue({ id: 'c1', title: 'T' });
+      mockPrisma.campaign.findUnique.mockResolvedValue({
+        id: 'c1',
+        title: 'T',
+      });
       const result = await service.findOne('c1');
-      expect(result.id).toBe('c1');
+      expect(result?.id).toBe('c1');
     });
   });
 

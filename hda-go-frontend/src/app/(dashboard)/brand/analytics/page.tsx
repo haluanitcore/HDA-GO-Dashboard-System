@@ -97,7 +97,7 @@ export default function BrandROIAnalyticsPage() {
               </div>
             </div>
             <p className="text-sm font-medium text-gray-500 mb-1">Blended Conv. Rate</p>
-            <p className="text-3xl font-bold text-white tracking-tight">{stats?.totalSpend > 0 ? ((funnel?.orders / funnel?.clicks) * 100).toFixed(1) : 0}%</p>
+            <p className="text-3xl font-bold text-white tracking-tight">{stats?.totalSpend > 0 && funnel?.clicks > 0 ? ((funnel?.orders / funnel?.clicks) * 100).toFixed(1) : 0}%</p>
           </CardContent>
         </Card>
       </div>
@@ -130,7 +130,7 @@ export default function BrandROIAnalyticsPage() {
                 <div key={i} className="flex-1 flex flex-col items-center justify-end group">
                   <div className="w-full flex justify-center opacity-0 group-hover:opacity-100 transition-opacity mb-2">
                     <span className="text-[10px] font-bold text-white bg-white/10 px-2 py-1 rounded-full whitespace-nowrap">
-                      {Math.round((d.returns/d.investment)*100)}% ROI
+                      {d.investment > 0 ? Math.round((d.returns/d.investment)*100) : 0}% ROI
                     </span>
                   </div>
                   <div className="w-full relative max-w-[56px] h-full flex items-end gap-1">

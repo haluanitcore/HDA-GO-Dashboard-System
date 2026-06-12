@@ -64,7 +64,7 @@ describe('CmCreatorsService', () => {
 
     it('creates user, creator, progress and returns credentials with HDA-XXXX password', async () => {
       mockPrisma.user.findUnique
-        .mockResolvedValueOnce(null)           // email check → not found
+        .mockResolvedValueOnce(null) // email check → not found
         .mockResolvedValueOnce({ name: 'CM Alice' }); // CM name lookup
       txMock.user.create.mockResolvedValue({});
       txMock.creator.create.mockResolvedValue({});
@@ -89,7 +89,7 @@ describe('CmCreatorsService', () => {
 
     it('creates transaction with correct creator fields', async () => {
       mockPrisma.user.findUnique
-        .mockResolvedValueOnce(null)  // email check
+        .mockResolvedValueOnce(null) // email check
         .mockResolvedValueOnce({ name: 'CM' }); // CM name lookup
       txMock.user.create.mockResolvedValue({});
       txMock.creator.create.mockResolvedValue({});
@@ -165,7 +165,9 @@ describe('CmCreatorsService', () => {
 
     it('throws NotFoundException when creator not found', async () => {
       mockPrisma.creator.findUnique.mockResolvedValue(null);
-      await expect(service.getCreatorDetail('ghost')).rejects.toThrow(NotFoundException);
+      await expect(service.getCreatorDetail('ghost')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -196,14 +198,18 @@ describe('CmCreatorsService', () => {
 
       expect(mockPrisma.creator.update).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({ niche: JSON.stringify(['FNB', 'Tech']) }),
+          data: expect.objectContaining({
+            niche: JSON.stringify(['FNB', 'Tech']),
+          }),
         }),
       );
     });
 
     it('throws NotFoundException when creator not found', async () => {
       mockPrisma.creator.findUnique.mockResolvedValue(null);
-      await expect(service.updateCreator('ghost', {})).rejects.toThrow(NotFoundException);
+      await expect(service.updateCreator('ghost', {})).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -211,14 +217,22 @@ describe('CmCreatorsService', () => {
 
   describe('transferCreator', () => {
     it('transfers creator and creates assignment log', async () => {
-      mockPrisma.creator.findUnique.mockResolvedValue({ user_id: 'u1', cm_id: 'cm-1' });
+      mockPrisma.creator.findUnique.mockResolvedValue({
+        user_id: 'u1',
+        cm_id: 'cm-1',
+      });
       mockPrisma.user.findFirst.mockResolvedValue({ id: 'cm-2', role: 'CM' });
       txMock.creatorAssignmentLog.create.mockResolvedValue({});
       txMock.notification.create.mockResolvedValue({});
       // Mock tx.creator.update — need to add it to txMock
       (txMock as any).creator = { update: jest.fn().mockResolvedValue({}) };
 
-      const result = await service.transferCreator('u1', 'cm-1', 'cm-2', 'Rotation');
+      const result = await service.transferCreator(
+        'u1',
+        'cm-1',
+        'cm-2',
+        'Rotation',
+      );
 
       expect(result.success).toBe(true);
     });
@@ -232,7 +246,10 @@ describe('CmCreatorsService', () => {
     });
 
     it('throws BadRequestException when target CM not found', async () => {
-      mockPrisma.creator.findUnique.mockResolvedValue({ user_id: 'u1', cm_id: 'cm-1' });
+      mockPrisma.creator.findUnique.mockResolvedValue({
+        user_id: 'u1',
+        cm_id: 'cm-1',
+      });
       mockPrisma.user.findFirst.mockResolvedValue(null);
 
       await expect(

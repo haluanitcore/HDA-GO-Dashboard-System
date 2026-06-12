@@ -8,7 +8,7 @@ export class LeaderboardService {
   // ──────────────────────────────────────────────
   // TOP CREATORS BY GMV (Monthly)
   // ──────────────────────────────────────────────
-  async getTopByGMV(limit = 20) {
+  async getTopByGMV(limit = 10) {
     return this.prisma.creator.findMany({
       orderBy: { gmv_monthly: 'desc' },
       take: limit,
@@ -22,7 +22,7 @@ export class LeaderboardService {
   // ──────────────────────────────────────────────
   // TOP CREATORS BY ORDERS
   // ──────────────────────────────────────────────
-  async getTopByOrders(limit = 20) {
+  async getTopByOrders(limit = 10) {
     return this.prisma.creator.findMany({
       orderBy: { total_orders: 'desc' },
       take: limit,
@@ -35,7 +35,7 @@ export class LeaderboardService {
   // ──────────────────────────────────────────────
   // TOP CREATORS BY STREAK
   // ──────────────────────────────────────────────
-  async getTopByStreak(limit = 20) {
+  async getTopByStreak(limit = 10) {
     return this.prisma.creator.findMany({
       orderBy: { streak_days: 'desc' },
       take: limit,

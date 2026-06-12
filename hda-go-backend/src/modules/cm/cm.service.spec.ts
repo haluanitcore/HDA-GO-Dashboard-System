@@ -153,7 +153,11 @@ describe('CmService', () => {
       });
       mockPrisma.notification.create.mockResolvedValue({ id: 'n1' });
 
-      const result = await service.pushCampaignRecommendation('cm-1', 'u1', 'c1');
+      const result = await service.pushCampaignRecommendation(
+        'cm-1',
+        'u1',
+        'c1',
+      );
 
       expect(result!.pushed).toBe(true);
       expect(result!.creatorName).toBe('Alice');
@@ -167,7 +171,11 @@ describe('CmService', () => {
       mockPrisma.campaign.findUnique.mockResolvedValue(null);
       mockPrisma.creator.findUnique.mockResolvedValue(null);
 
-      const result = await service.pushCampaignRecommendation('cm-1', 'u1', 'c1');
+      const result = await service.pushCampaignRecommendation(
+        'cm-1',
+        'u1',
+        'c1',
+      );
       expect(result).toBeNull();
     });
   });
@@ -176,7 +184,10 @@ describe('CmService', () => {
 
   describe('assignCreator', () => {
     it('updates creator cm_id', async () => {
-      mockPrisma.creator.update.mockResolvedValue({ user_id: 'u1', cm_id: 'cm-2' });
+      mockPrisma.creator.update.mockResolvedValue({
+        user_id: 'u1',
+        cm_id: 'cm-2',
+      });
 
       const result = await service.assignCreator('u1', 'cm-2');
 
@@ -189,8 +200,24 @@ describe('CmService', () => {
   describe('getGMVMonitoring', () => {
     it('returns total GMV and creator breakdown', async () => {
       mockPrisma.creator.findMany.mockResolvedValue([
-        { user_id: 'u1', user: { name: 'A' }, creator_level: 1, gmv_monthly: 1000, gmv_total: 5000, total_orders: 10, streak_days: 3 },
-        { user_id: 'u2', user: { name: 'B' }, creator_level: 0, gmv_monthly: 500, gmv_total: 2000, total_orders: 5, streak_days: 1 },
+        {
+          user_id: 'u1',
+          user: { name: 'A' },
+          creator_level: 1,
+          gmv_monthly: 1000,
+          gmv_total: 5000,
+          total_orders: 10,
+          streak_days: 3,
+        },
+        {
+          user_id: 'u2',
+          user: { name: 'B' },
+          creator_level: 0,
+          gmv_monthly: 500,
+          gmv_total: 2000,
+          total_orders: 5,
+          streak_days: 1,
+        },
       ]);
 
       const result = await service.getGMVMonitoring('cm-1');
@@ -205,9 +232,24 @@ describe('CmService', () => {
   describe('getLevelMonitoring', () => {
     it('returns level distribution', async () => {
       mockPrisma.creator.findMany.mockResolvedValue([
-        { user_id: 'u1', user: { name: 'A' }, creator_level: 1, progress: null },
-        { user_id: 'u2', user: { name: 'B' }, creator_level: 1, progress: null },
-        { user_id: 'u3', user: { name: 'C' }, creator_level: 3, progress: null },
+        {
+          user_id: 'u1',
+          user: { name: 'A' },
+          creator_level: 1,
+          progress: null,
+        },
+        {
+          user_id: 'u2',
+          user: { name: 'B' },
+          creator_level: 1,
+          progress: null,
+        },
+        {
+          user_id: 'u3',
+          user: { name: 'C' },
+          creator_level: 3,
+          progress: null,
+        },
       ]);
 
       const result = await service.getLevelMonitoring('cm-1');

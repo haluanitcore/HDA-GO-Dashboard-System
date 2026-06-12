@@ -16,7 +16,9 @@ import {
   Users,
   ShieldCheck,
   Building2,
-  X
+  X,
+  Award,
+  Trophy
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
@@ -58,6 +60,7 @@ export function Sidebar() {
       return [
         { name: 'Analytics', href: '/executive', icon: BarChart3 },
         { name: 'KPI Overview', href: '/executive/kpi', icon: TrendingUp },
+        { name: 'Leaderboard', href: '/executive/leaderboard', icon: Trophy },
       ];
     }
     if (user?.role === 'BRAND') {
@@ -83,6 +86,7 @@ export function Sidebar() {
       { name: 'Submission', href: '/creator/submissions', icon: BarChart3 },
       { name: 'Performance', href: '/creator/analytics', icon: TrendingUp },
       { name: 'Rewards', href: '/creator/rewards', icon: Gift },
+      { name: 'Level Progress', href: '/creator/level-progress', icon: Award },
     ];
   };
 

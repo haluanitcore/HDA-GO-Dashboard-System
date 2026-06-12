@@ -78,7 +78,9 @@ export const levelService = {
 };
 
 export const leaderboardService = {
-  getTopGMV: (limit = 20) => api.get<any>(`/leaderboard/gmv?limit=${limit}`),
+  getTopGMV: (limit = 10) => api.get<any>(`/leaderboard/gmv?limit=${limit}`),
+  getTopOrders: (limit = 10) => api.get<any>(`/leaderboard/orders?limit=${limit}`),
+  getTopStreak: (limit = 10) => api.get<any>(`/leaderboard/streak?limit=${limit}`),
   getMyRank: () => api.get<any>('/leaderboard/my-rank'),
 };
 

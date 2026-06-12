@@ -10,22 +10,22 @@ import { LeaderboardService } from './leaderboard.service';
 export class LeaderboardController {
   constructor(private readonly leaderboardService: LeaderboardService) {}
 
-  // GET /leaderboard/gmv?limit=20
+  // GET /leaderboard/gmv?limit=10
   @Get('gmv')
   getTopGMV(@Query('limit') limit?: string) {
-    return this.leaderboardService.getTopByGMV(limit ? parseInt(limit) : 20);
+    return this.leaderboardService.getTopByGMV(limit ? parseInt(limit) : 10);
   }
 
   // GET /leaderboard/orders
   @Get('orders')
   getTopOrders(@Query('limit') limit?: string) {
-    return this.leaderboardService.getTopByOrders(limit ? parseInt(limit) : 20);
+    return this.leaderboardService.getTopByOrders(limit ? parseInt(limit) : 10);
   }
 
   // GET /leaderboard/streak
   @Get('streak')
   getTopStreak(@Query('limit') limit?: string) {
-    return this.leaderboardService.getTopByStreak(limit ? parseInt(limit) : 20);
+    return this.leaderboardService.getTopByStreak(limit ? parseInt(limit) : 10);
   }
 
   // GET /leaderboard/my-rank — Creator's own rank

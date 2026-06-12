@@ -91,7 +91,9 @@ export default function BrandDashboard() {
                   </div>
                   <div className="text-right">
                     <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">ROI</p>
-                    <p className="text-xl font-black text-emerald-500">{Math.round((camp.gmv / camp.budget) * 100)}%</p>
+                    <p className="text-xl font-black text-emerald-500">
+                      {camp.budget > 0 ? Math.round(((camp.gmv || 0) / camp.budget) * 100) : 0}%
+                    </p>
                   </div>
                 </div>
 
@@ -99,12 +101,12 @@ export default function BrandDashboard() {
                   <div>
                     <div className="flex justify-between text-xs font-bold text-gray-400 mb-1 uppercase tracking-widest">
                       <span>SOW Fulfillment</span>
-                      <span>{camp.sowCompleted} / {camp.sowTotal} Posts</span>
+                      <span>{(camp.sowCompleted || 0)} / {(camp.sowTotal || 0)} Posts</span>
                     </div>
                     <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
                       <div 
                         className={`h-full transition-all duration-500 ${camp.sowCompleted === camp.sowTotal ? 'bg-emerald-500' : 'bg-blue-500'}`}
-                        style={{ width: `${(camp.sowCompleted / camp.sowTotal) * 100}%` }}
+                        style={{ width: `${camp.sowTotal > 0 ? (((camp.sowCompleted || 0) / camp.sowTotal) * 100) : 0}%` }}
                       />
                     </div>
                   </div>
@@ -116,7 +118,7 @@ export default function BrandDashboard() {
                     </div>
                     <div>
                       <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">GMV</p>
-                      <p className="text-sm font-bold text-emerald-500">Rp {(camp.gmv / 1000000).toFixed(1)}M</p>
+                      <p className="text-sm font-bold text-emerald-500">Rp {((camp.gmv || 0) / 1000000).toFixed(1)}M</p>
                     </div>
                   </div>
                 </div>

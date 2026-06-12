@@ -23,7 +23,7 @@ describe('LeaderboardService', () => {
   // ── TOP BY GMV ────────────────────────────────────────────────────────────
 
   describe('getTopByGMV', () => {
-    it('returns creators sorted by gmv_monthly with default limit 20', async () => {
+    it('returns creators sorted by gmv_monthly with default limit 10', async () => {
       const creators = [{ user_id: 'u1', gmv_monthly: 1000 }];
       mockPrisma.creator.findMany.mockResolvedValue(creators);
 
@@ -33,7 +33,7 @@ describe('LeaderboardService', () => {
       expect(mockPrisma.creator.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           orderBy: { gmv_monthly: 'desc' },
-          take: 20,
+          take: 10,
         }),
       );
     });

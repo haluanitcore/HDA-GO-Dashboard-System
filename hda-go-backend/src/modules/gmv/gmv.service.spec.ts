@@ -107,7 +107,10 @@ describe('GmvService', () => {
 
     it('approves (VERIFY) and updates creator stats', async () => {
       mockPrisma.creatorOrder.findUnique.mockResolvedValue(record);
-      mockPrisma.creatorOrder.update.mockResolvedValue({ ...record, status: 'VERIFIED' });
+      mockPrisma.creatorOrder.update.mockResolvedValue({
+        ...record,
+        status: 'VERIFIED',
+      });
       mockPrisma.creator.update.mockResolvedValue({});
       mockPrisma.creatorProgress.update.mockResolvedValue({});
       mockPrisma.submissionDeliverable.findMany.mockResolvedValue([
@@ -115,7 +118,9 @@ describe('GmvService', () => {
       ]);
       mockLevelsService.evaluateLevel.mockResolvedValue({ leveledUp: false });
 
-      const result = await service.verifyGmv('o1', 'cm-1', { action: 'VERIFY' });
+      const result = await service.verifyGmv('o1', 'cm-1', {
+        action: 'VERIFY',
+      });
 
       expect(mockPrisma.creator.update).toHaveBeenCalledWith(
         expect.objectContaining({
