@@ -30,6 +30,7 @@ async function main() {
   await prisma.creator.deleteMany();
   await prisma.campaign.deleteMany();
   await prisma.user.deleteMany();
+  await prisma.systemSetting.deleteMany();
 
   console.log('   ✅ All tables cleared.');
 
