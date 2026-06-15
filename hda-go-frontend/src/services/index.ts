@@ -153,14 +153,11 @@ export const getUploadUrl = (url: string): string => {
   if (!url) return '';
   if (url.startsWith('http') || url.includes('drive.google.com')) return url;
   
-  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
   const backendBase = process.env.NEXT_PUBLIC_API_URL 
     ? process.env.NEXT_PUBLIC_API_URL.replace(/\/api$/, '') 
     : 'http://localhost:4000';
   
-  const separator = url.includes('?') ? '&' : '?';
-  const urlWithHost = url.startsWith('/') ? `${backendBase}${url}` : `${backendBase}/${url}`;
-  return token ? `${urlWithHost}${separator}token=${token}` : urlWithHost;
+  return url.startsWith('/') ? `${backendBase}${url}` : `${backendBase}/${url}`;
 };
 
 // ── Auth Services ──
@@ -169,6 +166,7 @@ export const authService = {
     api.post<any>('/auth/login', { email, password }),
   register: (data: { name: string; email: string; password: string; cm_id?: string }) =>
     api.post<any>('/auth/register', data),
+  logout: () => api.post<any>('/auth/logout', {}),
   getCMListPublic: () => api.get<any[]>('/auth/cm-list'),
 };
 

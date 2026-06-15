@@ -12,21 +12,14 @@ interface RequestOptions {
 }
 
 class ApiClient {
-  private getToken(): string | null {
-    if (typeof window === 'undefined') return null;
-    return localStorage.getItem('accessToken');
-  }
-
   private async request<T>(endpoint: string, options: RequestOptions = {}, isRetry = false): Promise<T> {
-    const token = this.getToken();
-
     const res = await fetch(`${API_BASE}${endpoint}`, {
       method: options.method || 'GET',
       headers: {
         'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...options.headers,
       },
+      credentials: 'include', // Important: Ensures HttpOnly cookies are sent!
       body: options.body ? JSON.stringify(options.body) : undefined,
     });
 
@@ -36,10 +29,9 @@ class ApiClient {
       if (refreshed) {
         return this.request(endpoint, options, true); // Retry once only
       }
-      // Token refresh failed — clear storage and redirect
+      // Token refresh failed — redirect to login
       if (typeof window !== 'undefined') {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user'); // Just to clear UI state
         window.location.href = '/login';
       }
     }
@@ -53,21 +45,17 @@ class ApiClient {
   }
 
   private async refreshToken(): Promise<boolean> {
-    const refreshToken = localStorage.getItem('refreshToken');
-    if (!refreshToken) return false;
-
     try {
       const res = await fetch(`${API_BASE}/auth/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken }),
+        credentials: 'include', // Sends the refreshToken HttpOnly cookie automatically
+        body: JSON.stringify({}),
       });
 
       if (!res.ok) return false;
 
-      const data = await res.json();
-      localStorage.setItem('accessToken', data.accessToken);
-      localStorage.setItem('refreshToken', data.refreshToken);
+      // New cookies (accessToken & refreshToken) are automatically set via backend response headers
       return true;
     } catch {
       return false;
@@ -98,7 +86,6 @@ class ApiClient {
     onProgress?: (percent: number) => void,
   ): Promise<T> {
     return new Promise((resolve, reject) => {
-      const token = this.getToken();
       const xhr = new XMLHttpRequest();
 
       xhr.upload.onprogress = (e) => {
@@ -125,7 +112,7 @@ class ApiClient {
       xhr.ontimeout = () => reject(new Error('Upload gagal — waktu habis'));
 
       xhr.open('POST', `${API_BASE}${endpoint}`);
-      if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      xhr.withCredentials = true; // Send cookies with XHR
       xhr.timeout = 5 * 60 * 1000; // 5 minutes timeout for large files
       xhr.send(formData);
     });
