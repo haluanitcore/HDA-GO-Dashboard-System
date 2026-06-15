@@ -49,19 +49,26 @@ export class LeaderboardService {
   // CREATOR RANK POSITION
   // ──────────────────────────────────────────────
   async getCreatorRank(creatorId: string) {
-    const allCreators = await this.prisma.creator.findMany({
-      orderBy: { gmv_monthly: 'desc' },
-      select: { user_id: true, gmv_monthly: true },
+    const creator = await this.prisma.creator.findUnique({
+      where: { user_id: creatorId },
+      select: { gmv_monthly: true },
     });
 
-    const rank = allCreators.findIndex((c) => c.user_id === creatorId) + 1;
-    const total = allCreators.length;
+    if (!creator) {
+      return { creatorId, rank: 0, total: 0, percentile: 0 };
+    }
+
+    const rank = await this.prisma.creator.count({
+      where: { gmv_monthly: { gt: creator.gmv_monthly } },
+    }) + 1;
+
+    const total = await this.prisma.creator.count();
 
     return {
       creatorId,
       rank,
       total,
-      percentile: Math.round(((total - rank) / total) * 100),
+      percentile: total > 0 ? Math.round(((total - rank) / total) * 100) : 0,
     };
   }
 }

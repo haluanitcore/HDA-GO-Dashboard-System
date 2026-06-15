@@ -61,8 +61,15 @@ export class CampaignsController {
     @Req() req: any,
     @Query('status') status?: string,
     @Query('category') category?: string,
+    @Query('skip') skip?: string,
+    @Query('take') take?: string,
   ) {
-    return this.campaignsService.findAll({ status, category }, req.user);
+    const skipNum = skip ? parseInt(skip, 10) : 0;
+    const takeNum = take ? parseInt(take, 10) : 50;
+    return this.campaignsService.findAll(
+      { status, category, skip: skipNum, take: takeNum },
+      req.user,
+    );
   }
 
   // GET /campaigns/:id — Campaign detail

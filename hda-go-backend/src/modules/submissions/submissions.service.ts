@@ -368,9 +368,11 @@ export class SubmissionsService {
   }
 
   // ── GET SUBMISSIONS BY CREATOR ──
-  async findByCreator(creatorId: string) {
+  async findByCreator(creatorId: string, skip: number = 0, take: number = 50) {
     return this.prisma.submission.findMany({
       where: { creator_id: creatorId },
+      skip,
+      take,
       include: {
         campaign: {
           select: {
@@ -387,9 +389,11 @@ export class SubmissionsService {
   }
 
   // ── GET SUBMISSIONS BY CAMPAIGN (for CM QC view) ──
-  async findByCampaign(campaignId: string) {
+  async findByCampaign(campaignId: string, skip: number = 0, take: number = 50) {
     return this.prisma.submission.findMany({
       where: { campaign_id: campaignId },
+      skip,
+      take,
       include: {
         creator: {
           include: { user: { select: { name: true } } },
@@ -419,8 +423,8 @@ export class SubmissionsService {
       ['APPROVED', 'POSTED', 'COMPLETED'].includes(s.status),
     ).length;
 
-    for (const sib of siblingSubmissions) {
-      await this.prisma.submissionDeliverable.upsert({
+    const upsertOperations = siblingSubmissions.map((sib) => 
+      this.prisma.submissionDeliverable.upsert({
         where: { submission_id: sib.id },
         create: {
           submission_id: sib.id,
@@ -432,14 +436,18 @@ export class SubmissionsService {
           completed_sow: approvedCount,
           remaining_sow: Math.max(0, totalSow - approvedCount),
         },
-      });
-    }
+      })
+    );
+
+    await this.prisma.$transaction(upsertOperations);
   }
 
   // ── GET ALL PENDING QC (for CM dashboard) ──
-  async findPendingQC() {
+  async findPendingQC(skip: number = 0, take: number = 50) {
     return this.prisma.submission.findMany({
       where: { status: 'QC_REVIEW' },
+      skip,
+      take,
       include: {
         creator: {
           include: { user: { select: { name: true } } },
@@ -577,6 +585,13 @@ export class SubmissionsService {
       throw new BadRequestException(
         'VT link hanya bisa disubmit setelah konten disetujui',
       );
+    }
+
+    // Validate URL format
+    try {
+      new URL(vtLink);
+    } catch {
+      throw new BadRequestException('Format URL VT tidak valid');
     }
 
     const updated = await this.prisma.submission.update({

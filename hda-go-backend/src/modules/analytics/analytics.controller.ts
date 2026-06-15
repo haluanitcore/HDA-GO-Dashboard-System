@@ -31,8 +31,11 @@ export class AnalyticsController {
   // GET /analytics/campaigns — Campaign analytics
   @Get('campaigns')
   @Roles(Role.ADMIN, Role.EXECUTIVE, Role.CM)
-  getCampaignAnalytics() {
-    return this.analyticsService.getCampaignAnalytics();
+  getCampaignAnalytics(@Query('skip') skip?: string, @Query('take') take?: string) {
+    return this.analyticsService.getCampaignAnalytics(
+      skip ? parseInt(skip, 10) : 0,
+      take ? parseInt(take, 10) : 50
+    );
   }
 
   // GET /analytics/creators?limit=20 — Creator performance (current month)

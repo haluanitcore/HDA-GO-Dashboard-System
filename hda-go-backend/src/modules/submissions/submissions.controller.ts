@@ -6,6 +6,7 @@ import {
   Param,
   Body,
   Req,
+  Query,
   UseGuards,
   UseInterceptors,
   UploadedFile,
@@ -79,15 +80,22 @@ export class SubmissionsController {
   // GET /submissions/my — Creator's own submissions
   @Get('my')
   @Roles(Role.CREATOR)
-  findMine(@Req() req: any) {
-    return this.submissionsService.findByCreator(req.user.userId);
+  findMine(@Req() req: any, @Query('skip') skip?: string, @Query('take') take?: string) {
+    return this.submissionsService.findByCreator(
+      req.user.userId, 
+      skip ? parseInt(skip, 10) : 0, 
+      take ? parseInt(take, 10) : 50
+    );
   }
 
   // GET /submissions/qc-queue — All pending QC (CM dashboard)
   @Get('qc-queue')
   @Roles(Role.CM, Role.ADMIN, Role.QC)
-  findPendingQC() {
-    return this.submissionsService.findPendingQC();
+  findPendingQC(@Query('skip') skip?: string, @Query('take') take?: string) {
+    return this.submissionsService.findPendingQC(
+      skip ? parseInt(skip, 10) : 0, 
+      take ? parseInt(take, 10) : 50
+    );
   }
 
   // GET /submissions/qc-stats — Performance stats for QC Team Dashboard
@@ -107,8 +115,12 @@ export class SubmissionsController {
   // GET /submissions/campaign/:id — Submissions by campaign
   @Get('campaign/:id')
   @Roles(Role.CM, Role.ADMIN, Role.BRAND, Role.QC)
-  findByCampaign(@Param('id') id: string) {
-    return this.submissionsService.findByCampaign(id);
+  findByCampaign(@Param('id') id: string, @Query('skip') skip?: string, @Query('take') take?: string) {
+    return this.submissionsService.findByCampaign(
+      id,
+      skip ? parseInt(skip, 10) : 0, 
+      take ? parseInt(take, 10) : 50
+    );
   }
 
   // PATCH /submissions/:id/vt-link — Creator submits TikTok VT link

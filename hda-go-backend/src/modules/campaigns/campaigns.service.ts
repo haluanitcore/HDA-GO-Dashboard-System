@@ -271,19 +271,23 @@ export class CampaignsService {
   // Frontend fetches by: category, min_level, status, deadline
   // Categories: HOTEL, FNB, TTD, LIVE, BEAUTY, TECH
   // ══════════════════════════════════════════════
-  async findAll(filters?: { status?: string; category?: string }, user?: any) {
+  async findAll(
+    filters?: { status?: string; category?: string; skip?: number; take?: number },
+    user?: any,
+  ) {
     const where: any = {};
     if (filters?.status) where.status = filters.status;
     if (filters?.category) where.category = filters.category;
 
     // If user is a BRAND, they can only see their own campaigns
     if (user && user.role === 'BRAND') {
-      where.brand_id = user.userId;
       where.brand_id = user.userId || user.id;
     }
 
     return this.prisma.campaign.findMany({
       where,
+      skip: filters?.skip || 0,
+      take: filters?.take || 50,
       include: {
         _count: { select: { participants: true, submissions: true } },
       },

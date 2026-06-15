@@ -31,43 +31,47 @@ export class AuthService {
 
     const hashedPassword = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
 
-    const user = await this.prisma.user.create({
-      data: {
-        name: dto.name,
-        email: dto.email,
-        password: hashedPassword,
-        role: 'CREATOR',
-      },
-    });
+    const user = await this.prisma.$transaction(async (tx) => {
+      const createdUser = await tx.user.create({
+        data: {
+          name: dto.name,
+          email: dto.email,
+          password: hashedPassword,
+          role: 'CREATOR',
+        },
+      });
 
-    // Auto-create Creator profile + progress
-    await this.prisma.creator.create({
-      data: {
-        user_id: user.id,
-        creator_level: 1, // Default level 1 (Bronze)
-        creator_code: null, // Creator ID (opsional, akan diisi CM)
-        sheet_registered: false, // Belum terdaftar di Sheet
-        gmv_total: 0,
-        gmv_monthly: 0,
-        total_orders: 0,
-        total_campaigns: 0,
-        total_posts: 0,
-        streak_days: 0,
-        cm_id: dto.cm_id || null, // CM assignment from self-registration dropdown
-        onboarding_status: 'PENDING',
-      },
-    });
+      // Auto-create Creator profile + progress
+      await tx.creator.create({
+        data: {
+          user_id: createdUser.id,
+          creator_level: 1, // Default level 1 (Bronze)
+          creator_code: null, // Creator ID (opsional, akan diisi CM)
+          sheet_registered: false, // Belum terdaftar di Sheet
+          gmv_total: 0,
+          gmv_monthly: 0,
+          total_orders: 0,
+          total_campaigns: 0,
+          total_posts: 0,
+          streak_days: 0,
+          cm_id: dto.cm_id || null, // CM assignment from self-registration dropdown
+          onboarding_status: 'PENDING',
+        },
+      });
 
-    await this.prisma.creatorProgress.create({
-      data: {
-        creator_id: user.id,
-        current_level: 1,
-        target_level: 2,
-        progress_percentage: 0,
-        gmv_progress: 0,
-        campaign_progress: 0,
-        order_progress: 0,
-      },
+      await tx.creatorProgress.create({
+        data: {
+          creator_id: createdUser.id,
+          current_level: 1,
+          target_level: 2,
+          progress_percentage: 0,
+          gmv_progress: 0,
+          campaign_progress: 0,
+          order_progress: 0,
+        },
+      });
+
+      return createdUser;
     });
 
     // Generate tokens

@@ -39,8 +39,10 @@ export class AnalyticsService {
   // ──────────────────────────────────────────────
   // CAMPAIGN ANALYTICS (from aggregated table)
   // ──────────────────────────────────────────────
-  async getCampaignAnalytics() {
+  async getCampaignAnalytics(skip: number = 0, take: number = 50) {
     return this.prisma.campaignAnalytics.findMany({
+      skip,
+      take,
       include: {
         campaign: {
           select: { title: true, category: true, status: true, deadline: true },

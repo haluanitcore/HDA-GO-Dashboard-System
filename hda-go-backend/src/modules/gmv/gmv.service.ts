@@ -146,33 +146,37 @@ export class GmvService {
       finalGmv = dto.adjustedAmount;
     }
 
-    // Process approval
-    const updated = await this.prisma.creatorOrder.update({
-      where: { id: recordId },
-      data: {
-        status: newStatus,
-        adjusted_amount: newStatus === 'ADJUSTED' ? finalGmv : null,
-        verified_by: cmId,
-        verified_at: new Date(),
-      },
-    });
+    // Process approval with transaction
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const updatedOrder = await tx.creatorOrder.update({
+        where: { id: recordId },
+        data: {
+          status: newStatus,
+          adjusted_amount: newStatus === 'ADJUSTED' ? finalGmv : null,
+          verified_by: cmId,
+          verified_at: new Date(),
+        },
+      });
 
-    // ── Update creator aggregate stats ──
-    await this.prisma.creator.update({
-      where: { user_id: record.creator_id },
-      data: {
-        gmv_total: { increment: finalGmv },
-        gmv_monthly: { increment: finalGmv },
-        total_orders: { increment: record.order_count },
-      },
-    });
+      // ── Update creator aggregate stats ──
+      await tx.creator.update({
+        where: { user_id: record.creator_id },
+        data: {
+          gmv_total: { increment: finalGmv },
+          gmv_monthly: { increment: finalGmv },
+          total_orders: { increment: record.order_count },
+        },
+      });
 
-    await this.prisma.creatorProgress.update({
-      where: { creator_id: record.creator_id },
-      data: {
-        gmv_progress: { increment: finalGmv },
-        order_progress: { increment: record.order_count },
-      },
+      await tx.creatorProgress.update({
+        where: { creator_id: record.creator_id },
+        data: {
+          gmv_progress: { increment: finalGmv },
+          order_progress: { increment: record.order_count },
+        },
+      });
+
+      return updatedOrder;
     });
 
     // ── Check if all SOW is completed to trigger level engine ──
@@ -274,11 +278,19 @@ export class GmvService {
 
   // ── PLATFORM-WIDE GMV (Executive/Admin) ──
   async getPlatformGMV() {
-    const orders = await this.prisma.creatorOrder.findMany();
-    const totalGMV = orders.reduce((sum, o) => sum + o.gmv_amount, 0);
-    const totalOrders = orders.reduce((sum, o) => sum + o.order_count, 0);
+    const aggregate = await this.prisma.creatorOrder.aggregate({
+      _sum: {
+        gmv_amount: true,
+        order_count: true,
+      },
+      _count: true,
+    });
 
-    return { totalGMV, totalOrders, transactionCount: orders.length };
+    return {
+      totalGMV: aggregate._sum.gmv_amount || 0,
+      totalOrders: aggregate._sum.order_count || 0,
+      transactionCount: aggregate._count,
+    };
   }
 
   // ── GET PENDING GMV (CM) ──
