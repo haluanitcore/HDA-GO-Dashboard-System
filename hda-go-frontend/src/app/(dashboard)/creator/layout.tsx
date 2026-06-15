@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store';
 import { Sidebar } from '@/components/shared/Sidebar';
 import { Navbar } from '@/components/shared/Navbar';
@@ -10,19 +10,36 @@ import { Loader2 } from 'lucide-react';
 export default function CreatorLayout({ children }: { children: React.ReactNode }) {
   const { user, isAuthenticated } = useAuthStore();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (!isAuthenticated) {
       router.push('/login');
     } else if (user?.role !== 'CREATOR') {
       router.push(`/${user!.role.toLowerCase()}`);
+    } else if (user?.onboarding_status === 'PENDING' && pathname !== '/creator/onboarding') {
+      router.push('/creator/onboarding');
+    } else if (user?.onboarding_status === 'ACTIVE' && pathname === '/creator/onboarding') {
+      router.push('/creator/overview');
     }
-  }, [isAuthenticated, user, router]);
+  }, [isAuthenticated, user, router, pathname]);
 
   if (!isAuthenticated || user?.role !== 'CREATOR') {
     return (
       <div className="h-screen w-screen flex items-center justify-center bg-[#0C0E10]">
         <Loader2 className="h-8 w-8 text-[#F6D145] animate-spin" />
+      </div>
+    );
+  }
+
+  const isOnboarding = pathname === '/creator/onboarding';
+
+  if (isOnboarding) {
+    return (
+      <div className="min-h-screen bg-[#0C0E10] text-white">
+        <main className="min-h-screen w-full relative z-10">
+          {children}
+        </main>
       </div>
     );
   }

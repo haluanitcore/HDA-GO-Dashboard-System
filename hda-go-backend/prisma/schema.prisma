@@ -84,7 +84,7 @@ model Creator {
   cm_notes           String?
 
   // Status Onboarding
-  onboarding_status  String        @default("ACTIVE") // ACTIVE, INACTIVE
+  onboarding_status  String        @default("PENDING") // PENDING, ACTIVE, INACTIVE
   onboarded_at       DateTime?
 }
 

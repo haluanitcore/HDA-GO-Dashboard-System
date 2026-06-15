@@ -54,6 +54,7 @@ export class AuthService {
         total_posts: 0,
         streak_days: 0,
         cm_id: dto.cm_id || null, // CM assignment from self-registration dropdown
+        onboarding_status: 'PENDING',
       },
     });
 
@@ -78,6 +79,7 @@ export class AuthService {
         name: user.name,
         email: user.email,
         role: user.role,
+        onboarding_status: 'PENDING',
       },
       ...tokens,
       redirectUrl: this.getRedirectUrl(user.role),
@@ -103,12 +105,22 @@ export class AuthService {
 
     const tokens = await this.generateTokens(user.id, user.role);
 
+    let onboardingStatus = 'ACTIVE';
+    if (user.role === 'CREATOR') {
+      const creator = await this.prisma.creator.findUnique({
+        where: { user_id: user.id },
+        select: { onboarding_status: true },
+      });
+      onboardingStatus = creator?.onboarding_status || 'ACTIVE';
+    }
+
     return {
       user: {
         id: user.id,
         name: user.name,
         email: user.email,
         role: user.role,
+        onboarding_status: onboardingStatus,
       },
       ...tokens,
       redirectUrl: this.getRedirectUrl(user.role),

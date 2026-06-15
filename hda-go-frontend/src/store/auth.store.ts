@@ -13,6 +13,7 @@ interface User {
   avatar_url?: string;
   bio?: string;
   phone?: string;
+  onboarding_status?: string;
 }
 
 interface AuthState {

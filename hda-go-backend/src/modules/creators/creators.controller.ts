@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Patch, Req, UseGuards, Body } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../../common/roles.guard';
 import { Roles } from '../../common/roles.decorator';
@@ -10,11 +10,25 @@ import { CreatorsService } from './creators.service';
 export class CreatorsController {
   constructor(private readonly creatorsService: CreatorsService) {}
 
+  // GET /creators/cm-list — Get list of CMs for onboarding dropdown
+  @Get('cm-list')
+  @Roles(Role.CREATOR)
+  getCMList() {
+    return this.creatorsService.getCMList();
+  }
+
   // GET /creators/profile — Creator's own profile
   @Get('profile')
   @Roles(Role.CREATOR)
   getProfile(@Req() req: any) {
     return this.creatorsService.getProfile(req.user.userId);
+  }
+
+  // PATCH /creators/profile — Update profile & complete onboarding
+  @Patch('profile')
+  @Roles(Role.CREATOR)
+  updateProfile(@Req() req: any, @Body() data: any) {
+    return this.creatorsService.completeOnboarding(req.user.userId, data);
   }
 
   // GET /creators/my-cm — Get assigned CM info for Creator
