@@ -1,5 +1,6 @@
 # Production Deployment to Hostinger VPS
 # Triggered on every push to main branch with clean builds
+# Trigger: 2026-06-15 CI/CD verification run
 
 on:
   push:
