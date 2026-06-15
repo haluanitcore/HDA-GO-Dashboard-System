@@ -166,7 +166,7 @@ chown -R hdago:hdago /var/www/hda-go
 
 # Start backend using PM2 as hdago user
 sudo -u hdago pm2 delete hda-go-backend 2>/dev/null || true
-sudo -u hdago pm2 start dist/main.js --name "hda-go-backend"
+sudo -u hdago pm2 start dist/src/main.js --name "hda-go-backend"
 
 # ------------------------------------------------------------------------------
 # 7. BUILD & DEPLOY NEXTJS FRONTEND (PORT 3000)
