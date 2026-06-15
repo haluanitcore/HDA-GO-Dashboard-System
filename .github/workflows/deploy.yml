@@ -23,6 +23,7 @@ jobs:
             # Reset local changes if any, and pull latest code from main
             git reset --hard HEAD
             git pull origin main
+            chown -R hdago:hdago /var/www/hda-go
             
             # 1. Update & Build NestJS Backend
             cd /var/www/hda-go/hda-go-backend
@@ -30,7 +31,7 @@ jobs:
             npx prisma generate
             npx prisma db push
             npm run build
-            pm2 restart hda-go-backend || pm2 start dist/src/main.js --name "hda-go-backend"
+            sudo -u hdago pm2 restart hda-go-backend || sudo -u hdago pm2 start dist/src/main.js --name "hda-go-backend"
             
             # 2. Update & Build NextJS Frontend
             cd /var/www/hda-go/hda-go-frontend
@@ -38,9 +39,9 @@ jobs:
             rm -rf .next
             npm install
             NEXT_PUBLIC_API_URL=https://dashboardhdago.com/api NEXT_PUBLIC_SOCKET_URL=https://dashboardhdago.com npm run build
-            pm2 restart hda-go-frontend || pm2 start npm --name "hda-go-frontend" -- start -- -p 3000
+            sudo -u hdago pm2 restart hda-go-frontend || sudo -u hdago pm2 start npm --name "hda-go-frontend" -- start -- -p 3000
             
             # 3. Save PM2 configurations
-            pm2 save
+            sudo -u hdago pm2 save
             
             echo "🚀 Deployment successfully completed with clean builds!"
