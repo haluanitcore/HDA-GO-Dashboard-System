@@ -54,7 +54,7 @@ read -p "👉 Press [ENTER] to start the deployment... (or Ctrl+C to cancel)"
 # ------------------------------------------------------------------------------
 echo -e "\n\e[33m[1/8] Updating Ubuntu system packages...\e[0m"
 apt update && apt upgrade -y
-apt install -y git curl wget build-essential ufw nginx certbot python3-certbot-nginx libtool make g++
+apt install -y git curl wget build-essential ufw nginx certbot python3-certbot-nginx libtool make g++ postgresql postgresql-contrib
 
 # ------------------------------------------------------------------------------
 # 3. CONFIGURE FIREWALL (UFW)
@@ -112,7 +112,20 @@ cd /var/www/hda-go
 # ------------------------------------------------------------------------------
 # 6. BUILD & DEPLOY NESTJS BACKEND (PORT 4000)
 # ------------------------------------------------------------------------------
-echo -e "\n\e[33m[5/8] Building NestJS Backend (Database: SQLite)...\e[0m"
+echo -e "\n\e[33m[5/8] Building NestJS Backend (Database: PostgreSQL)...\e[0m"
+
+# Ensure PostgreSQL service is started and enabled
+systemctl start postgresql
+systemctl enable postgresql
+
+# Create PostgreSQL database and user if not exists
+echo -e "\e[33mConfiguring PostgreSQL database...\e[0m"
+DB_PASS="HalunaIT3009?"
+sudo -u postgres psql -c "CREATE USER hdago_admin WITH PASSWORD '$DB_PASS';" 2>/dev/null || true
+sudo -u postgres psql -c "ALTER USER hdago_admin WITH PASSWORD '$DB_PASS';"
+sudo -u postgres psql -c "CREATE DATABASE hdago_prod OWNER hdago_admin;" 2>/dev/null || true
+sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE hdago_prod TO hdago_admin;"
+
 cd /var/www/hda-go/hda-go-backend
 
 # Clean node_modules just in case
@@ -126,7 +139,7 @@ JWT_SEC=$(openssl rand -hex 32)
 JWT_REF=$(openssl rand -hex 32)
 
 cat <<EOT > .env
-DATABASE_URL="file:./dev.db"
+DATABASE_URL="postgresql://hdago_admin:$DB_PASS@localhost:5432/hdago_prod?schema=public"
 JWT_SECRET="$JWT_SEC"
 JWT_REFRESH_SECRET="$JWT_REF"
 PORT=4000
@@ -137,8 +150,8 @@ echo -e "\e[32m[OK] Generated secure .env file with fresh JWT secret keys.\e[0m"
 
 # Run Prisma schema push, generate client & seed
 echo -e "\e[33mRunning database migrations & seeder...\e[0m"
-npx prisma db push
 npx prisma generate
+npx prisma db push
 npx prisma db seed
 
 # Build backend

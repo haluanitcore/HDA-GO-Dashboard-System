@@ -1,15 +1,11 @@
 import { PrismaClient } from '@prisma/client';
-import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
-import { resolve } from 'path';
 import * as bcrypt from 'bcryptjs';
 
-const dbPath = resolve(process.cwd(), 'dev.db');
-const adapter = new PrismaBetterSqlite3({ url: dbPath });
-const prisma = new PrismaClient({ adapter });
+const prisma = new PrismaClient();
 
 async function main() {
   console.log('🌱 Seeding HDA Go Database (10 Real Creators & Core Users)...');
-  console.log(`   Database: ${dbPath}`);
+  console.log('   Database: PostgreSQL');
 
   // ── CLEAR EXISTING DATA ──
   await prisma.campaignEditLog.deleteMany();
