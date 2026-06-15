@@ -120,7 +120,7 @@ systemctl enable postgresql
 
 # Create PostgreSQL database and user if not exists
 echo -e "\e[33mConfiguring PostgreSQL database...\e[0m"
-DB_PASS="HalunaIT3009?"
+DB_PASS=$(openssl rand -hex 16)
 sudo -u postgres psql -c "CREATE USER hdago_admin WITH PASSWORD '$DB_PASS';" 2>/dev/null || true
 sudo -u postgres psql -c "ALTER USER hdago_admin WITH PASSWORD '$DB_PASS';"
 sudo -u postgres psql -c "CREATE DATABASE hdago_prod OWNER hdago_admin;" 2>/dev/null || true
