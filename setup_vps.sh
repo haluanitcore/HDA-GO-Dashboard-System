@@ -101,6 +101,10 @@ if ! id -u hdago >/dev/null 2>&1; then
   useradd -m -s /bin/bash hdago
 fi
 
+# Stop any existing PM2 processes to release file locks
+sudo -u hdago pm2 stop all 2>/dev/null || true
+sudo -u hdago pm2 delete all 2>/dev/null || true
+
 rm -rf /var/www/hda-go
 mkdir -p /var/www/hda-go
 cd /var/www
