@@ -47,10 +47,6 @@ export default function BDHotelsPage() {
   const [formError, setFormError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    fetchHotels();
-  }, []);
-
   const fetchHotels = async () => {
     setIsLoading(true);
     try {
@@ -77,6 +73,10 @@ export default function BDHotelsPage() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchHotels();
+  }, []);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

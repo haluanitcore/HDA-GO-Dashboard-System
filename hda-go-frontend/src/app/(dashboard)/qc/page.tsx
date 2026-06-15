@@ -36,6 +36,7 @@ const ISSUE_CATEGORIES = [
 ];
 
 export default function QCQueuePage() {
+  const [now] = useState(() => Date.now());
   const [activeTab, setActiveTab] = useState<'QC' | 'GMV'>('QC');
   const [queue, setQueue] = useState<any[]>([]);
   const [gmvQueue, setGmvQueue] = useState<any[]>([]);
@@ -84,6 +85,57 @@ export default function QCQueuePage() {
   });
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  const fetchQueues = async (showLoading = true) => {
+    if (showLoading) setIsLoading(true);
+    try {
+      const [qcData, gmvRes, statsRes] = await Promise.all([
+        submissionService.getQcQueue(),
+        api.get('/gmv/pending'),
+        submissionService.getQcStats().catch(() => null),
+      ]);
+      setQueue(qcData || []);
+      setGmvQueue((gmvRes as any) || []);
+
+      const overdueCount = qcData?.filter((item: any) => {
+        const diffHours = (new Date().getTime() - new Date(item.submitted_at).getTime()) / (1000 * 60 * 60);
+        return diffHours > 48;
+      }).length || 0;
+
+      const deadlineTodayCount = qcData?.filter((item: any) => {
+        const diffHours = (new Date().getTime() - new Date(item.submitted_at).getTime()) / (1000 * 60 * 60);
+        return diffHours >= 24 && diffHours <= 48;
+      }).length || 0;
+
+      if (statsRes) {
+        setStats({
+          reviewedToday: statsRes.reviewedToday || 0,
+          dailyTarget: statsRes.dailyTarget || 60,
+          approvalRate: statsRes.approvalRate || 0,
+          revisionRate: statsRes.revisionRate || 0,
+          rejectionRate: statsRes.rejectionRate || 0,
+          pendingCount: qcData?.length || 0,
+          overdueCount,
+          deadlineTodayCount
+        });
+      } else {
+        setStats({
+          reviewedToday: 0,
+          dailyTarget: 60,
+          approvalRate: 0,
+          revisionRate: 0,
+          rejectionRate: 0,
+          pendingCount: qcData?.length || 0,
+          overdueCount,
+          deadlineTodayCount
+        });
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      if (showLoading) setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchQueues();
@@ -138,57 +190,6 @@ export default function QCQueuePage() {
       }
     }
   }, [videoPlaying]);
-
-  const fetchQueues = async (showLoading = true) => {
-    if (showLoading) setIsLoading(true);
-    try {
-      const [qcData, gmvRes, statsRes] = await Promise.all([
-        submissionService.getQcQueue(),
-        api.get('/gmv/pending'),
-        submissionService.getQcStats().catch(() => null),
-      ]);
-      setQueue(qcData || []);
-      setGmvQueue((gmvRes as any) || []);
-
-      const overdueCount = qcData?.filter((item: any) => {
-        const diffHours = (new Date().getTime() - new Date(item.submitted_at).getTime()) / (1000 * 60 * 60);
-        return diffHours > 48;
-      }).length || 0;
-
-      const deadlineTodayCount = qcData?.filter((item: any) => {
-        const diffHours = (new Date().getTime() - new Date(item.submitted_at).getTime()) / (1000 * 60 * 60);
-        return diffHours >= 24 && diffHours <= 48;
-      }).length || 0;
-
-      if (statsRes) {
-        setStats({
-          reviewedToday: statsRes.reviewedToday || 0,
-          dailyTarget: statsRes.dailyTarget || 60,
-          approvalRate: statsRes.approvalRate || 0,
-          revisionRate: statsRes.revisionRate || 0,
-          rejectionRate: statsRes.rejectionRate || 0,
-          pendingCount: qcData?.length || 0,
-          overdueCount,
-          deadlineTodayCount
-        });
-      } else {
-        setStats({
-          reviewedToday: 0,
-          dailyTarget: 60,
-          approvalRate: 0,
-          revisionRate: 0,
-          rejectionRate: 0,
-          pendingCount: qcData?.length || 0,
-          overdueCount,
-          deadlineTodayCount
-        });
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      if (showLoading) setIsLoading(false);
-    }
-  };
 
   // Stage 2 & 3: Single submission review execution
   const executeReview = async () => {
@@ -756,7 +757,7 @@ export default function QCQueuePage() {
                   </td>
                   <td className="px-6 py-4">
                      <div className="text-sm font-bold text-white">{item.campaign?.title}</div>
-                     {item.notes && <p className="text-[10px] text-gray-400 mt-1 italic">"{item.notes}"</p>}
+                     {item.notes && <p className="text-[10px] text-gray-400 mt-1 italic">&quot;{item.notes}&quot;</p>}
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="text-sm font-bold text-emerald-400">Rp {item.gmv_amount?.toLocaleString('id-ID')}</div>
@@ -1167,7 +1168,7 @@ export default function QCQueuePage() {
                         <AlertTriangle className="h-4.5 w-4.5 text-amber-400 shrink-0 mt-0.5" />
                         <div>
                           <p className="text-[10px] font-black text-amber-400 uppercase leading-none">Auto-calculated deadline</p>
-                          <p className="text-[11px] text-gray-300 font-medium mt-1">Sistem menetapkan batas re-upload creator maksimal 2 hari (sebelum {new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toLocaleDateString('id-ID')}).</p>
+                          <p className="text-[11px] text-gray-300 font-medium mt-1">Sistem menetapkan batas re-upload creator maksimal 2 hari (sebelum {new Date(now + 2 * 24 * 60 * 60 * 1000).toLocaleDateString('id-ID')}).</p>
                         </div>
                       </div>
                     </div>

@@ -11,10 +11,6 @@ export default function AdminUsersPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<string>('ALL');
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
   const fetchUsers = async () => {
     setIsLoading(true);
     try {
@@ -51,6 +47,10 @@ export default function AdminUsersPage() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
 
   const handleAction = (id: string, actionName: string) => {
     setUsers(prev => prev.map(u => {

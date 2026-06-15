@@ -17,11 +17,6 @@ export default function MonitoringPage() {
   const [recordData, setRecordData] = useState({ creator_id: '', campaign_id: '', order_count: '', gmv_amount: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    fetchMonitoring();
-    fetchOptions();
-  }, [fetchMonitoring]);
-
   const fetchOptions = async () => {
     try {
       const [crRes, caRes] = await Promise.all([
@@ -34,6 +29,11 @@ export default function MonitoringPage() {
       console.error('Error fetching options', err);
     }
   };
+
+  useEffect(() => {
+    fetchMonitoring();
+    fetchOptions();
+  }, [fetchMonitoring]);
 
   const handleRecordGmv = async (e: React.FormEvent) => {
     e.preventDefault();

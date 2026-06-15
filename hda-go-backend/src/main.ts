@@ -7,7 +7,7 @@ import { rateLimit } from 'express-rate-limit';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
-  
+
   // Trust proxy for express-rate-limit behind Nginx reverse proxy
   app.set('trust proxy', 1);
   const logger = new Logger('Bootstrap');
@@ -34,7 +34,8 @@ async function bootstrap() {
       windowMs: 15 * 60 * 1000, // 15 minutes
       max: 500, // limit each IP to 500 requests per windowMs
       message: {
-        message: 'Batas permintaan terlampaui. Silakan coba lagi setelah beberapa saat.',
+        message:
+          'Batas permintaan terlampaui. Silakan coba lagi setelah beberapa saat.',
       },
       standardHeaders: true,
       legacyHeaders: false,
@@ -84,4 +85,4 @@ async function bootstrap() {
 
   logger.log(`HDA Go Backend API — Running on http://localhost:${port}/api`);
 }
-bootstrap();
+void bootstrap();

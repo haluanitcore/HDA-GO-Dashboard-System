@@ -10,10 +10,6 @@ export default function CMCreatorsPage() {
   const [creators, setCreators] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    fetchCreators();
-  }, []);
-
   const fetchCreators = async () => {
     try {
       const res = await api.get('/cm/creators');
@@ -25,6 +21,10 @@ export default function CMCreatorsPage() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchCreators();
+  }, []);
 
   const getLoadIndicator = (count: number) => {
     // Kelipatan 100 dengan 4 divisi: 25%, 50%, 75%, 100%
@@ -90,6 +90,19 @@ export default function CMCreatorsPage() {
         </CardContent>
       </Card>
 
+      {/* Warning Alert for Unregistered Sheet Creators */}
+      {!isLoading && creators.filter(c => !c.creator_code || !c.sheet_registered).length > 0 && (
+        <div className="bg-amber-500/10 border border-amber-500/20 rounded-3xl p-5 flex items-start gap-4 shadow-xl animate-fadeIn">
+          <AlertCircle className="h-6 w-6 text-amber-400 mt-0.5 flex-shrink-0" />
+          <div className="space-y-1">
+            <h4 className="text-sm font-bold text-white">Terdapat Kreator Belum Sinkron Sheet ⚠️</h4>
+            <p className="text-xs text-gray-500 leading-relaxed">
+              Ada <span className="text-amber-400 font-bold">{creators.filter(c => !c.creator_code || !c.sheet_registered).length} kreator</span> di bawah bimbinganmu yang belum memiliki **Creator ID** atau belum sinkron dengan Google Sheets Master. Silakan lengkapi profil mereka dengan menambahkan Creator ID dari spreadsheet perusahaan agar sinkronisasi GMV/Orders mingguan berjalan sukses.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Creators List */}
       <div className="glass-panel rounded-[32px] overflow-hidden shadow-2xl">
         <div className="p-6 border-b border-white/5 flex items-center justify-between">
@@ -121,6 +134,8 @@ export default function CMCreatorsPage() {
               <tr className="bg-white/[0.02] border-b border-white/5">
                 <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest w-10">No</th>
                 <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">Creator</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">Creator ID</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">Level</th>
                 <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">Niche & Info</th>
                 <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">GMV Target</th>
                 <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">Masa Kontrak</th>
@@ -148,6 +163,39 @@ export default function CMCreatorsPage() {
                         </div>
                       </div>
                     </div>
+                  </td>
+                  <td className="px-6 py-5">
+                    {creator.creator_code ? (
+                      <div className="space-y-1">
+                        <p className="text-xs font-mono text-gray-300 bg-white/5 px-2 py-1 rounded-md inline-block">{creator.creator_code}</p>
+                        {creator.sheet_registered && (
+                          <p className="text-[9px] text-emerald-500 font-bold">✓ Terdaftar di Sheet</p>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 px-2 py-1 rounded-md border border-amber-500/20">
+                        ⚠ Belum Terdaftar
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-6 py-5">
+                    {(() => {
+                      const level = creator.creator_level || 1;
+                      const levelMap: Record<number, { name: string; color: string; bg: string }> = {
+                        1: { name: 'Bronze', color: 'text-orange-400', bg: 'bg-orange-500/10 border-orange-500/20' },
+                        2: { name: 'Silver', color: 'text-gray-300', bg: 'bg-gray-400/10 border-gray-400/20' },
+                        3: { name: 'Gold', color: 'text-yellow-400', bg: 'bg-yellow-500/10 border-yellow-500/20' },
+                        4: { name: 'Platinum', color: 'text-cyan-400', bg: 'bg-cyan-500/10 border-cyan-500/20' },
+                      };
+                      const info = levelMap[level] || levelMap[1];
+                      return (
+                        <div className="flex items-center gap-2">
+                          <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg border ${info.bg} ${info.color}`}>
+                            Lv.{level} {info.name}
+                          </span>
+                        </div>
+                      );
+                    })()}
                   </td>
                   <td className="px-6 py-5">
                     <div className="space-y-2">
@@ -191,7 +239,10 @@ export default function CMCreatorsPage() {
                           }
                         })()}
                         <p className="text-[10px] text-gray-500 font-medium">
-                          s.d. {new Date(creator.end_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          {creator.start_date && (
+                            <>{new Date(creator.start_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} — </>
+                          )}
+                          {new Date(creator.end_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
                         </p>
                       </div>
                     ) : (

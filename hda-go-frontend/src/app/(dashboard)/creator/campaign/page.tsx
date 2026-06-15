@@ -11,10 +11,6 @@ export default function CampaignHub() {
   const [isLoading, setIsLoading] = useState(true);
   const [joining, setJoining] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
   const fetchData = async () => {
     try {
       // 1. Fetch all eligible campaigns
@@ -65,6 +61,10 @@ export default function CampaignHub() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   const handleJoin = async (id: string) => {
     setJoining(id);

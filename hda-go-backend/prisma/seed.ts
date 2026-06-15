@@ -15,6 +15,7 @@ async function main() {
   await prisma.campaignEditLog.deleteMany();
   await prisma.brandBDAssignment.deleteMany();
   await prisma.notification.deleteMany();
+  await prisma.creatorWeeklyStats.deleteMany();
   await prisma.creatorMonthlyStats.deleteMany();
   await prisma.campaignAnalytics.deleteMany();
   await prisma.platformMetrics.deleteMany();
@@ -69,7 +70,7 @@ async function main() {
 
   for (const cm of cmList) {
     const createdCm = await prisma.user.create({
-      data: { name: `${cm.name} CM`, email: cm.email, password, role: 'CM' }
+      data: { name: `${cm.name} CM`, email: cm.email, password, role: 'CM', cm_code: cm.name.toUpperCase() }
     });
     cmsMap[cm.name.toLowerCase()] = createdCm.id;
   }
@@ -254,6 +255,8 @@ async function main() {
     await prisma.creator.create({
       data: {
         user_id: user.id,
+        creator_code: c.id, // Creator ID from Sheet
+        sheet_registered: true,
         creator_level: c.level,
         gmv_total: c.gmv,
         gmv_monthly: c.gmv,
@@ -271,15 +274,16 @@ async function main() {
         affiliate_exp: 'AKTIF',
         sow_per_month: 4,
         gmv_target_monthly: c.level === 1 ? 1500000 : 7500000,
-        start_date: new Date(),
+        start_date: new Date('2026-01-01'),
+        end_date: new Date('2026-12-31'),
         onboarding_status: 'ACTIVE',
         onboarded_at: new Date()
       }
     });
 
     // 3. Create Creator Progress
-    const targetLvl = Math.min(c.level + 1, 5);
-    const targetGmvThresholds = [1500000, 7500000, 18000000, 50000000, 150000000];
+    const targetLvl = Math.min(c.level + 1, 4);
+    const targetGmvThresholds: Record<number, number> = { 1: 5000000, 2: 25000000, 3: 100000000, 4: 100000000 };
     const progressPct = c.gmv > 0 ? Math.min((c.gmv / targetGmvThresholds[c.level]) * 100, 99) : 0;
 
     await prisma.creatorProgress.create({
@@ -341,6 +345,17 @@ async function main() {
     });
   }
   console.log('   ✅ Setup active working campaigns.');
+
+  // ══════════════════════════════════════
+  // SYSTEM SETTINGS
+  // ══════════════════════════════════════
+  await prisma.systemSetting.createMany({
+    data: [
+      { key: 'google_sheets_url', value: 'https://docs.google.com/spreadsheets/d/1Alp1XHgQtK8CnIW3fFD7p-8HXGDsA5IbYM4Da97btGc' },
+      { key: 'google_sheets_gid', value: '1505444998' },
+    ],
+  });
+  console.log('   ✅ System settings seeded.');
 
   console.log('');
   console.log('🎉 HDA-GO DATABASE SEED COMPLETE (10 REAL CREATORS + CMs)!');

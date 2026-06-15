@@ -39,13 +39,13 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private userSocketMap = new Map<string, string[]>(); // userId -> socketId[]
 
   // ── Client connects & registers their userId ──
-  handleConnection(client: Socket) {
+  async handleConnection(client: Socket) {
     const userId = client.handshake.query.userId as string;
     if (userId) {
       const existing = this.userSocketMap.get(userId) || [];
       existing.push(client.id);
       this.userSocketMap.set(userId, existing);
-      client.join(`user:${userId}`);
+      await client.join(`user:${userId}`);
       this.logger.log(`📡 Client connected: ${client.id} (user: ${userId})`);
     }
   }

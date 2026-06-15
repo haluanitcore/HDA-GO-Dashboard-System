@@ -38,6 +38,9 @@ export class CmCreatorsService {
         data: {
           user_id: userId,
           cm_id: cmId,
+          creator_code: dto.creator_code || null, // Creator ID from Sheet (optional, filled by CM later)
+          sheet_registered: !!dto.creator_code, // true jika creator_code diisi
+          creator_level: 1, // Default level 1 (Bronze)
           phone_number: dto.phone_number,
           gender: dto.gender,
           birth_date: dto.birth_date ? new Date(dto.birth_date) : null,
@@ -58,7 +61,7 @@ export class CmCreatorsService {
         },
       });
       await tx.creatorProgress.create({
-        data: { creator_id: userId, current_level: 0, target_level: 1 },
+        data: { creator_id: userId, current_level: 1, target_level: 2 },
       });
     });
 
@@ -121,6 +124,7 @@ export class CmCreatorsService {
     if (!creator) throw new NotFoundException('Creator not found');
     const updates: any = {};
     const fields = [
+      'creator_code',
       'phone_number',
       'gender',
       'birth_date',

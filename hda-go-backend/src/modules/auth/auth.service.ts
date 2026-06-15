@@ -44,7 +44,9 @@ export class AuthService {
     await this.prisma.creator.create({
       data: {
         user_id: user.id,
-        creator_level: 0,
+        creator_level: 1, // Default level 1 (Bronze)
+        creator_code: null, // Creator ID (opsional, akan diisi CM)
+        sheet_registered: false, // Belum terdaftar di Sheet
         gmv_total: 0,
         gmv_monthly: 0,
         total_orders: 0,
@@ -58,8 +60,8 @@ export class AuthService {
     await this.prisma.creatorProgress.create({
       data: {
         creator_id: user.id,
-        current_level: 0,
-        target_level: 1,
+        current_level: 1,
+        target_level: 2,
         progress_percentage: 0,
         gmv_progress: 0,
         campaign_progress: 0,

@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Settings, Save, AlertCircle, ShieldAlert, Key, Globe, Sliders, Play, Server, RefreshCw } from 'lucide-react';
+import { api } from '@/services/api';
 
 export default function AdminSettingsPage() {
   const [activeTab, setActiveTab] = useState<'TIERS' | 'SYSTEM' | 'API'>('TIERS');
@@ -30,12 +31,38 @@ export default function AdminSettingsPage() {
     imageOcrEndpoint: 'https://ocr.api.hdago.com/v1/parse',
   });
 
-  const handleSave = () => {
+  const [googleSheetsUrl, setGoogleSheetsUrl] = useState('');
+  const [googleSheetsGid, setGoogleSheetsGid] = useState('');
+
+  useEffect(() => {
+    const fetchGlobalSettings = async () => {
+      try {
+        const res: any = await api.get('/settings/global');
+        if (res) {
+          setGoogleSheetsUrl(res.google_sheets_url || '');
+          setGoogleSheetsGid(res.google_sheets_gid || '');
+        }
+      } catch (err) {
+        console.error('Failed to fetch global settings:', err);
+      }
+    };
+    fetchGlobalSettings();
+  }, []);
+
+  const handleSave = async () => {
     setIsSaving(true);
-    setTimeout(() => {
-      setIsSaving(false);
+    try {
+      await api.patch('/settings/global', {
+        google_sheets_url: googleSheetsUrl,
+        google_sheets_gid: googleSheetsGid,
+      });
       alert('System configurations have been successfully updated & saved to the database!');
-    }, 1200);
+    } catch (err) {
+      console.error('Failed to save settings:', err);
+      alert('Gagal menyimpan konfigurasi.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -260,6 +287,35 @@ export default function AdminSettingsPage() {
                     onChange={e => setApiKeys({...apiKeys, imageOcrEndpoint: e.target.value})}
                     className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white"
                   />
+                </div>
+
+                <div className="bg-white/5 p-6 rounded-2xl border border-white/5 space-y-4 mt-6">
+                  <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                    📊 Google Sheets Master Integration
+                  </h4>
+                  <p className="text-[10px] text-gray-500">
+                    Konfigurasi URL Google Sheets dan GID untuk menyelaraskan data performa GMV/Orders mingguan kreator secara dinamis.
+                  </p>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-400">Google Sheets Master URL</label>
+                    <input 
+                      type="url" 
+                      value={googleSheetsUrl} 
+                      onChange={e => setGoogleSheetsUrl(e.target.value)}
+                      placeholder="https://docs.google.com/spreadsheets/d/..."
+                      className="w-full bg-[#121212] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/50"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-400">Tab Sheet GID</label>
+                    <input 
+                      type="text" 
+                      value={googleSheetsGid} 
+                      onChange={e => setGoogleSheetsGid(e.target.value)}
+                      placeholder="1505444998"
+                      className="w-full bg-[#121212] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/50"
+                    />
+                  </div>
                 </div>
               </div>
             </div>

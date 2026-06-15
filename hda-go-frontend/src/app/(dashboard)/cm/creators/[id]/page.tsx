@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/services/api';
 import { Card, CardContent } from '@/components/ui/card';
-import { ChevronLeft, User, MapPin, Phone, Calendar, Hash, Users, ExternalLink, Save, Repeat, Edit2 } from 'lucide-react';
+import { ChevronLeft, User, MapPin, Phone, Calendar, Hash, Users, ExternalLink, Save, Repeat, Edit2, Shield, FileSpreadsheet } from 'lucide-react';
 
 export default function CreatorDetailPage() {
   const params = useParams();
@@ -20,11 +20,6 @@ export default function CreatorDetailPage() {
   const [cmList, setCmList] = useState<any[]>([]);
   const [transferData, setTransferData] = useState({ target_cm_id: '', reason: '' });
   const [isTransferring, setIsTransferring] = useState(false);
-
-  useEffect(() => {
-    fetchCreator();
-    fetchCMs();
-  }, [creatorId]);
 
   const fetchCreator = async () => {
     try {
@@ -60,6 +55,21 @@ export default function CreatorDetailPage() {
     }
   };
 
+  useEffect(() => {
+    fetchCreator();
+    fetchCMs();
+  }, [creatorId]);
+
+  // parse niches at component top level
+  let parsedNiches: string[] = [];
+  if (creator) {
+    try {
+      parsedNiches = JSON.parse(creator.niche || '[]');
+    } catch {
+      parsedNiches = [];
+    }
+  }
+
   if (isLoading) return <div className="p-12 text-center text-white">Memuat data...</div>;
   if (!creator) return <div className="p-12 text-center text-white">Creator tidak ditemukan.</div>;
 
@@ -77,12 +87,40 @@ export default function CreatorDetailPage() {
             </div>
             <div>
               <h1 className="text-3xl font-black text-white tracking-tight">{creator.user?.name}</h1>
-              <div className="flex items-center gap-3 mt-1 text-sm font-medium">
+              <div className="flex items-center gap-3 mt-1 text-sm font-medium flex-wrap">
                 <span className="text-blue-400">@{creator.tiktok_username || 'n/a'}</span>
                 <span className="w-1 h-1 rounded-full bg-white/20" />
                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest ${creator.onboarding_status === 'ACTIVE' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
                   {creator.onboarding_status}
                 </span>
+                {/* Level Badge */}
+                {(() => {
+                  const level = creator.creator_level || 1;
+                  const levelMap: Record<number, { name: string; color: string; bg: string }> = {
+                    1: { name: 'Bronze', color: 'text-orange-400', bg: 'bg-orange-500/10 border-orange-500/20' },
+                    2: { name: 'Silver', color: 'text-gray-300', bg: 'bg-gray-400/10 border-gray-400/20' },
+                    3: { name: 'Gold', color: 'text-yellow-400', bg: 'bg-yellow-500/10 border-yellow-500/20' },
+                    4: { name: 'Platinum', color: 'text-cyan-400', bg: 'bg-cyan-500/10 border-cyan-500/20' },
+                  };
+                  const info = levelMap[level] || levelMap[1];
+                  return (
+                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${info.bg} ${info.color}`}>
+                      Lv.{level} {info.name}
+                    </span>
+                  );
+                })()}
+              </div>
+              {/* Creator ID & Sheet Status */}
+              <div className="flex items-center gap-2 mt-2">
+                {creator.creator_code ? (
+                  <span className="text-[10px] font-mono text-gray-400 bg-white/5 px-2 py-1 rounded-md border border-white/5 flex items-center gap-1">
+                    <Hash className="w-3 h-3" /> {creator.creator_code}
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 px-2 py-1 rounded-md border border-amber-500/20 flex items-center gap-1">
+                    <FileSpreadsheet className="w-3 h-3" /> Belum Terdaftar di Sheet
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -180,7 +218,7 @@ export default function CreatorDetailPage() {
           </Card>
         </div>
 
-        {/* Kolom Kanan: Profil & Target */}
+        {/* Kolom Rangan: Profil & Target */}
         <div className="col-span-2 space-y-6">
           <Card className="glass-card border-0 rounded-[24px] shadow-xl">
             <CardContent className="p-6">
@@ -201,15 +239,13 @@ export default function CreatorDetailPage() {
                 <div>
                   <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mb-2">Niche Konten</p>
                   <div className="flex flex-wrap gap-2">
-                    {(() => {
-                      try {
-                        const niches = JSON.parse(creator.niche || '[]');
-                        if (niches.length === 0) return <span className="text-sm text-gray-500">-</span>;
-                        return niches.map((n: string) => (
-                          <span key={n} className="px-3 py-1 bg-white/5 border border-white/10 rounded-lg text-xs font-bold text-gray-300">{n}</span>
-                        ));
-                      } catch { return null; }
-                    })()}
+                    {parsedNiches.length === 0 ? (
+                      <span className="text-sm text-gray-500">-</span>
+                    ) : (
+                      parsedNiches.map((n: string) => (
+                        <span key={n} className="px-3 py-1 bg-white/5 border border-white/10 rounded-lg text-xs font-bold text-gray-300">{n}</span>
+                      ))
+                    )}
                   </div>
                 </div>
                 <div>

@@ -114,4 +114,24 @@ export class SettingsService {
 
     return { message: 'Password updated successfully' };
   }
+
+  async getGlobalSettings() {
+    const settings = await this.prisma.systemSetting.findMany();
+    const result: Record<string, string> = {};
+    for (const s of settings) {
+      result[s.key] = s.value;
+    }
+    return result;
+  }
+
+  async updateGlobalSettings(data: Record<string, string>) {
+    for (const [key, value] of Object.entries(data)) {
+      await this.prisma.systemSetting.upsert({
+        where: { key },
+        update: { value: String(value) },
+        create: { key, value: String(value) },
+      });
+    }
+    return { success: true, message: 'Global settings updated successfully' };
+  }
 }

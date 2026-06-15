@@ -35,10 +35,10 @@ describe('LevelsService', () => {
       expect(result).toBeNull();
     });
 
-    it('keeps level at 0 for newcomer with no stats', async () => {
+    it('keeps level at 1 for newcomer with no stats', async () => {
       mockPrisma.creator.findUnique.mockResolvedValue({
         user_id: 'u1',
-        creator_level: 0,
+        creator_level: 1,
         gmv_total: 0,
         total_campaigns: 0,
         total_orders: 0,
@@ -52,18 +52,18 @@ describe('LevelsService', () => {
 
       const result = await service.evaluateLevel('u1');
 
-      expect(result!.newLevel).toBe(0);
+      expect(result!.newLevel).toBe(1);
       expect(result!.leveledUp).toBe(false);
     });
 
-    it('levels up to 1 when meeting Starter threshold', async () => {
+    it('levels up to 2 when meeting Silver threshold', async () => {
       mockPrisma.creator.findUnique.mockResolvedValue({
         user_id: 'u1',
-        creator_level: 0,
-        gmv_total: 1500000,
-        total_campaigns: 3,
-        total_orders: 15,
-        posting_consistency: 25,
+        creator_level: 1,
+        gmv_total: 6000000,
+        total_campaigns: 4,
+        total_orders: 60,
+        posting_consistency: 35,
         live_participation: 0,
         cm_id: 'cm-1',
         user: { name: 'RisingStar' },
@@ -74,20 +74,20 @@ describe('LevelsService', () => {
 
       const result = await service.evaluateLevel('u1');
 
-      expect(result!.previousLevel).toBe(0);
-      expect(result!.newLevel).toBe(1);
+      expect(result!.previousLevel).toBe(1);
+      expect(result!.newLevel).toBe(2);
       expect(result!.leveledUp).toBe(true);
-      expect(result!.levelName).toBe('Starter');
+      expect(result!.levelName).toBe('Silver');
     });
 
     it('sends notifications to creator and CM on level up', async () => {
       mockPrisma.creator.findUnique.mockResolvedValue({
         user_id: 'u1',
-        creator_level: 0,
-        gmv_total: 1000000,
-        total_campaigns: 2,
-        total_orders: 10,
-        posting_consistency: 20,
+        creator_level: 1,
+        gmv_total: 6000000,
+        total_campaigns: 4,
+        total_orders: 60,
+        posting_consistency: 35,
         live_participation: 0,
         cm_id: 'cm-1',
         user: { name: 'Alice' },
@@ -105,7 +105,7 @@ describe('LevelsService', () => {
     it('does NOT send notification when level stays the same', async () => {
       mockPrisma.creator.findUnique.mockResolvedValue({
         user_id: 'u1',
-        creator_level: 0,
+        creator_level: 1,
         gmv_total: 0,
         total_campaigns: 0,
         total_orders: 0,
@@ -127,10 +127,10 @@ describe('LevelsService', () => {
         user_id: 'u1',
         creator_level: 1,
         gmv_total: 2000000,
-        total_campaigns: 3,
-        total_orders: 30,
-        posting_consistency: 30,
-        live_participation: 1,
+        total_campaigns: 1,
+        total_orders: 10,
+        posting_consistency: 10,
+        live_participation: 0,
         cm_id: null,
         user: { name: 'Progress' },
       });
@@ -140,20 +140,20 @@ describe('LevelsService', () => {
       const result = await service.evaluateLevel('u1');
 
       expect(result!.factors.gmv.current).toBe(2000000);
-      expect(result!.factors.gmv.required).toBe(5000000); // Level 2 threshold
+      expect(result!.factors.gmv.required).toBe(5000000); // Level 2 threshold (Silver)
     });
   });
 
   // ── GET THRESHOLDS ────────────────────────────────────────────────────────
 
   describe('getThresholds', () => {
-    it('returns all 7 level thresholds', () => {
+    it('returns all 4 level thresholds', () => {
       const thresholds = service.getThresholds();
 
-      expect(thresholds).toHaveLength(7);
-      expect(thresholds[0].level).toBe(0);
-      expect(thresholds[6].level).toBe(6);
-      expect(thresholds[6].name).toBe('Legend');
+      expect(thresholds).toHaveLength(4);
+      expect(thresholds[0].level).toBe(1);
+      expect(thresholds[3].level).toBe(4);
+      expect(thresholds[3].name).toBe('Platinum');
     });
   });
 
@@ -170,16 +170,16 @@ describe('LevelsService', () => {
       mockPrisma.creator.findUnique.mockResolvedValue({
         user_id: 'u1',
         gmv_total: 2000000,
-        total_campaigns: 3,
-        total_orders: 30,
-        posting_consistency: 30,
-        live_participation: 1,
+        total_campaigns: 1,
+        total_orders: 10,
+        posting_consistency: 10,
+        live_participation: 0,
       });
 
       const result = await service.getProgress('u1');
 
-      expect(result!.currentLevelName).toBe('Starter');
-      expect(result!.nextLevelName).toBe('Rising');
+      expect(result!.currentLevelName).toBe('Bronze');
+      expect(result!.nextLevelName).toBe('Silver');
       expect(result!.factors.gmv.current).toBe(2000000);
     });
 

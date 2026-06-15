@@ -56,8 +56,20 @@ export default function CreatorOverview() {
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-20 -mt-20 blur-3xl" />
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
           <div className="space-y-2">
-            <h1 className="text-3xl font-black text-white tracking-tight">Level {profile?.creator_level || 0}</h1>
-            <p className="text-blue-100/80 font-medium">You're doing great! Keep up the momentum.</p>
+            <h1 className="text-3xl font-black text-white tracking-tight">
+              {(() => {
+                const level = profile?.creator_level || 1;
+                const levelMap: Record<number, { name: string; gradient: string }> = {
+                  1: { name: 'Bronze', gradient: 'from-orange-400 to-orange-600' },
+                  2: { name: 'Silver', gradient: 'from-gray-300 to-gray-500' },
+                  3: { name: 'Gold', gradient: 'from-yellow-400 to-amber-500' },
+                  4: { name: 'Platinum', gradient: 'from-cyan-400 to-blue-500' },
+                };
+                const info = levelMap[level] || levelMap[1];
+                return <>Level {level} — <span className={`bg-gradient-to-r ${info.gradient} bg-clip-text text-transparent`}>{info.name}</span></>;
+              })()}
+            </h1>
+            <p className="text-blue-100/80 font-medium">{"You're doing great! Keep up the momentum."}</p>
             {profile?.end_date && (
               <div className="flex items-center gap-2 pt-1">
                 <span className="text-xs font-bold text-blue-100/50 uppercase tracking-wider">Masa Kemitraan:</span>

@@ -18,13 +18,13 @@ describe('JwtStrategy', () => {
   });
 
   describe('validate', () => {
-    it('returns userId and role from payload', async () => {
-      const result = await strategy.validate({ sub: 'u1', role: 'CM' });
+    it('returns userId and role from payload', () => {
+      const result = strategy.validate({ sub: 'u1', role: 'CM' });
       expect(result).toEqual({ userId: 'u1', role: 'CM' });
     });
 
-    it('returns CREATOR role correctly', async () => {
-      const result = await strategy.validate({
+    it('returns CREATOR role correctly', () => {
+      const result = strategy.validate({
         sub: 'creator-1',
         role: 'CREATOR',
       });

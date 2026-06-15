@@ -51,14 +51,6 @@ export default function SettingsPage() {
     return 'Browser';
   });
 
-  useEffect(() => {
-    fetchProfile();
-    const savedPrefs = localStorage.getItem('hda_notif_prefs');
-    if (savedPrefs) {
-      try { setNotifPrefs(JSON.parse(savedPrefs)); } catch {}
-    }
-  }, []);
-
   const fetchProfile = async () => {
     setIsLoading(true);
     try {
@@ -91,6 +83,14 @@ export default function SettingsPage() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchProfile();
+    const savedPrefs = localStorage.getItem('hda_notif_prefs');
+    if (savedPrefs) {
+      try { setNotifPrefs(JSON.parse(savedPrefs)); } catch {}
+    }
+  }, []);
 
   const handleProfileChange = (field: string, value: string) => {
     setProfileData(prev => ({ ...prev, [field]: value }));
@@ -423,7 +423,7 @@ export default function SettingsPage() {
                       {creatorData.cm_notes && (
                         <div className="bg-white/[0.02] p-4 rounded-xl border border-white/5 space-y-1.5">
                           <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Pesan & Catatan CM Anda</p>
-                          <p className="text-xs text-gray-400 font-medium italic leading-relaxed">"{creatorData.cm_notes}"</p>
+                          <p className="text-xs text-gray-400 font-medium italic leading-relaxed">&quot;{creatorData.cm_notes}&quot;</p>
                         </div>
                       )}
                     </div>
@@ -449,7 +449,7 @@ export default function SettingsPage() {
                         placeholder="https://drive.google.com/drive/folders/..."
                       />
                       <p className="text-[10px] text-gray-500">
-                        Pastikan folder di-set <span className="text-emerald-400 font-bold">"Anyone with the link can edit/upload"</span> agar creator bisa mengunggah video.
+                        Pastikan folder di-set <span className="text-emerald-400 font-bold">&quot;Anyone with the link can edit/upload&quot;</span> agar creator bisa mengunggah video.
                       </p>
                       {profileData.gdrive_url && (
                         <a

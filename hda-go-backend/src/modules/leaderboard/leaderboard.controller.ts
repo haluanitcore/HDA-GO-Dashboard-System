@@ -13,19 +13,25 @@ export class LeaderboardController {
   // GET /leaderboard/gmv?limit=10
   @Get('gmv')
   getTopGMV(@Query('limit') limit?: string) {
-    return this.leaderboardService.getTopByGMV(limit ? parseInt(limit) : 10);
+    const n = parseInt(limit ?? '', 10);
+    const take = isNaN(n) || n < 1 ? 10 : Math.min(n, 50);
+    return this.leaderboardService.getTopByGMV(take);
   }
 
   // GET /leaderboard/orders
   @Get('orders')
   getTopOrders(@Query('limit') limit?: string) {
-    return this.leaderboardService.getTopByOrders(limit ? parseInt(limit) : 10);
+    const n = parseInt(limit ?? '', 10);
+    const take = isNaN(n) || n < 1 ? 10 : Math.min(n, 50);
+    return this.leaderboardService.getTopByOrders(take);
   }
 
   // GET /leaderboard/streak
   @Get('streak')
   getTopStreak(@Query('limit') limit?: string) {
-    return this.leaderboardService.getTopByStreak(limit ? parseInt(limit) : 10);
+    const n = parseInt(limit ?? '', 10);
+    const take = isNaN(n) || n < 1 ? 10 : Math.min(n, 50);
+    return this.leaderboardService.getTopByStreak(take);
   }
 
   // GET /leaderboard/my-rank — Creator's own rank

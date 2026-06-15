@@ -8,7 +8,7 @@ export class RewardsService {
   // Reward logic will be expanded — for now, placeholder endpoints
   // Rewards are tied to Level Engine progression and campaign completion
 
-  async getAvailableRewards(creatorLevel: number) {
+  getAvailableRewards(creatorLevel: number) {
     // In production, this queries a rewards table filtered by min_level
     const rewardCatalog = [
       { id: 'r1', name: 'Voucher Shopee 50K', min_level: 1, type: 'VOUCHER' },

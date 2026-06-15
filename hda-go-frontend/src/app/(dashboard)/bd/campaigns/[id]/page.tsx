@@ -34,6 +34,7 @@ export default function BDCampaignDetailPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState<any>({});
   const [editNotes, setEditNotes] = useState('');
+  const [now] = useState(() => Date.now());
 
   useEffect(() => {
     if (campaignId) fetchCampaignDetail(campaignId);
@@ -448,7 +449,7 @@ export default function BDCampaignDetailPage() {
                           </p>
                         )}
                         {log.notes && (
-                          <p className="text-xs text-gray-500 mt-1 italic">"{log.notes}"</p>
+                          <p className="text-xs text-gray-500 mt-1 italic">&quot;{log.notes}&quot;</p>
                         )}
                       </div>
                     </div>
@@ -529,7 +530,7 @@ export default function BDCampaignDetailPage() {
                   { label: 'Participants', value: c._count?.participants || 0 },
                   { label: 'Submissions', value: c._count?.submissions || 0 },
                   { label: 'Cost per SOW', value: c.budget && c.sow_total ? `Rp ${((c.budget / c.sow_total) / 1000).toFixed(0)}K` : '—' },
-                  { label: 'Days to Deadline', value: c.deadline ? Math.max(0, Math.ceil((new Date(c.deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24))) : '—' },
+                  { label: 'Days to Deadline', value: c.deadline ? Math.max(0, Math.ceil((new Date(c.deadline).getTime() - now) / (1000 * 60 * 60 * 24))) : '—' },
                 ].map((item, i) => (
                   <div key={i} className="flex items-center justify-between p-2.5 bg-white/[0.02] rounded-lg">
                     <span className="text-xs text-gray-500">{item.label}</span>

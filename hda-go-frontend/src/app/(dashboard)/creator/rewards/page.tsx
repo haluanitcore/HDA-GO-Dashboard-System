@@ -44,10 +44,6 @@ export default function CreatorRewards() {
   const [levelProgress, setLevelProgress] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
   const loadData = async () => {
     setIsLoading(true);
     try {
@@ -64,6 +60,10 @@ export default function CreatorRewards() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   if (isLoading) {
     return (

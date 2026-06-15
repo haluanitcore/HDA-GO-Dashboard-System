@@ -35,10 +35,6 @@ export default function BrandCampaignsPage() {
 
   const { user } = useAuthStore();
 
-  useEffect(() => {
-    fetchCampaigns();
-  }, []);
-
   const fetchCampaigns = async () => {
     setIsLoading(true);
     try {
@@ -52,6 +48,10 @@ export default function BrandCampaignsPage() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchCampaigns();
+  }, []);
 
   const handleOpenDetailModal = async (campaignId: string) => {
     setIsFetchingDetail(true);

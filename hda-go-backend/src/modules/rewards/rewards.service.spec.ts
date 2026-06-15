@@ -23,24 +23,24 @@ describe('RewardsService', () => {
   // ── getAvailableRewards ──────────────────────────────────────────────────────
 
   describe('getAvailableRewards', () => {
-    it('returns no rewards for level 0', async () => {
-      const result = await service.getAvailableRewards(0);
+    it('returns no rewards for level 0', () => {
+      const result = service.getAvailableRewards(0);
       expect(result).toHaveLength(0);
     });
 
-    it('returns rewards up to level 1', async () => {
-      const result = await service.getAvailableRewards(1);
+    it('returns rewards up to level 1', () => {
+      const result = service.getAvailableRewards(1);
       expect(result.every((r) => r.min_level <= 1)).toBe(true);
       expect(result.length).toBeGreaterThan(0);
     });
 
-    it('returns all rewards for level 5', async () => {
-      const result = await service.getAvailableRewards(5);
+    it('returns all rewards for level 5', () => {
+      const result = service.getAvailableRewards(5);
       expect(result).toHaveLength(5);
     });
 
-    it('returns subset of rewards for level 3', async () => {
-      const result = await service.getAvailableRewards(3);
+    it('returns subset of rewards for level 3', () => {
+      const result = service.getAvailableRewards(3);
       const levels = result.map((r) => r.min_level);
       expect(Math.max(...levels)).toBeLessThanOrEqual(3);
     });

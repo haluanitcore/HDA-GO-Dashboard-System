@@ -1,7 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { google, drive_v3 } from 'googleapis';
 import * as fs from 'fs';
-import * as path from 'path';
 
 @Injectable()
 export class GDriveService {

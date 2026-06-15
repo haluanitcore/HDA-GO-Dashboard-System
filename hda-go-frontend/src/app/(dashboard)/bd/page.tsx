@@ -285,6 +285,21 @@ export default function BDDashboard() {
           {/* 🎉 Upload Success & Level Up Summary */}
           {uploadResult && (
             <div className="mt-8 border-t border-white/5 pt-6 space-y-6 animate-[slideUp_0.4s_ease-out]">
+              {/* Sync Info Badge */}
+              {uploadResult.sync_info && (
+                <div className="flex flex-wrap items-center gap-3 mb-4">
+                  <span className="text-[10px] font-black text-blue-400 bg-blue-500/10 px-3 py-1.5 rounded-xl border border-blue-500/20 uppercase tracking-widest">
+                    📅 {uploadResult.sync_info.week_label}
+                  </span>
+                  <span className="text-[10px] font-black text-gray-400 bg-white/5 px-3 py-1.5 rounded-xl border border-white/5 uppercase tracking-widest">
+                    Kolom: {uploadResult.sync_info.gmv_column_name}
+                  </span>
+                  <span className="text-[10px] font-medium text-gray-500">
+                    Terakhir sync: {new Date(uploadResult.sync_info.synced_at).toLocaleString('id-ID')}
+                  </span>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-white/5 border border-white/5 rounded-2xl p-4">
                   <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Kreator Terupdate</p>
@@ -342,16 +357,32 @@ export default function BDDashboard() {
                     {showUpdated ? <ChevronUp className="h-4 w-4 text-gray-500" /> : <ChevronDown className="h-4 w-4 text-gray-500" />}
                   </button>
                   {showUpdated && (
-                    <div className="border-t border-white/5 bg-black/20 divide-y divide-white/5 max-h-60 overflow-y-auto">
+                    <div className="border-t border-white/5 bg-black/20 divide-y divide-white/5 max-h-72 overflow-y-auto">
                       {uploadResult.updated_creators.map((c: any, i: number) => (
                         <div key={i} className="px-6 py-3.5 flex items-center justify-between text-xs font-medium">
-                          <div className="flex flex-col">
+                          <div className="flex flex-col gap-1">
                             <span className="text-white font-bold">{c.name}</span>
                             <span className="text-gray-500 text-[10px]">@{c.username}</span>
+                            {c.fieldsChanged && c.fieldsChanged.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {c.fieldsChanged.map((field: string) => (
+                                  <span key={field} className="text-[9px] font-bold bg-blue-500/10 text-blue-400 px-1.5 py-0.5 rounded border border-blue-500/20">
+                                    {field}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
                           </div>
-                          <div className="flex items-center gap-4">
-                            <span className="text-emerald-400">GMV: +Rp {Number(c.gmvAdded).toLocaleString('id-ID')}</span>
-                            <span className="text-blue-400">Orders: +{c.ordersAdded}</span>
+                          <div className="flex items-center gap-4 flex-shrink-0">
+                            {c.gmvAdded > 0 && (
+                              <span className="text-emerald-400">GMV: +Rp {Number(c.gmvAdded).toLocaleString('id-ID')}</span>
+                            )}
+                            {c.ordersAdded > 0 && (
+                              <span className="text-blue-400">Orders: +{c.ordersAdded}</span>
+                            )}
+                            {c.gmvAdded === 0 && c.ordersAdded === 0 && (
+                              <span className="text-gray-500">Biodata updated</span>
+                            )}
                           </div>
                         </div>
                       ))}

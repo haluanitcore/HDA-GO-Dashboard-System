@@ -55,7 +55,7 @@ describe('LeaderboardService', () => {
     it('returns creators sorted by total_orders', async () => {
       mockPrisma.creator.findMany.mockResolvedValue([{ user_id: 'u1' }]);
 
-      const result = await service.getTopByOrders();
+      await service.getTopByOrders();
 
       expect(mockPrisma.creator.findMany).toHaveBeenCalledWith(
         expect.objectContaining({ orderBy: { total_orders: 'desc' } }),

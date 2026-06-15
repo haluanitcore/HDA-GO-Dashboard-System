@@ -18,10 +18,6 @@ export default function CMCampaignsPage() {
   const [isPushingAll, setIsPushingAll] = useState(false);
   const [publishingId, setPublishingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
   const fetchData = async () => {
     setIsLoading(true);
     try {
@@ -58,6 +54,10 @@ export default function CMCampaignsPage() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   const getCreatorId = (creator: any): string => {
     return creator.user_id || creator.userId || creator.id || '';

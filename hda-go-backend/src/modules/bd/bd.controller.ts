@@ -206,4 +206,29 @@ export class BdController {
   getHotelVisits(@Query('campaign_id') campaignId?: string) {
     return this.bdService.getHotelVisits(campaignId);
   }
+
+  // ══════════════════════════════════════════════════
+  // PHASE 3: WEEKLY STATS & CREATOR MANAGEMENT
+  // ══════════════════════════════════════════════════
+
+  // GET /bd/creators/weekly-stats — Weekly GMV & Orders per creator
+  @Get('creators/weekly-stats')
+  @Roles(Role.BD, Role.ADMIN)
+  getWeeklyStats(@Query('week') week?: string) {
+    return this.bdService.getWeeklyStats(week);
+  }
+
+  // GET /bd/creators/unregistered — Creators without creator_code
+  @Get('creators/unregistered')
+  @Roles(Role.BD, Role.ADMIN)
+  getUnregisteredCreators() {
+    return this.bdService.getUnregisteredCreators();
+  }
+
+  // POST /bd/creators/send-sync-reminder — Send weekly sync reminder to BD
+  @Post('creators/send-sync-reminder')
+  @Roles(Role.ADMIN)
+  sendSyncReminder() {
+    return this.bdService.sendWeeklySyncReminder();
+  }
 }

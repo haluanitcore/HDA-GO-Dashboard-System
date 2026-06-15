@@ -22,6 +22,7 @@ model User {
   avatar_url    String?
   bio           String?
   phone         String?
+  cm_code       String?             // Kode unik CM (untuk matching sync Sheet)
   gdrive_url        String?         // Tautan Folder Google Drive (Khusus CM)
   gdrive_folder_id  String?         // Google Drive Folder ID (untuk API upload)
   
@@ -38,6 +39,7 @@ model User {
 model Creator {
   user_id           String             @id
   user              User               @relation(fields: [user_id], references: [id])
+  creator_code      String?            @unique    // Creator ID dari Sheet (primary business key, e.g. TikTok user ID)
   creator_level     Int                @default(0)
   gmv_total         Float              @default(0)
   gmv_monthly       Float              @default(0)
@@ -49,6 +51,7 @@ model Creator {
   posting_consistency Float            @default(0)    // % consistency score
   cm_id             String?
   cm_user           User?              @relation("CreatorCM", fields: [cm_id], references: [id])
+  sheet_registered  Boolean            @default(false) // Apakah sudah terdaftar di Google Sheet
 
   progress          CreatorProgress?
   participants      CampaignParticipant[]
@@ -56,6 +59,7 @@ model Creator {
   orders            CreatorOrder[]
   rewards           CreatorReward[]
   monthlyStats      CreatorMonthlyStats[]
+  weeklyStats       CreatorWeeklyStats[]
   hotelVisits       HotelVisit[]
 
   // Biodata Section 1 - Identitas
@@ -365,6 +369,30 @@ model PlatformMetrics {
 }
 
 // ═══════════════════════════════════════════════════
+// CREATOR WEEKLY STATS — Weekly GMV & Orders Tracking
+// Updated via Google Sheet sync every week
+// ═══════════════════════════════════════════════════
+
+model CreatorWeeklyStats {
+  id              String   @id @default(uuid())
+  creator_id      String
+  week_label      String   // Format: "2026-W24" (tahun-minggu ISO)
+  week_start      DateTime // Senin awal minggu
+  week_end        DateTime // Minggu akhir minggu
+  gmv             Float    @default(0)
+  orders          Int      @default(0)
+  gmv_updated_at  DateTime? // Kapan data GMV terakhir diupdate
+  source          String   @default("SHEET_SYNC") // SHEET_SYNC, MANUAL, SELF_REPORT
+  notes           String?
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  creator         Creator  @relation(fields: [creator_id], references: [user_id])
+
+  @@unique([creator_id, week_label])
+}
+
+// ═══════════════════════════════════════════════════
 // USER PREFERENCES (Settings)
 // ═══════════════════════════════════════════════════
 
@@ -429,5 +457,11 @@ model HotelVisit {
   campaign        Campaign     @relation(fields: [campaign_id], references: [id])
   creator         Creator      @relation(fields: [creator_id], references: [user_id])
   hotel           HotelPartner @relation(fields: [hotel_id], references: [id])
+}
+
+model SystemSetting {
+  key        String   @id
+  value      String
+  updated_at DateTime @updatedAt
 }
 

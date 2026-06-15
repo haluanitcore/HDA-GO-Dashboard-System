@@ -18,8 +18,8 @@ export interface LevelThreshold {
 
 const LEVEL_THRESHOLDS: LevelThreshold[] = [
   {
-    level: 0,
-    name: 'Newcomer',
+    level: 1,
+    name: 'Bronze',
     minGMV: 0,
     minCampaigns: 0,
     minOrders: 0,
@@ -27,58 +27,31 @@ const LEVEL_THRESHOLDS: LevelThreshold[] = [
     minLive: 0,
   },
   {
-    level: 1,
-    name: 'Starter',
-    minGMV: 1000000,
-    minCampaigns: 2,
-    minOrders: 10,
-    minConsistency: 20,
+    level: 2,
+    name: 'Silver',
+    minGMV: 5000000,
+    minCampaigns: 3,
+    minOrders: 50,
+    minConsistency: 30,
     minLive: 0,
   },
   {
-    level: 2,
-    name: 'Rising',
-    minGMV: 5000000,
-    minCampaigns: 5,
-    minOrders: 50,
-    minConsistency: 40,
-    minLive: 2,
-  },
-  {
     level: 3,
-    name: 'Pro',
-    minGMV: 15000000,
+    name: 'Gold',
+    minGMV: 25000000,
     minCampaigns: 10,
-    minOrders: 150,
+    minOrders: 250,
     minConsistency: 55,
     minLive: 5,
   },
   {
     level: 4,
-    name: 'Expert',
-    minGMV: 50000000,
-    minCampaigns: 25,
-    minOrders: 500,
-    minConsistency: 70,
-    minLive: 10,
-  },
-  {
-    level: 5,
-    name: 'Master',
+    name: 'Platinum',
     minGMV: 100000000,
-    minCampaigns: 50,
+    minCampaigns: 30,
     minOrders: 1000,
-    minConsistency: 80,
-    minLive: 20,
-  },
-  {
-    level: 6,
-    name: 'Legend',
-    minGMV: 250000000,
-    minCampaigns: 100,
-    minOrders: 2500,
-    minConsistency: 90,
-    minLive: 50,
+    minConsistency: 75,
+    minLive: 15,
   },
 ];
 
@@ -102,7 +75,7 @@ export class LevelsService {
     const previousLevel = creator.creator_level;
 
     // ── Calculate new level based on ALL factors ──
-    let newLevel = 0;
+    let newLevel = 1; // Minimum level is 1 (Bronze)
     for (const threshold of LEVEL_THRESHOLDS) {
       if (
         creator.gmv_total >= threshold.minGMV &&
@@ -116,8 +89,9 @@ export class LevelsService {
     }
 
     // ── Calculate progress % toward next level ──
+    const currentThresholdIdx = LEVEL_THRESHOLDS.findIndex(t => t.level === newLevel);
     const nextThreshold =
-      LEVEL_THRESHOLDS[newLevel + 1] ||
+      LEVEL_THRESHOLDS[currentThresholdIdx + 1] ||
       LEVEL_THRESHOLDS[LEVEL_THRESHOLDS.length - 1];
     const factors = [
       nextThreshold.minGMV > 0
@@ -183,7 +157,7 @@ export class LevelsService {
         data: {
           user_id: creatorId,
           title: '🎉 Level Up!',
-          message: `Selamat ${creator.user.name}! Kamu naik ke Level ${newLevel} (${LEVEL_THRESHOLDS[newLevel].name}). Campaign baru telah terbuka untukmu!`,
+          message: `Selamat ${creator.user.name}! Kamu naik ke Level ${newLevel} (${LEVEL_THRESHOLDS[newLevel - 1].name}). Campaign baru telah terbuka untukmu!`,
           type: 'LEVEL_UP',
           read_status: false,
         },
@@ -195,7 +169,7 @@ export class LevelsService {
           data: {
             user_id: creator.cm_id,
             title: '📈 Creator Level Up',
-            message: `${creator.user.name} naik ke Level ${newLevel} (${LEVEL_THRESHOLDS[newLevel].name}).`,
+            message: `${creator.user.name} naik ke Level ${newLevel} (${LEVEL_THRESHOLDS[newLevel - 1].name}).`,
             type: 'SYSTEM',
             read_status: false,
           },
@@ -208,7 +182,7 @@ export class LevelsService {
       creatorName: creator.user.name,
       previousLevel,
       newLevel,
-      levelName: LEVEL_THRESHOLDS[newLevel].name,
+      levelName: LEVEL_THRESHOLDS[newLevel - 1].name,
       nextLevelName: nextThreshold.name,
       progressPercentage: Math.round(progressPercentage * 100) / 100,
       leveledUp,
@@ -255,9 +229,9 @@ export class LevelsService {
 
     if (!progress || !creator) return null;
 
-    const currentThreshold = LEVEL_THRESHOLDS[progress.current_level];
+    const currentThreshold = LEVEL_THRESHOLDS.find(t => t.level === progress.current_level) || LEVEL_THRESHOLDS[0];
     const nextThreshold =
-      LEVEL_THRESHOLDS[progress.target_level] ||
+      LEVEL_THRESHOLDS.find(t => t.level === progress.target_level) ||
       LEVEL_THRESHOLDS[LEVEL_THRESHOLDS.length - 1];
 
     return {

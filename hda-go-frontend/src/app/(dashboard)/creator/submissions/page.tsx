@@ -41,10 +41,6 @@ export default function SubmissionsPage() {
   const [vtSubmitting, setVtSubmitting] = useState(false);
   const [vtSuccess, setVtSuccess] = useState('');
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
   const fetchData = async () => {
     setIsLoading(true);
     try {
@@ -67,6 +63,10 @@ export default function SubmissionsPage() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   // ── File Validation ──
   const validateFile = (file: File): string | null => {

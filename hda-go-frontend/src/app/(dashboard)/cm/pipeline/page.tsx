@@ -133,7 +133,7 @@ export default function PipelinePage() {
             </thead>
             <tbody className="divide-y divide-white/5">
               {filteredPipeline.length > 0 ? (
-                filteredPipeline.map((item: any) => {
+                filteredPipeline.map((item: any, idx: number) => {
                   const statusColor = item.status === 'ACTIVE' ? 'text-emerald-500 bg-emerald-500/10' : 
                                       item.status === 'NEAR_LEVEL_UP' ? 'text-blue-500 bg-blue-500/10' : 
                                       item.status === 'DORMANT' ? 'text-red-500 bg-red-500/10' : 
@@ -142,7 +142,7 @@ export default function PipelinePage() {
                   const progressVal = item.progress?.progress_percentage || 0;
 
                   return (
-                    <tr key={item.user_id || `item-${Math.random()}`} className="hover:bg-white/[0.02] transition-colors group">
+                    <tr key={item.user_id || `item-${idx}`} className="hover:bg-white/[0.02] transition-colors group">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <Avatar className="h-9 w-9 border border-white/10 group-hover:border-blue-500/50 transition-colors">

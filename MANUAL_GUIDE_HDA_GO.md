@@ -42,25 +42,66 @@ graph TD
 
 ## 📈 2. Sistem Tingkatan Level Kreator (Leveling Engine)
 
-Dashboard HDA GO menerapkan mesin kalkulasi level (*leveling engine*) otomatis yang melacak pertumbuhan performa kreator berdasarkan pencapaian **Total GMV (Gross Merchandise Value)** dan **Jumlah Pesanan (Orders)** nyata.
+Dashboard HDA GO menerapkan mesin kalkulasi level (*leveling engine*) otomatis yang melacak pertumbuhan performa kreator berdasarkan pencapaian **Total GMV (Gross Merchandise Value)**, **Jumlah Pesanan (Orders)**, **Konsistensi Posting**, dan **Partisipasi Live**.
 
 Tingkatan level kreator ini memengaruhi hak akses mereka dalam melamar kampanye brand premium dengan batas kuota minimum yang ditentukan oleh pemilik produk.
 
-### Kriteria Kasta Level Kreator HDA GO
-Sistem secara otomatis mengevaluasi pencapaian kreator dan mengelompokkannya ke dalam 6 tingkatan berikut:
+### Kriteria Kasta Level Kreator HDA GO (4-Level System)
+Sistem secara otomatis mengevaluasi pencapaian kreator dan mengelompokkannya ke dalam **4 tingkatan** berikut:
 
-| Level | Kasta / Sebutan | Syarat Akumulasi GMV | Syarat Jumlah Pesanan (*Orders*) | Keuntungan Utama |
-| :---: | :--- | :--- | :---: | :--- |
-| **0** | **Bronze** | Rp 0 | 0 | Dapat mendaftar kampanye dasar non-hotel. |
-| **1** | **Silver** | $\ge$ **Rp 1.500.000** | **15** | Akses ke kampanye dengan tipe komisi lebih besar. |
-| **2** | **Gold** | $\ge$ **Rp 7.500.000** | **75** | Akses kampanye Hotel kategori staycation standar. |
-| **3** | **Platinum** | $\ge$ **Rp 18.000.000** | **180** | Prioritas penunjukan kampanye barter stay mewah. |
-| **4** | **Diamond** | $\ge$ **Rp 50.000.000** | **500** | Biaya kerja sama fixed rate premium khusus. |
-| **5** | **Elite** | $\ge$ **Rp 150.000.000** | **1.500** | Akses penuh seluruh VIP campaigns dan bonus eksklusif. |
+| Level | Kasta / Sebutan | Syarat Min. GMV | Syarat Min. Kampanye | Syarat Min. Orders | Syarat Konsistensi | Syarat Live | Keuntungan Utama |
+| :---: | :--- | :--- | :---: | :---: | :---: | :---: | :--- |
+| **1** | **Bronze** 🟠 | Rp 0 | 0 | 0 | 0% | 0 | Level awal, akses kampanye dasar non-hotel. |
+| **2** | **Silver** ⚪ | $\ge$ **Rp 5.000.000** | **3** | **50** | **30%** | 0 | Akses ke kampanye komisi premium. |
+| **3** | **Gold** 🟡 | $\ge$ **Rp 25.000.000** | **10** | **250** | **55%** | **5** | Akses kampanye Hotel & staycation. |
+| **4** | **Platinum** 🔵 | $\ge$ **Rp 100.000.000** | **30** | **1.000** | **75%** | **15** | Akses penuh VIP campaigns & bonus eksklusif. |
 
 > [!TIP]
 > **WebSocket Live Confetti Celebration**:
 > Ketika seorang CM meningkatkan level kreator di panel bimbingan, sistem akan mengirimkan sinyal WebSocket ke peramban kreator secara instan. Dasbor kreator akan langsung memicu popup popup visual selebrasi confetti warna-warni yang meriah sebagai bentuk apresiasi atas kemajuan mereka!
+
+> [!NOTE]
+> **Level Awal Default**: Setiap kreator baru yang terdaftar (baik melalui self-registration maupun onboarding CM) akan otomatis ditetapkan pada **Level 1 (Bronze)**. Evaluasi level dilakukan secara otomatis setelah sinkronisasi GMV dari Google Sheets.
+
+---
+
+## 🆔 2.1. Sistem Identifikasi Creator ID & CM Code
+
+Dashboard HDA GO menggunakan **kode identifikasi unik** untuk menjaga konsistensi data walaupun terjadi perubahan nama kreator atau CM.
+
+### Creator ID (creator_code)
+- **Format**: Angka panjang numerik dari Google Sheet (misal: `7145781983607374874`) — umumnya merupakan TikTok User ID.
+- **Fungsi**: Sebagai **primary business key** untuk setiap kreator. Jika kreator mengganti nama atau username TikTok, data mereka tetap konsisten karena identifikasi menggunakan Creator ID, **bukan** nama.
+- **Wajib?**: **Tidak wajib** saat registrasi mandiri oleh kreator. Creator ID bersifat **opsional** dan akan diisi/diingatkan oleh CM.
+- **Status di Dashboard**:
+  - ✅ **Terdaftar di Sheet** — Creator ID sudah terisi dan tersinkron dengan Google Sheet.
+  - ⚠ **Belum Terdaftar** — Creator ID belum diisi, ditandai badge kuning pada tabel daftar kreator.
+
+### CM Code (cm_code)
+- **Format**: Kode unik teks untuk identifikasi Creator Manager.
+- **Fungsi**: Digunakan saat sinkronisasi Google Sheet untuk mencocokkan kolom **CM** pada sheet dengan pengguna CM di database. Sistem mencari berdasarkan `cm_code` terlebih dahulu, lalu *fallback* ke pencocokan nama.
+
+---
+
+## 📊 2.2. Pelacakan Performa Mingguan (Weekly Stats)
+
+Dashboard HDA GO kini melacak **GMV dan Orders per minggu** melalui model `CreatorWeeklyStats`. Data ini diperbarui setiap kali sinkronisasi Google Sheet dilakukan.
+
+### Detail Pelacakan
+| Field | Keterangan | Contoh |
+|-------|------------|--------|
+| `week_label` | Label minggu ISO | `2026-W24` |
+| `week_start` | Tanggal Senin awal minggu | `2026-06-09` |
+| `week_end` | Tanggal Minggu akhir minggu | `2026-06-15` |
+| `gmv` | Total GMV minggu tersebut | `Rp 3.500.000` |
+| `orders` | Total orders minggu tersebut | `12` |
+| `gmv_updated_at` | Timestamp terakhir data diperbarui | `2026-06-15 11:30:00` |
+| `source` | Sumber data | `SHEET_SYNC`, `MANUAL`, `SELF_REPORT` |
+
+### Akses Data Weekly Stats
+- **Endpoint API**: `GET /bd/creators/weekly-stats?week=2026-W24`
+- **Filter**: Dapat memfilter berdasarkan label minggu tertentu.
+- **Dropdown**: Menampilkan 12 minggu terakhir yang tersedia.
 
 ---
 
@@ -111,15 +152,60 @@ Pusat kendali operasional komersial untuk meninjau kampanye brand, mengelola jad
 > [!IMPORTANT]
 > Halaman utama BD berada di rute `/bd`. Ini adalah panel pengendali utama yang paling sering diakses oleh tim BD.
 
-#### 1. Integrasi Sinkronisasi Google Sheets Terpadu (`/bd`)
-*   **Fungsi**: Menghubungkan platform HDA GO langsung dengan lembar kerja Google Sheets Master untuk menyelaraskan pencapaian GMV dan pesanan kreator secara otomatis tanpa perantara file lokal.
+#### 1. Integrasi Sinkronisasi Google Sheets Terpadu — 12 Kolom (`/bd`)
+*   **Fungsi**: Menghubungkan platform HDA GO langsung dengan lembar kerja Google Sheets Master untuk menyelaraskan **seluruh 12 kolom data kreator** secara otomatis tanpa perantara file lokal.
+*   **12 Kolom yang Disinkronkan**:
+
+    | # | Kolom Sheet | Field Database | Keterangan |
+    |---|-------------|----------------|------------|
+    | A | **Fenoy** | `start_date` | Tanggal awal kontrak kerja sama |
+    | B | **Tanggal Expired** | `end_date` | Tanggal akhir kontrak |
+    | C | **Creator ID** | `creator_code` | Primary key bisnis (TikTok User ID) — **prioritas matching #1** |
+    | D | **Nama** | `User.name` | Nama asli kreator |
+    | E | **Creator Username** | `tiktok_username` | Username TikTok — **fallback matching #2** |
+    | F | **CM** | `cm_id` | Assignment CM (match via `cm_code` atau nama) |
+    | G | **Link Profile** | `tiktok_url` | URL profil TikTok |
+    | H | **Followers** | `tiktok_followers` | Jumlah pengikut TikTok |
+    | I | **Category Proper** | `niche` | Kategori/niche kreator |
+    | J | **Sales Level** | `creator_level` | Level 1-4 (Bronze/Silver/Gold/Platinum) |
+    | K | **GMV** (nama berubah per bulan) | `CreatorWeeklyStats.gmv` | GMV per minggu — kolom dikenali via **prefix "GMV"** (misal: "GMV Jun", "GMV Jul") |
+    | L | **Order** | `CreatorWeeklyStats.orders` | Jumlah pesanan per minggu |
+
 *   **Cara Penggunaan Fitur Sync**:
     1. Pastikan Google Sheet Master (`https://docs.google.com/spreadsheets/d/1Alp1XHgQtK8CnIW3fFD7p-8HXGDsA5IbYM4Da97btGc`) telah disetel dengan privasi publik (*Anyone with the link can view*).
     2. Pada dasbor BD, klik tombol **"Sinkronkan Google Sheet"**.
     3. Sistem akan memicu *backend parser* untuk mengunduh data langsung dari **GID 1505444998** (Tab lembar kerja *Creator HDA-GO*).
-    4. Sistem melakukan normalisasi data secara otomatis: membersihkan karakter simbol `@`, mencocokkan nama pengguna TikTok dengan database, menghitung perubahan data transaksi, dan memicu kalkulator level.
-    5. **Laci Detail Kreator Terupdate** (*Detail Drawer*): Klik laci interaktif ini untuk memunculkan daftar kreator yang datanya sukses diperbarui pada sinkronisasi terakhir, menampilkan rincian penambahan nominal GMV dan jumlah pesanan baru mereka secara jelas (misal: `safira nur hidayah (@jadikieu) | GMV +Rp 2.910.928 | Orders +1`).
-    6. **Laci Baris Data Dilewati** (*Skipped Rows Drawer*): Klik laci ini untuk mengaudit data mana saja yang diabaikan oleh sistem berserta alasannya (misal: `"Baris 5 dilewati: Username TikTok 'budi_review' tidak ditemukan dalam database HDA GO"`). Hal ini memudahkan audit koreksi kesalahan penulisan nama di Google Sheets.
+    4. Sistem melakukan normalisasi data secara otomatis:
+       - Mencocokkan kreator berdasarkan **Creator ID** (prioritas utama), lalu **username TikTok** sebagai *fallback*.
+       - Memperbarui **12 kolom biodata** (nama, followers, niche, level, kontrak, CM, dll).
+       - Menyimpan data **GMV & Orders ke Weekly Stats** dengan timestamp dan label minggu ISO.
+       - Memicu **kalkulator level** untuk setiap kreator yang datanya berubah.
+    5. **Badge Info Sync**: Setelah sinkronisasi, dashboard menampilkan:
+       - 📅 **Label Minggu** (misal: `2026-W24`) — Periode minggu data.
+       - 📊 **Nama Kolom GMV** (misal: `GMV Jun`) — Kolom mana yang dibaca dari Sheet.
+       - 🕐 **Timestamp Sync** — Waktu terakhir sinkronisasi dilakukan.
+    6. **Laci Detail Kreator Terupdate** (*Detail Drawer*): Klik laci interaktif ini untuk memunculkan daftar kreator yang datanya sukses diperbarui. Setiap kreator menampilkan:
+       - Rincian penambahan nominal GMV dan jumlah pesanan (misal: `GMV +Rp 2.910.928 | Orders +1`).
+       - **Badge perubahan field** — menunjukkan field mana saja yang berubah (misal: `followers`, `niche`, `sales_level`, `cm`, `start_date`).
+       - Jika hanya biodata yang berubah tanpa GMV, ditampilkan label `"Biodata updated"`.
+    7. **Laci Baris Data Dilewati** (*Skipped Rows Drawer*): Klik laci ini untuk mengaudit data mana saja yang diabaikan oleh sistem beserta alasannya (misal: `"Creator '7145781983607374874' tidak terdaftar di sistem HDA-GO"`).
+
+> [!IMPORTANT]
+> **Logika Matching Kreator**:
+> Saat sinkronisasi, sistem mencari kreator di database dengan urutan prioritas:
+> 1. **Creator ID** (`creator_code`) — cocokkan angka panjang dari kolom C Sheet.
+> 2. **Username TikTok** (`tiktok_username`) — *fallback* jika Creator ID tidak ditemukan.
+> Jika keduanya tidak cocok, baris tersebut dilewati dan masuk ke laci *Skipped Rows*.
+
+#### 1.1. Daftar Kreator Belum Terdaftar di Sheet
+*   **Endpoint**: `GET /bd/creators/unregistered`
+*   **Fungsi**: Menampilkan daftar kreator yang belum memiliki **Creator ID** atau belum tersinkron dengan Google Sheet.
+*   **Kegunaan**: Membantu BD/CM untuk mengidentifikasi kreator mana yang perlu ditambahkan Creator ID-nya.
+
+#### 1.2. Notifikasi Reminder Sinkronisasi Mingguan
+*   **Endpoint**: `POST /bd/creators/send-sync-reminder` (hanya ADMIN)
+*   **Fungsi**: Mengirimkan notifikasi reminder ke seluruh pengguna BD untuk melakukan sinkronisasi Google Sheet minggu ini.
+*   **Format Pesan**: *"📊 Reminder: Silakan lakukan sinkronisasi Google Sheet untuk memperbarui data GMV & Orders kreator minggu ini."*
 
 #### 2. Pengimpor Spreadsheet Berkas Lokal (`/bd`)
 *   **Fungsi**: Sebagai cadangan jika koneksi Google Sheets API mengalami gangguan, BD dapat menyeret berkas Excel/CSV lokal ke area dropzone.
@@ -153,11 +239,14 @@ Garda terdepan yang bertugas mendampingi kreator, memastikan kepatuhan video ter
 #### 1. Registrasi & Onboarding Kreator Baru (`/cm/creators`)
 *   **Fungsi**: Mendaftarkan kreator baru ke ekosistem HDA GO dan membuatkan mereka kredensial login.
 *   **Formulir Onboarding Lengkap**:
+    *   **Creator ID (Opsional)**: Kode unik dari Google Sheet (misal: `7145781983607374874`). Jika belum tersedia, bisa dikosongkan dan diisi nanti oleh CM. Placeholder: *"Akan diisi/diingatkan oleh CM"*.
     *   **Identitas**: Nama Lengkap, Nomor WhatsApp, Jenis Kelamin, Tanggal Lahir, Kota Domisili.
     *   **Media Sosial**: Username TikTok, Link Profil TikTok, Jumlah Followers, Rata-rata Views.
     *   **Niche & Pengalaman**: Kategori konten (FNB, Beauty, Fashion, Travel), Pengalaman Afiliasi (Baru, Pernah, Aktif).
     *   **Kontrak Bulanan**: SOW Target Video bulanan (misal: 4 video wajib) dan target nominal GMV.
 *   **Kredensial Otomatis**: Setelah disimpan, akun pengguna baru akan otomatis terbuat di database dengan sandi bawaan default: `HdaGo123!`.
+*   **Default Level**: Kreator baru otomatis ditetapkan pada **Level 1 (Bronze)**.
+*   **Sheet Status**: Jika Creator ID diisi saat onboarding, kreator langsung ditandai sebagai `sheet_registered = true`.
 
 #### 2. Dasbor Pemantauan Bimbingan (`/cm/monitoring`)
 *   **Fungsi**: Melihat secara komprehensif tingkat kepatuhan dan keaktifan para kreator di bawah bimbingan CM tersebut.
@@ -190,8 +279,11 @@ Dasbor personal bagi konten kreator yang berfungsi sebagai pusat motivasi, pelap
 #### 1. Panel Ringkasan Kemajuan Level (`/creator/overview`)
 *   **Fungsi**: Memvisualisasikan posisi kasta level kreator saat ini dan apa saja syarat konkret yang harus dicapai untuk naik tingkat.
 *   **Visual Indicator**:
+    *   **Judul Level Berwarna Gradien**: Header menampilkan level dengan nama kasta dan warna gradient yang sesuai (misal: *"Level 3 — Gold"* dengan gradasi kuning-emas).
+    *   **Warna Level**: Bronze (oranye), Silver (abu-abu), Gold (kuning-emas), Platinum (biru-cyan).
     *   **Progress Bar Dinamis**: Persentase kemajuan menuju level berikutnya.
-    *   **Milestones Target**: Menampilkan angka sisa GMV kurang berapa rupiah lagi, dan sisa pesanan kurang berapa buah lagi untuk naik tingkat (misal: *"Kurang Rp 2.450.000 GMV & 12 Orders lagi untuk naik ke Level 2 (Gold)!"*).
+    *   **Milestones Target**: Menampilkan angka sisa GMV kurang berapa rupiah lagi, dan sisa pesanan kurang berapa buah lagi untuk naik tingkat (misal: *"Kurang Rp 2.450.000 GMV & 12 Orders lagi untuk naik ke Level 3 (Gold)!"*).
+    *   **Status Kontrak**: Badge kontrak aktif/segera berakhir/habis langsung ditampilkan di header level.
 
 #### 2. Portal Pencarian Kampanye Terbuka (`/creator/campaign`)
 *   **Fungsi**: Menelusuri seluruh kampanye yang sedang aktif dibuka oleh Brand & BD.
@@ -351,11 +443,24 @@ Berikut adalah visualisasi alur interaksi antarkomponen dalam mengeksekusi opera
 *   **Deskripsi Masalah**: Ketika BD mengklik tombol "Sinkronkan Google Sheet", sistem memunculkan pesan eror dan data GMV kreator tidak terperbarui.
 *   **Langkah Diagnosis & Penanganan**:
     1. **Verifikasi Privasi Spreadsheet**: Buka Google Sheet Master Anda di tab penyamaran (*incognito*). Pastikan setelan berbagi (*Share settings*) diatur ke **"Anyone with the link can view"** (Siapa saja yang memiliki link dapat melihat). Jika disetel privat, backend server tidak dapat mengunduh data CSV.
-    2. **Periksa Struktur Kolom**: Algoritma pencarian baris sistem HDA GO sangat bergantung pada header kolom baris pertama sheet. Pastikan Anda tidak mengubah atau salah mengetik nama kolom utama berikut:
-        *   Kolom Nama Pengguna: harus bertuliskan nama `Username`, `Creator`, atau `Nama`.
-        *   Kolom Penjualan: harus bertuliskan nama `GMV`, `Omset`, atau `Penjualan`.
-        *   Kolom Transaksi: harus bertuliskan nama `Order`, `Orders`, atau `Pesanan`.
+    2. **Periksa Struktur Kolom**: Algoritma pencarian sistem HDA GO mendeteksi **12 kolom utama** berdasarkan header baris pertama sheet. Pastikan Anda tidak mengubah atau salah mengetik nama kolom berikut:
+        *   `Fenoy` — Tanggal awal kontrak.
+        *   `Tanggal Expired` — Tanggal akhir kontrak.
+        *   `Creator ID` — Kode unik kreator (angka panjang TikTok User ID).
+        *   `Nama` — Nama asli kreator.
+        *   `Creator Username` — Username TikTok kreator.
+        *   `CM` — Nama atau kode CM yang mengelola.
+        *   `Link Profile` — URL profil TikTok.
+        *   `Followers` — Jumlah pengikut.
+        *   `Category Proper` — Niche/kategori konten.
+        *   `Sales Level` — Level kreator (1-4).
+        *   `GMV*` — Kolom GMV (nama boleh berubah tiap bulan, misal: `GMV Jun`, `GMV Jul`). Sistem mendeteksi kolom apapun yang **diawali** kata `GMV`.
+        *   `Order` / `Orders` — Jumlah pesanan.
     3. **Periksa GID Sheet**: Sistem disetel untuk mengunduh spesifik tab *Creator HDA-GO* yang memiliki GID `1505444998`. Jangan menghapus atau memindahkan tab ini.
+    4. **Creator Tidak Cocok (Skipped Rows)**: Jika banyak baris dilewati, periksa:
+        *   Apakah **Creator ID** di sheet sudah diisi ke database dashboard (via CM onboarding atau edit profil).
+        *   Apakah **username TikTok** di sheet sama persis dengan yang terdaftar di dashboard (case-insensitive).
+        *   Kreator yang tidak cocok akan ditandai di laci *Skipped Rows* dengan alasan detail.
 
 ### 3. Mesin OCR Gagal Membaca Nominal Struk Belanja
 *   **Deskripsi Masalah**: Gambar struk yang diunggah kreator menghasilkan pembacaan teks kosong atau nilai GMV menjadi Rp 0 pada layar verifikasi CM.

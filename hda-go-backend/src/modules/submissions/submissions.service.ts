@@ -32,8 +32,6 @@ export class SubmissionsService {
     file: Express.Multer.File,
     dto: CreateSubmissionUploadDto,
   ) {
-    const totalSow = parseInt(dto.total_sow, 10) || 1;
-
     // 1. Verify creator is participant of this campaign
     const participant = await this.prisma.campaignParticipant.findUnique({
       where: {
@@ -131,7 +129,19 @@ export class SubmissionsService {
       }
 
       const filename = submission.tiktok_url.replace('/api/uploads/', '');
-      const filePath = path.join(process.cwd(), 'tmp_uploads', filename);
+      const baseDir = path.resolve(process.cwd(), 'tmp_uploads');
+      const filePath = path.resolve(baseDir, filename);
+
+      // Path traversal guard: resolved path must stay inside tmp_uploads/
+      if (!filePath.startsWith(baseDir + path.sep) && filePath !== baseDir) {
+        this.logger.warn(
+          `Path traversal attempt detected for submission ${submission.id}: ${filename}`,
+        );
+        return {
+          url: submission.tiktok_url,
+          fileId: submission.gdrive_file_id,
+        };
+      }
 
       if (!fs.existsSync(filePath)) {
         this.logger.warn(

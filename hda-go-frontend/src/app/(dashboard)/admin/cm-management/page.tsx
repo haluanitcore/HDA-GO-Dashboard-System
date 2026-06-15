@@ -9,10 +9,6 @@ export default function AdminCMManagementPage() {
   const [cms, setCms] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    fetchCMs();
-  }, []);
-
   const fetchCMs = async () => {
     try {
       const res: any = await api.get('/cm/creators/list-all-cms');
@@ -23,6 +19,10 @@ export default function AdminCMManagementPage() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchCMs();
+  }, []);
 
   const getLoadIndicator = (count: number) => {
     if (count < 25) return { label: 'LOW', color: 'text-emerald-500', bg: 'bg-emerald-500/10', bar: 'bg-emerald-500', width: `${Math.max((count/100)*100, 5)}%` };

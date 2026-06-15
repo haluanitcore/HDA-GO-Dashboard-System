@@ -118,7 +118,7 @@ describe('GmvService', () => {
       ]);
       mockLevelsService.evaluateLevel.mockResolvedValue({ leveledUp: false });
 
-      const result = await service.verifyGmv('o1', 'cm-1', {
+      await service.verifyGmv('o1', 'cm-1', {
         action: 'VERIFY',
       });
 

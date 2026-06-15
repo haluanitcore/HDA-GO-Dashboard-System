@@ -1,6 +1,6 @@
 # HDA GO — Creator Growth OS
 
-**Generated:** 2026-05-13 | **Commit:** `aa264da` | **Branch:** `main`
+**Generated:** 2026-06-15 | **Branch:** `main`
 
 ## OVERVIEW
 Two-package monorepo for a TikTok/Shopee Live creator growth platform (Indonesia). Backend: **NestJS + Prisma + SQLite + Socket.io**. Frontend: **Next.js 16 (App Router) + React 19 + Tailwind v4 + Zustand**. Role-based dashboards: `ADMIN`, `CM` (Creator Manager), `CREATOR`, `BRAND`, `EXECUTIVE`.
@@ -37,6 +37,11 @@ Before editing anything unfamiliar: run `git ls-tree -r HEAD --name-only | rg <p
 - **GMV** = Gross Merchandise Value, displayed `Rp <amount>` with `toLocaleString()`
 - **SOW** = Statement of Work (post count per campaign)
 - **CM** = Creator Manager (the human who manages creators)
+- **Creator ID** (`creator_code`) = Unique numeric business key from Google Sheet (e.g. TikTok User ID `7145781983607374874`). Used as primary matching key during Sheet sync.
+- **CM Code** (`cm_code`) = Unique code for CM identification during Sheet sync. Matched before falling back to name.
+- **Weekly Stats** = `CreatorWeeklyStats` model tracking GMV/Orders per ISO week (e.g. `2026-W24`). Updated via Sheet sync.
+- **Sheet Registered** (`sheet_registered`) = Boolean flag indicating if a creator has been matched/synced with Google Sheet.
+- **Levels** = 4-level system (1: Bronze, 2: Silver, 3: Gold, 4: Platinum). Default for new creators: Level 1.
 - **Pipeline statuses**: `ACTIVE | LOW_ACTIVITY | DORMANT | NEAR_LEVEL_UP` (rules in [cm.service.ts#L81-L99](file:///D:/Dashboard%20HDA%20GO/Dashboard%20HDA%20GO/hda-go-backend/src/modules/cm/cm.service.ts#L81-L99))
 - **QC** = Quality Check (submission review state `QC_REVIEW`)
 - **Notification title format**: `CAMPAIGN_REC::<campaign_id>` — embedded ID, frontend parses ([cm.service.ts#L147](file:///D:/Dashboard%20HDA%20GO/Dashboard%20HDA%20GO/hda-go-backend/src/modules/cm/cm.service.ts#L147))

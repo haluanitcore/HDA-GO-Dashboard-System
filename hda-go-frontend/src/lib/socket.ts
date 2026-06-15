@@ -27,11 +27,15 @@ export function connectSocket(userId: string): Socket {
   });
 
   socket.on('connect', () => {
-    console.log('🔌 Socket connected:', socket?.id);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔌 Socket connected:', socket?.id);
+    }
   });
 
   socket.on('disconnect', () => {
-    console.log('🔌 Socket disconnected');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔌 Socket disconnected');
+    }
   });
 
   return socket;

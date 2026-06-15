@@ -24,7 +24,7 @@ export default function OnboardCreatorPage() {
 
   const [formData, setFormData] = useState({
     // Step 1
-    name: '', email: '', phone_number: '', gender: 'MALE', birth_date: '', domicile: '',
+    name: '', email: '', phone_number: '', gender: 'MALE', birth_date: '', domicile: '', creator_code: '',
     // Step 2
     tiktok_username: '', tiktok_url: '', tiktok_followers: '', avg_views: '', niche: [] as string[], affiliate_exp: 'BARU',
     // Step 3
@@ -59,6 +59,7 @@ export default function OnboardCreatorPage() {
     try {
       const payload = {
         ...formData,
+        creator_code: formData.creator_code || undefined,
         tiktok_followers: Number(formData.tiktok_followers),
         avg_views: Number(formData.avg_views),
         sow_per_month: Number(formData.sow_per_month),
@@ -168,6 +169,11 @@ export default function OnboardCreatorPage() {
             {currentStep === 1 && (
               <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
                 <div className="grid grid-cols-2 gap-6">
+                  <div className="col-span-2 space-y-2">
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Creator ID (Opsional)</label>
+                    <input name="creator_code" value={formData.creator_code} onChange={handleChange} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Contoh: 7145781983607374874 (Akan diisi/diingatkan oleh CM)" />
+                    <p className="text-[10px] text-gray-600 font-medium">Kode unik dari Google Sheet. Jika belum tersedia, bisa dikosongkan dan diisi nanti oleh CM.</p>
+                  </div>
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Nama Lengkap *</label>
                     <input required name="name" value={formData.name} onChange={handleChange} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Sesuai KTP" />

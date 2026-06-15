@@ -32,10 +32,6 @@ export default function CreatorAnalytics() {
   const [streakList, setStreakList] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
   const loadData = async () => {
     setIsLoading(true);
     try {
@@ -60,6 +56,10 @@ export default function CreatorAnalytics() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   if (isLoading) {
     return (
