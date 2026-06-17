@@ -13,6 +13,11 @@ import { RolesGuard } from '../../common/roles.guard';
 import { Roles } from '../../common/roles.decorator';
 import { Role } from '../../common/roles.enum';
 import { CmCreatorsService } from './cm-creators.service';
+import {
+  OnboardCreatorDto,
+  UpdateCreatorDto,
+  TransferCreatorDto,
+} from './dto/cm-creators.dto';
 
 @Controller('cm/creators')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -22,8 +27,8 @@ export class CmCreatorsController {
   // POST /cm/creators/onboard — CM mendaftarkan creator baru
   @Post('onboard')
   @Roles(Role.CM, Role.ADMIN)
-  onboardCreator(@Req() req: any, @Body() body: any) {
-    return this.cmCreatorsService.onboardCreator(req.user.userId, body);
+  onboardCreator(@Req() req: any, @Body() dto: OnboardCreatorDto) {
+    return this.cmCreatorsService.onboardCreator(req.user.userId, dto);
   }
 
   // GET /cm/creators — Daftar semua creator milik CM ini
@@ -50,8 +55,8 @@ export class CmCreatorsController {
   // PATCH /cm/creators/:id — Edit biodata creator
   @Patch(':id')
   @Roles(Role.CM, Role.ADMIN)
-  updateCreator(@Param('id') creatorId: string, @Body() body: any) {
-    return this.cmCreatorsService.updateCreator(creatorId, body);
+  updateCreator(@Param('id') creatorId: string, @Body() dto: UpdateCreatorDto) {
+    return this.cmCreatorsService.updateCreator(creatorId, dto);
   }
 
   // POST /cm/creators/:id/transfer — Transfer creator ke CM lain
@@ -60,13 +65,13 @@ export class CmCreatorsController {
   transferCreator(
     @Req() req: any,
     @Param('id') creatorId: string,
-    @Body() body: { target_cm_id: string; reason: string },
+    @Body() dto: TransferCreatorDto,
   ) {
     return this.cmCreatorsService.transferCreator(
       creatorId,
       req.user.userId,
-      body.target_cm_id,
-      body.reason,
+      dto.target_cm_id,
+      dto.reason,
     );
   }
 }

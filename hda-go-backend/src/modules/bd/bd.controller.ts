@@ -22,7 +22,9 @@ import {
   BDEditCampaignDto,
   BDAssignBrandDto,
   BDSubmitDealDto,
+  CreateHotelDto,
 } from './dto/bd-review.dto';
+import { CreateHotelVisitDto, UpdateHotelVisitDto } from './dto/hotel-visit.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { multerConfig } from '../../config/upload.config';
 
@@ -182,21 +184,21 @@ export class BdController {
   // POST /bd/hotels — Create single hotel partner
   @Post('hotels')
   @Roles(Role.BD, Role.ADMIN)
-  createHotel(@Body() body: any) {
-    return this.bdService.createHotel(body);
+  createHotel(@Body() dto: CreateHotelDto) {
+    return this.bdService.createHotel(dto);
   }
 
   // POST /bd/hotel-visits — Schedule hotel visit
   @Post('hotel-visits')
   @Roles(Role.BD, Role.ADMIN)
-  createHotelVisit(@Body() body: any) {
+  createHotelVisit(@Body() body: CreateHotelVisitDto) {
     return this.bdService.createHotelVisit(body);
   }
 
   // PATCH /bd/hotel-visits/:id — Update hotel visit status
   @Patch('hotel-visits/:id')
   @Roles(Role.BD, Role.ADMIN)
-  updateHotelVisit(@Param('id') id: string, @Body() body: any) {
+  updateHotelVisit(@Param('id') id: string, @Body() body: UpdateHotelVisitDto) {
     return this.bdService.updateHotelVisitStatus(id, body.status, body.notes);
   }
 

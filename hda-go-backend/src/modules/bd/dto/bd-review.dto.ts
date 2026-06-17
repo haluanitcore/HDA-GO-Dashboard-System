@@ -5,6 +5,10 @@ import {
   IsInt,
   IsDateString,
   IsNumber,
+  MaxLength,
+  IsUrl,
+  IsArray,
+  Min,
 } from 'class-validator';
 
 // ══════════════════════════════════════════════════
@@ -15,16 +19,19 @@ import {
 export class BDReviewDto {
   @IsOptional()
   @IsString()
+  @MaxLength(2000)
   notes?: string;
 }
 
 export class BDEditCampaignDto {
   @IsOptional()
   @IsString()
+  @MaxLength(255)
   title?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(100)
   category?: string;
 
   @IsOptional()
@@ -37,6 +44,7 @@ export class BDEditCampaignDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(100)
   reward_type?: string;
 
   @IsOptional()
@@ -53,15 +61,18 @@ export class BDEditCampaignDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(500)
   brief_url?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(2000)
   notes?: string; // Edit reason / notes
 
   // Phase 2 fields
   @IsOptional()
   @IsString()
+  @MaxLength(100)
   collaboration_type?: string; // VISIT_ONLY, BARTER_STAY, BARTER_DINING
 
   @IsOptional()
@@ -74,24 +85,29 @@ export class BDEditCampaignDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(2000)
   description?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(255)
   pic_contact?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(2000)
   brief_text?: string;
 }
 
 export class BDAssignBrandDto {
   @IsNotEmpty()
   @IsString()
+  @MaxLength(100)
   brand_user_id: string;
 
   @IsNotEmpty()
   @IsString()
+  @MaxLength(100)
   bd_user_id: string;
 }
 
@@ -103,14 +119,17 @@ export class BDAssignBrandDto {
 export class BDSubmitDealDto {
   @IsNotEmpty()
   @IsString()
+  @MaxLength(255)
   title: string;
 
   @IsNotEmpty()
   @IsString()
+  @MaxLength(100)
   category: string; // HOTEL, FNB, TTD, LIVE, BEAUTY, TECH
 
   @IsNotEmpty()
   @IsString()
+  @MaxLength(100)
   brand_id: string;
 
   @IsOptional()
@@ -119,6 +138,7 @@ export class BDSubmitDealDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(100)
   reward_type?: string;
 
   @IsOptional()
@@ -135,10 +155,12 @@ export class BDSubmitDealDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(500)
   brief_url?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(100)
   collaboration_type?: string;
 
   @IsOptional()
@@ -151,13 +173,67 @@ export class BDSubmitDealDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(2000)
   description?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(255)
   pic_contact?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(2000)
   brief_text?: string;
+}
+
+export class CreateHotelDto {
+  @IsNotEmpty()
+  @IsString()
+  @MaxLength(255)
+  name: string;
+
+  @IsNotEmpty()
+  @IsString()
+  @MaxLength(255)
+  location: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  city?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  category?: string;
+
+  @IsOptional()
+  @IsArray()
+  facilities?: string[];
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  contact?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  province?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  quota?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  pic_name?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  pic_phone?: string;
 }

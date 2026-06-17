@@ -52,7 +52,7 @@ describe('SettingsController', () => {
   });
 
   it('updateNotifications returns ok stub', () => {
-    const result = controller.updateNotifications(mockReq, { email: true });
-    expect(result).toEqual({ message: 'ok', data: { email: true } });
+    const result = controller.updateNotifications();
+    expect(result).toEqual({ message: 'ok' });
   });
 });

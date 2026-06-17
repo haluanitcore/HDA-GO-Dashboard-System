@@ -12,6 +12,7 @@ import { RolesGuard } from '../../common/roles.guard';
 import { Roles } from '../../common/roles.decorator';
 import { Role } from '../../common/roles.enum';
 import { CmService } from './cm.service';
+import { PushRecommendationDto, AssignCreatorDto } from './dto/cm-creators.dto';
 
 @Controller('cm')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -47,12 +48,12 @@ export class CmController {
   @Roles(Role.CM, Role.ADMIN)
   pushRecommendation(
     @Req() req: any,
-    @Body() body: { creator_id: string; campaign_id: string },
+    @Body() dto: PushRecommendationDto,
   ) {
     return this.cmService.pushCampaignRecommendation(
       req.user.userId,
-      body.creator_id,
-      body.campaign_id,
+      dto.creator_id,
+      dto.campaign_id,
     );
   }
 
@@ -80,7 +81,7 @@ export class CmController {
   // POST /cm/assign — Assign creator to CM
   @Post('assign')
   @Roles(Role.ADMIN)
-  assignCreator(@Body() body: { creator_id: string; cm_id: string }) {
-    return this.cmService.assignCreator(body.creator_id, body.cm_id);
+  assignCreator(@Body() dto: AssignCreatorDto) {
+    return this.cmService.assignCreator(dto.creator_id, dto.cm_id);
   }
 }

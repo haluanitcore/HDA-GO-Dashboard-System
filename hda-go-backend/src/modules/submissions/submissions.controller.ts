@@ -21,9 +21,11 @@ import {
   CreateSubmissionUploadDto,
   ReviewSubmissionDto,
   BulkReviewDto,
+  SubmitVtLinkDto,
 } from './dto/submission.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { multerConfig, validateFileSize } from '../../config/upload.config';
+import { Throttle } from '@nestjs/throttler';
 
 @Controller('submissions')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -32,6 +34,7 @@ export class SubmissionsController {
 
   // POST /submissions/upload — Creator uploads file directly
   @Post('upload')
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
   @Roles(Role.CREATOR)
   @UseInterceptors(FileInterceptor('file', multerConfig))
   uploadSubmission(
@@ -52,15 +55,15 @@ export class SubmissionsController {
   // PATCH /submissions/:id/review — CM reviews (QC & Approval / Revision)
   @Patch(':id/review')
   @Roles(Role.CM, Role.ADMIN, Role.QC)
-  review(@Param('id') id: string, @Body() dto: ReviewSubmissionDto) {
-    return this.submissionsService.review(id, dto);
+  review(@Req() req: any, @Param('id') id: string, @Body() dto: ReviewSubmissionDto) {
+    return this.submissionsService.review(id, dto, req.user.userId);
   }
 
   // PATCH /submissions/bulk-review — CM reviews multiple submissions in batch
   @Patch('bulk-review')
   @Roles(Role.CM, Role.ADMIN, Role.QC)
-  bulkReview(@Body() dto: BulkReviewDto) {
-    return this.submissionsService.bulkReview(dto);
+  bulkReview(@Req() req: any, @Body() dto: BulkReviewDto) {
+    return this.submissionsService.bulkReview(dto, req.user.userId);
   }
 
   // PATCH /submissions/:id/posted — Mark as posted (content live)
@@ -129,12 +132,12 @@ export class SubmissionsController {
   submitVtLink(
     @Req() req: any,
     @Param('id') id: string,
-    @Body() body: { tiktok_vt_link: string },
+    @Body() dto: SubmitVtLinkDto,
   ) {
     return this.submissionsService.submitVtLink(
       id,
       req.user.userId,
-      body.tiktok_vt_link,
+      dto.tiktok_vt_link,
     );
   }
 }

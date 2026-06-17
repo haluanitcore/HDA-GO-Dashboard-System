@@ -116,7 +116,10 @@ export class SettingsService {
   }
 
   async getGlobalSettings() {
-    const settings = await this.prisma.systemSetting.findMany();
+    const settings = await this.prisma.systemSetting.findMany({
+      take: 500,
+      orderBy: { key: 'asc' },
+    });
     const result: Record<string, string> = {};
     for (const s of settings) {
       result[s.key] = s.value;

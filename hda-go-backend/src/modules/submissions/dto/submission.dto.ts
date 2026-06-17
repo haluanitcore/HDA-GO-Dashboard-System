@@ -4,6 +4,8 @@ import {
   IsOptional,
   IsNumber,
   IsArray,
+  IsIn,
+  MaxLength,
 } from 'class-validator';
 
 export class CreateSubmissionUploadDto {
@@ -19,11 +21,18 @@ export class CreateSubmissionUploadDto {
 export class ReviewSubmissionDto {
   @IsNotEmpty()
   @IsString()
+  @IsIn(['APPROVED', 'REVISION', 'REJECTED'])
   status: string; // APPROVED, REVISION, REJECTED
 
   @IsOptional()
   @IsString()
+  @MaxLength(1000)
   qc_notes?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  notes?: string;
 
   @IsOptional()
   @IsNumber()
@@ -45,9 +54,7 @@ export class ReviewSubmissionDto {
   @IsString()
   schedule_posting?: string; // ISO date string
 
-  @IsOptional()
-  @IsString()
-  reviewer_id?: string;
+
 }
 
 export class BulkReviewDto {
@@ -58,11 +65,18 @@ export class BulkReviewDto {
 
   @IsNotEmpty()
   @IsString()
+  @IsIn(['APPROVED', 'REVISION', 'REJECTED'])
   status: string; // APPROVED, REVISION, REJECTED
 
   @IsOptional()
   @IsString()
+  @MaxLength(1000)
   qc_notes?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  notes?: string;
 
   @IsOptional()
   @IsString()
@@ -76,7 +90,12 @@ export class BulkReviewDto {
   @IsString()
   schedule_posting?: string; // ISO date string
 
-  @IsOptional()
+
+}
+
+export class SubmitVtLinkDto {
+  @IsNotEmpty()
   @IsString()
-  reviewer_id?: string;
+  @MaxLength(500)
+  tiktok_vt_link: string;
 }

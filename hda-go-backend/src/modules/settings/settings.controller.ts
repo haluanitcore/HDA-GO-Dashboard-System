@@ -11,6 +11,7 @@ import { SettingsService } from './settings.service';
 import { RolesGuard } from '../../common/roles.guard';
 import { Roles } from '../../common/roles.decorator';
 import { Role } from '../../common/roles.enum';
+import { UpdateSettingsProfileDto, UpdatePasswordDto } from './dto/update-profile.dto';
 
 @Controller('settings')
 @UseGuards(AuthGuard('jwt'))
@@ -23,20 +24,20 @@ export class SettingsController {
   }
 
   @Patch('profile')
-  updateProfile(@Request() req, @Body() data: any) {
+  updateProfile(@Request() req, @Body() data: UpdateSettingsProfileDto) {
     return this.settingsService.updateProfile(req.user.userId, data);
   }
 
   @Patch('password')
-  updatePassword(@Request() req, @Body() data: any) {
+  updatePassword(@Request() req, @Body() data: UpdatePasswordDto) {
     return this.settingsService.updatePassword(req.user.userId, data);
   }
 
   @Patch('notifications')
-  updateNotifications(@Request() req, @Body() data: any) {
+  updateNotifications() {
     // Notifications preferences are stored in localStorage on the frontend
     // This endpoint is a no-op stub kept for future server-side preference storage
-    return { message: 'ok', data };
+    return { message: 'ok' };
   }
 
   @Get('global')
@@ -49,7 +50,7 @@ export class SettingsController {
   @Patch('global')
   @UseGuards(RolesGuard)
   @Roles(Role.ADMIN)
-  updateGlobalSettings(@Body() data: any) {
+  updateGlobalSettings(@Body() data: Record<string, string>) {
     return this.settingsService.updateGlobalSettings(data);
   }
 }

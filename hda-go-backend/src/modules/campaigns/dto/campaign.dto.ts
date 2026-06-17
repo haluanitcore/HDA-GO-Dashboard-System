@@ -5,6 +5,7 @@ import {
   IsDateString,
   IsOptional,
   IsIn,
+  MaxLength,
 } from 'class-validator';
 
 export const CAMPAIGN_CATEGORIES = [
@@ -19,6 +20,7 @@ export const CAMPAIGN_CATEGORIES = [
 export class CreateCampaignDto {
   @IsNotEmpty()
   @IsString()
+  @MaxLength(255)
   title: string;
 
   @IsNotEmpty()
@@ -30,6 +32,7 @@ export class CreateCampaignDto {
 
   @IsNotEmpty()
   @IsString()
+  @MaxLength(100)
   brand_id: string;
 
   @IsInt()
@@ -37,6 +40,7 @@ export class CreateCampaignDto {
 
   @IsNotEmpty()
   @IsString()
+  @MaxLength(100)
   reward_type: string; // FIXED, COMMISSION
 
   @IsOptional()
@@ -48,6 +52,7 @@ export class CreateCampaignDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(100)
   status?: string;
 
   @IsOptional()
@@ -55,6 +60,7 @@ export class CreateCampaignDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(500)
   brief_url?: string; // PDF brief attachment link
 
   @IsOptional()
@@ -63,6 +69,7 @@ export class CreateCampaignDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(100)
   collaboration_type?: string;
 
   @IsOptional()
@@ -71,30 +78,36 @@ export class CreateCampaignDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(2000)
   description?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(255)
   pic_contact?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(2000)
   brief_text?: string;
 }
 
 export class JoinCampaignDto {
   @IsNotEmpty()
   @IsString()
+  @MaxLength(100)
   campaign_id: string;
 }
 
 export class CampaignFilterDto {
   @IsOptional()
   @IsString()
+  @MaxLength(100)
   category?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(100)
   status?: string;
 
   @IsOptional()
