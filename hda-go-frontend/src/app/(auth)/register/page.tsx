@@ -122,7 +122,7 @@ export default function RegisterPage() {
                 <div className="relative">
                   <input
                     type={showPassword ? 'text' : 'password'}
-                    placeholder="Min. 6 karakter"
+                    placeholder="Min. 8 karakter"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="glass-input w-full px-4 py-3 pr-12 rounded-xl text-sm text-white placeholder:text-gray-600 focus:outline-none"

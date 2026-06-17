@@ -8,18 +8,19 @@ import { Navbar } from '@/components/shared/Navbar';
 import { Loader2 } from 'lucide-react';
 
 export default function QCLayout({ children }: { children: React.ReactNode }) {
-  const { user, isAuthenticated } = useAuthStore();
+  const { user, isAuthenticated, isInitialized } = useAuthStore();
   const router = useRouter();
 
   useEffect(() => {
+    if (!isInitialized) return;
     if (!isAuthenticated) {
       router.push('/login');
     } else if (user?.role !== 'QC' && user?.role !== 'CM' && user?.role !== 'ADMIN') {
-      router.push(`/${user!.role.toLowerCase()}`);
+      router.push(`/${user?.role?.toLowerCase() ?? 'login'}`);
     }
-  }, [isAuthenticated, user, router]);
+  }, [isAuthenticated, isInitialized, user, router]);
 
-  if (!isAuthenticated || (user?.role !== 'QC' && user?.role !== 'CM' && user?.role !== 'ADMIN')) {
+  if (!isInitialized || !isAuthenticated || (user?.role !== 'QC' && user?.role !== 'CM' && user?.role !== 'ADMIN')) {
     return (
       <div className="h-screen w-screen flex items-center justify-center bg-[#0C0E10]">
         <Loader2 className="h-8 w-8 text-[#F6D145] animate-spin" />
