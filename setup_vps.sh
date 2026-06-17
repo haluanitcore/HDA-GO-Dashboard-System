@@ -147,6 +147,7 @@ DATABASE_URL="postgresql://hdago_admin:$DB_PASS@localhost:5432/hdago_prod?schema
 JWT_SECRET="$JWT_SEC"
 JWT_REFRESH_SECRET="$JWT_REF"
 PORT=4000
+NODE_ENV=production
 CORS_ORIGIN="https://$DOMAIN,https://www.$DOMAIN"
 EOT
 
@@ -210,9 +211,19 @@ echo -e "\n\e[33m[7/8] Configuring Nginx Web Server Reverse Proxy...\e[0m"
 NGINX_CONF="server {
     listen 80;
     server_name $DOMAIN www.$DOMAIN;
+    # Redirect all HTTP to HTTPS — Certbot will manage this block
+    return 301 https://\$host\$request_uri;
+}
 
-    # Security headers
-    add_header Strict-Transport-Security \"max-age=31536000; includeSubDomains; preload\" always;
+server {
+    listen 443 ssl;
+    server_name $DOMAIN www.$DOMAIN;
+
+    # SSL certificates managed by Certbot
+    # ssl_certificate and ssl_certificate_key will be injected by certbot --nginx
+
+    # Security headers — HSTS only valid on HTTPS
+    add_header Strict-Transport-Security \"max-age=31536000; includeSubDomains\" always;
     add_header X-Frame-Options \"DENY\" always;
     add_header X-Content-Type-Options \"nosniff\" always;
     add_header Referrer-Policy \"strict-origin-when-cross-origin\" always;
@@ -270,7 +281,7 @@ echo -e "\e[32m[OK] Nginx is successfully configured and running.\e[0m"
 echo -e "\n\e[33m[8/8] Obtaining Free SSL Let's Encrypt Certificate...\e[0m"
 
 # Generate certificate automatically
-certbot --nginx --non-interactive --agree-tos --email "$EMAIL" -d "$DOMAIN" -d "www.$DOMAIN"
+certbot --nginx --non-interactive --agree-tos --email "$EMAIL" -d "$DOMAIN" -d "www.$DOMAIN" --keep-until-expiring
 
 # Reload Nginx again to apply certificates
 systemctl restart nginx
@@ -287,7 +298,7 @@ echo "  🌐 URL Website:   https://$DOMAIN"
 echo "  👤 API Endpoint:  https://$DOMAIN/api"
 echo "  📦 Backend PM2:   Running (Port 4000)"
 echo "  💻 Frontend PM2:  Running (Port 3000)"
-echo "  🐘 Database:       PostgreSQL (hdago_dev @ localhost:5432)"
+echo "  🐘 Database:       PostgreSQL (hdago_prod @ localhost:5432)"
 echo "  👤 DB User:        hdago_admin"
 echo "  🛡️ SSL status:     Let's Encrypt HTTPS (Auto-renew active)"
 echo -e "\n\e[36mPM2 Processes Status:\e[0m"
