@@ -7,6 +7,7 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RegisterDto, LoginDto } from './dto/auth.dto';
 import * as bcrypt from 'bcryptjs';
+import * as crypto from 'crypto';
 import { BCRYPT_ROUNDS } from '../../common/constants';
 
 @Injectable()
@@ -132,24 +133,59 @@ export class AuthService {
   }
 
   // ──────────────────────────────────────────────
-  // REFRESH TOKEN
+  // REFRESH TOKEN — validates DB entry, rotates token
   // ──────────────────────────────────────────────
-  async refreshToken(refreshToken: string) {
+  async refreshToken(oldRefreshToken: string) {
     try {
-      const payload = this.jwtService.verify(refreshToken, {
+      const payload = this.jwtService.verify(oldRefreshToken, {
         secret: process.env.JWT_REFRESH_SECRET,
       });
+
+      const tokenHash = crypto
+        .createHash('sha256')
+        .update(oldRefreshToken)
+        .digest('hex');
+
+      const stored = await this.prisma.refreshToken.findUnique({
+        where: { token_hash: tokenHash },
+      });
+
+      if (!stored || stored.revoked || stored.expires_at < new Date()) {
+        throw new UnauthorizedException('Refresh token invalid or revoked');
+      }
 
       const user = await this.prisma.user.findUnique({
         where: { id: payload.sub },
       });
-      if (!user) {
-        throw new UnauthorizedException('User not found');
-      }
+      if (!user) throw new UnauthorizedException('User not found');
 
-      return this.generateTokens(user.id, user.role);
+      // Revoke old token (rotation)
+      await this.prisma.refreshToken.update({
+        where: { token_hash: tokenHash },
+        data: { revoked: true },
+      });
+
+      return await this.generateTokens(user.id, user.role);
     } catch {
       throw new UnauthorizedException('Invalid refresh token');
+    }
+  }
+
+  // ──────────────────────────────────────────────
+  // REVOKE REFRESH TOKEN — called on logout
+  // ──────────────────────────────────────────────
+  async revokeRefreshToken(refreshToken: string): Promise<void> {
+    try {
+      const tokenHash = crypto
+        .createHash('sha256')
+        .update(refreshToken)
+        .digest('hex');
+      await this.prisma.refreshToken.updateMany({
+        where: { token_hash: tokenHash, revoked: false },
+        data: { revoked: true },
+      });
+    } catch {
+      // Logout must always succeed regardless of token state
     }
   }
 
@@ -158,17 +194,30 @@ export class AuthService {
   // ──────────────────────────────────────────────
   private async generateTokens(userId: string, role: string) {
     const payload = { sub: userId, role };
+    const jti = crypto.randomUUID(); // ensures unique hash even within same second
 
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, {
         secret: process.env.JWT_SECRET,
         expiresIn: '15m',
       }),
-      this.jwtService.signAsync(payload, {
+      this.jwtService.signAsync({ ...payload, jti }, {
         secret: process.env.JWT_REFRESH_SECRET,
         expiresIn: '7d',
       }),
     ]);
+
+    const tokenHash = crypto
+      .createHash('sha256')
+      .update(refreshToken)
+      .digest('hex');
+
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+
+    await this.prisma.refreshToken.create({
+      data: { token_hash: tokenHash, user_id: userId, expires_at: expiresAt },
+    });
 
     return { accessToken, refreshToken };
   }

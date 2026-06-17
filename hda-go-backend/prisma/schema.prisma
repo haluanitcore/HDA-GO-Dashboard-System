@@ -30,6 +30,17 @@ model User {
   managed_creators Creator[] @relation("CreatorCM")
   notifications Notification[]
   preferences   UserPreferences?
+  refreshTokens RefreshToken[]
+}
+
+model RefreshToken {
+  id         String   @id @default(cuid())
+  token_hash String   @unique
+  user_id    String
+  expires_at DateTime
+  revoked    Boolean  @default(false)
+  created_at DateTime @default(now())
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
 // ═══════════════════════════════════════════════════

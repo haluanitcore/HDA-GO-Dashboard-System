@@ -5,14 +5,27 @@ import { AuthService } from './auth.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
 
+const txMock = {
+  user: { create: jest.fn() },
+  creator: { create: jest.fn() },
+  creatorProgress: { create: jest.fn() },
+};
+
 const mockPrisma = {
   user: {
     findUnique: jest.fn(),
     findMany: jest.fn(),
     create: jest.fn(),
   },
-  creator: { create: jest.fn() },
+  creator: { create: jest.fn(), findUnique: jest.fn() },
   creatorProgress: { create: jest.fn() },
+  refreshToken: {
+    create: jest.fn().mockResolvedValue({}),
+    findUnique: jest.fn(),
+    update: jest.fn(),
+    updateMany: jest.fn(),
+  },
+  $transaction: jest.fn((cb: any) => cb(txMock)),
 };
 
 const mockJwt = {
@@ -47,14 +60,14 @@ describe('AuthService', () => {
 
     it('registers a new creator and returns tokens, creator profiles, and redirectUrl', async () => {
       mockPrisma.user.findUnique.mockResolvedValue(null);
-      mockPrisma.user.create.mockResolvedValue({
+      txMock.user.create.mockResolvedValue({
         id: 'user-2',
         name: dto.name,
         email: dto.email,
         role: 'CREATOR',
       });
-      mockPrisma.creator.create.mockResolvedValue({});
-      mockPrisma.creatorProgress.create.mockResolvedValue({});
+      txMock.creator.create.mockResolvedValue({});
+      txMock.creatorProgress.create.mockResolvedValue({});
 
       const result = await service.register(dto);
 
@@ -63,12 +76,12 @@ describe('AuthService', () => {
       expect(result.accessToken).toBe('mock-token');
       expect(result.redirectUrl).toBe('/creator/overview');
 
-      expect(mockPrisma.creator.create).toHaveBeenCalledWith(
+      expect(txMock.creator.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({ user_id: 'user-2', cm_id: 'cm-1' }),
         }),
       );
-      expect(mockPrisma.creatorProgress.create).toHaveBeenCalled();
+      expect(txMock.creatorProgress.create).toHaveBeenCalled();
     });
 
     it('throws ConflictException when email already exists', async () => {
@@ -129,6 +142,12 @@ describe('AuthService', () => {
   describe('refreshToken', () => {
     it('returns new tokens for valid refresh token', async () => {
       mockJwt.verify.mockReturnValue({ sub: 'u1', role: 'CM' });
+      mockPrisma.refreshToken.findUnique.mockResolvedValue({
+        token_hash: 'hash',
+        revoked: false,
+        expires_at: new Date(Date.now() + 100000),
+      });
+      mockPrisma.refreshToken.update.mockResolvedValue({});
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'u1',
         name: 'X',

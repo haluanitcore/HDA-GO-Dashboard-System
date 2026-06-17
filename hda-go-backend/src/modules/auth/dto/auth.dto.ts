@@ -3,23 +3,28 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  MaxLength,
   MinLength,
 } from 'class-validator';
+
 
 export class RegisterDto {
   @IsNotEmpty()
   @IsString()
+  @MaxLength(255)
   name: string;
 
   @IsEmail()
   email: string;
 
   @IsNotEmpty()
-  @MinLength(6)
+  @MinLength(8)
+  @MaxLength(128)
   password: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(100)
   cm_id?: string; // Optional: CM assignment for Creator self-registration
 }
 
@@ -28,11 +33,13 @@ export class LoginDto {
   email: string;
 
   @IsNotEmpty()
+  @MaxLength(128)
   password: string;
 }
 
 export class RefreshTokenDto {
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
-  refreshToken: string;
+  @MaxLength(1000)
+  refreshToken?: string;
 }
