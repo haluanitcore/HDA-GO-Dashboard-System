@@ -33,11 +33,10 @@ export class RewardsService {
   }
 
   async getCreatorRewards(creatorId: string) {
-    // Force return placeholder response for Opsi A
-    return { 
-      message: 'Reward system coming soon', 
-      rewards: [], 
-      available: false 
-    };
+    const creator = await this.prisma.creator.findUnique({
+      where: { user_id: creatorId },
+    });
+    const level = creator?.creator_level ?? 0;
+    return this.getAvailableRewards(level);
   }
 }
