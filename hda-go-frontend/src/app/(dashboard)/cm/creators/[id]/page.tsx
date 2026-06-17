@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { safeUrl } from '@/lib/utils';
 import { api } from '@/services/api';
 import { Card, CardContent } from '@/components/ui/card';
 import { ChevronLeft, User, MapPin, Phone, Calendar, Hash, Users, ExternalLink, Save, Repeat, Edit2, Shield, FileSpreadsheet } from 'lucide-react';
@@ -288,7 +289,7 @@ export default function CreatorDetailPage() {
                         
                         {sub.tiktok_vt_link ? (
                           <a 
-                            href={sub.tiktok_vt_link} 
+                            href={safeUrl(sub.tiktok_vt_link) ?? "#"} 
                             target="_blank" 
                             rel="noopener noreferrer"
                             className="bg-[#F6D145]/10 hover:bg-[#F6D145]/20 text-[#F6D145] text-xs font-bold px-3 py-1.5 rounded-xl border border-[#F6D145]/30 flex items-center gap-1.5 transition-all"

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ArrowLeft, Target, Plus, X, Upload, Loader2, ExternalLink } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { campaignService } from '@/services';
+import { safeUrl } from '@/lib/utils';
 import { useAuthStore } from '@/store';
 
 export default function BrandCampaignsPage() {
@@ -484,7 +485,7 @@ export default function BrandCampaignsPage() {
                                 VT Link Submitted ✅
                               </span>
                               <a 
-                                href={submission.tiktok_vt_link} 
+                                href={safeUrl(submission.tiktok_vt_link) ?? "#"} 
                                 target="_blank" 
                                 rel="noopener noreferrer"
                                 className="bg-[#F6D145]/10 hover:bg-[#F6D145]/20 text-[#F6D145] text-xs font-bold px-3 py-1.5 rounded-xl border border-[#F6D145]/30 flex items-center gap-1.5 transition-all"

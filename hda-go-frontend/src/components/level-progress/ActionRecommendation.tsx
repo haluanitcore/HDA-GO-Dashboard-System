@@ -36,8 +36,17 @@ export function ActionRecommendation({ factors, isMaxLevel }: ActionRecommendati
     );
   }
 
+  interface Recommendation {
+  metric: string;
+  title: string;
+  description: string;
+  actionText: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
+
   const { gmv, campaigns, orders, consistency, live } = factors;
-  const recommendations = [];
+  const recommendations: Recommendation[] = [];
 
   if (gmv.current < gmv.required) {
     const diff = gmv.required - gmv.current;

@@ -6,6 +6,7 @@ import { settingsService } from '@/services';
 import { User, Lock, Bell, Activity, Save, Loader2, Image as ImageIcon, Eye, EyeOff, CheckCircle2, XCircle, FolderOpen, ExternalLink, ShieldCheck, Calendar, Target, ShoppingBag } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import toast from 'react-hot-toast';
+import { safeUrl } from '@/lib/utils';
 
 export default function SettingsPage() {
   const { user, setUser } = useAuthStore();
@@ -453,9 +454,9 @@ export default function SettingsPage() {
                       </p>
                       {profileData.gdrive_url && (
                         <a
-                          href={profileData.gdrive_url}
+                          href={safeUrl(profileData.gdrive_url) ?? "#"}
                           target="_blank"
-                          rel="noreferrer"
+                          rel="noopener noreferrer"
                           className="flex items-center gap-2 text-xs text-emerald-400 hover:text-emerald-300 font-bold transition-colors"
                         >
                           <ExternalLink className="h-3.5 w-3.5" />

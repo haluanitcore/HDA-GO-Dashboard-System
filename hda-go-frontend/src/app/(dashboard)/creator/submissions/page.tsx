@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { submissionService, campaignService, creatorService, getUploadUrl } from '@/services';
+import { safeUrl } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
 import { Video, Clock, CheckCircle2, AlertCircle, Send, Loader2, ExternalLink, Plus, BarChart3, UploadCloud, FolderOpen, FileVideo, ImageIcon, X, CloudUpload, Link2 } from 'lucide-react';
 import { api } from '@/services/api';
@@ -329,7 +330,7 @@ export default function SubmissionsPage() {
                       {camp.brief_url && (
                         <div className="pt-2 border-t border-white/5 mt-2 flex justify-start">
                           <a 
-                            href={camp.brief_url} 
+                            href={safeUrl(camp.brief_url) ?? "#"} 
                             target="_blank" 
                             rel="noopener noreferrer"
                             className="bg-[#416CB1]/10 hover:bg-[#416CB1]/20 text-[#416CB1] text-[10px] font-bold px-3 py-1.5 rounded-lg border border-[#416CB1]/30 flex items-center gap-1 transition-all"
@@ -503,7 +504,7 @@ export default function SubmissionsPage() {
                           {/* Link to file */}
                           {sub.tiktok_url && sub.status !== 'UPLOADING' && (
                             <a
-                              href={getUploadUrl(sub.tiktok_url)}
+                              href={safeUrl(getUploadUrl(sub.tiktok_url)) ?? "#"}
                               target="_blank"
                               rel="noreferrer"
                               className="text-xs text-emerald-400 hover:text-emerald-300 hover:underline mt-1 flex items-center gap-1 truncate max-w-[280px]"
@@ -558,7 +559,7 @@ export default function SubmissionsPage() {
                                   <span className="text-xs font-bold text-[#F6D145]">Link VT Submitted</span>
                                 </div>
                                 <a
-                                  href={sub.tiktok_vt_link}
+                                  href={safeUrl(sub.tiktok_vt_link) ?? "#"}
                                   target="_blank"
                                   rel="noreferrer"
                                   className="text-[10px] text-[#E3903A] hover:text-[#F6D145] hover:underline flex items-center gap-1 truncate max-w-[200px]"

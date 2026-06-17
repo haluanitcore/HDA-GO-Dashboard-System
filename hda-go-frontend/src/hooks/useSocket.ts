@@ -9,7 +9,9 @@ import { useAuthStore, useNotificationStore } from '@/store';
 
 export function useSocket() {
   const user = useAuthStore((s) => s.user);
-  const { initSocket, disconnect, isConnected } = useNotificationStore();
+  const initSocket = useNotificationStore((s) => s.initSocket);
+  const disconnect = useNotificationStore((s) => s.disconnect);
+  const isConnected = useNotificationStore((s) => s.isConnected);
 
   useEffect(() => {
     if (user?.id && !isConnected) {
@@ -19,7 +21,7 @@ export function useSocket() {
     return () => {
       disconnect();
     };
-  }, [user?.id]);
+  }, [user?.id, isConnected, initSocket, disconnect]);
 
   return { isConnected };
 }

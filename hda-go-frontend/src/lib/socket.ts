@@ -21,20 +21,23 @@ export function connectSocket(userId: string): Socket {
   if (socket?.connected) return socket;
 
   socket = io(`${SOCKET_URL}/events`, {
+    // Pass userId in query only for room-join on the server side.
+    // Authentication is handled via the httpOnly cookie sent with withCredentials.
     query: { userId },
     transports: ['websocket', 'polling'],
+    withCredentials: true, // Send httpOnly auth cookies with the socket handshake
     autoConnect: true,
   });
 
   socket.on('connect', () => {
     if (process.env.NODE_ENV === 'development') {
-      console.log('🔌 Socket connected:', socket?.id);
+      console.log('Socket connected:', socket?.id);
     }
   });
 
   socket.on('disconnect', () => {
     if (process.env.NODE_ENV === 'development') {
-      console.log('🔌 Socket disconnected');
+      console.log('Socket disconnected');
     }
   });
 
@@ -68,7 +71,7 @@ export interface SocketEventData {
   title: string;
   message: string;
   timestamp: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export function onSocketEvent(event: SocketEvent, callback: (data: SocketEventData) => void) {

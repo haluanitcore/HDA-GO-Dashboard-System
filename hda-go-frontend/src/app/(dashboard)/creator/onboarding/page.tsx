@@ -63,7 +63,7 @@ export default function CreatorOnboardingPage() {
     const fetchCMs = async () => {
       try {
         const response = await api.get<{ id: string; name: string }[]>('/creators/cm-list');
-        setCmList(response.data);
+        setCmList(response);
       } catch (err) {
         console.error('Failed to fetch CM list', err);
         toast.error('Gagal mengambil daftar Campaign Manager');
@@ -144,10 +144,10 @@ export default function CreatorOnboardingPage() {
         cm_id: formData.cm_id,
       });
 
-      if (response.data.success) {
+      if ((response as any)?.success || response) {
         toast.success('🎉 Pendaftaran berhasil! Selamat datang di HDA GO.');
         // Update auth state user to reflect status ACTIVE
-        setUser(response.data.user);
+        if ((response as any)?.user) { setUser((response as any).user); }
         router.push('/creator/overview');
       }
     } catch (err: any) {

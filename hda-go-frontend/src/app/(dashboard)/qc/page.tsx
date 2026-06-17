@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { submissionService, getUploadUrl } from '@/services';
+import { safeUrl } from '@/lib/utils';
 import { api } from '@/services/api';
 import { Card, CardContent } from '@/components/ui/card';
 import { 
@@ -979,7 +980,7 @@ export default function QCQueuePage() {
                   </div>
                 </div>
                 <a 
-                  href={getUploadUrl(activeItem.tiktok_url)}
+                  href={safeUrl(getUploadUrl(activeItem.tiktok_url)) ?? "#"}
                   target="_blank"
                   rel="noreferrer"
                   className="p-2.5 rounded-2xl bg-blue-600/15 border border-blue-500/20 text-blue-400 hover:bg-blue-600/25 transition-all text-xs font-black"

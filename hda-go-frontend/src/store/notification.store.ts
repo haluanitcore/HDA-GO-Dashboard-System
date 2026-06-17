@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { notificationService } from '@/services';
-import { connectSocket, onSocketEvent, disconnectSocket, type SocketEventData } from '@/lib/socket';
+import { connectSocket, onSocketEvent, offSocketEvent, disconnectSocket, type SocketEvent, type SocketEventData } from '@/lib/socket';
 
 // ══════════════════════════════════════════════════
 // NOTIFICATION STORE — Real-time + Persistent
@@ -30,6 +30,26 @@ interface NotificationState {
   dismissPopup: () => void;
   disconnect: () => void;
 }
+
+const SOCKET_EVENTS: SocketEvent[] = [
+  'submission:approved',
+  'campaign:new',
+  'creator:levelup',
+  'campaign:push',
+  'reward:claim',
+  'notification',
+  'bd:new-campaign',
+  'bd:campaign-approved',
+];
+
+// Module-level map to hold event handler references so we can remove them
+const eventHandlers = new Map<SocketEvent, (data: SocketEventData) => void>();
+
+// Module-level set to prevent registering listeners more than once per connection
+let listenersRegistered = false;
+
+// Module-level auto-dismiss timer reference
+let dismissTimer: ReturnType<typeof setTimeout> | null = null;
 
 export const useNotificationStore = create<NotificationState>((set, get) => ({
   notifications: [],
@@ -77,45 +97,69 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     connectSocket(userId);
     set({ isConnected: true });
 
-    // Listen to ALL real-time events → Show popup
-    const events = [
-      'submission:approved',
-      'campaign:new',
-      'creator:levelup',
-      'campaign:push',
-      'reward:claim',
-      'notification',
-      'bd:new-campaign',
-      'bd:campaign-approved',
-    ] as const;
+    // Guard against registering duplicate listeners if initSocket is called again
+    // without a preceding disconnect (e.g., StrictMode double-invoke)
+    if (listenersRegistered) return;
+    listenersRegistered = true;
 
-    events.forEach((event) => {
-      onSocketEvent(event, (data: SocketEventData) => {
+    SOCKET_EVENTS.forEach((event) => {
+      const handler = (data: SocketEventData) => {
         // Show popup
         set({ realtimePopup: data });
 
         // Update unread count
         set((state) => ({ unreadCount: state.unreadCount + 1 }));
 
+        // Clear any pending auto-dismiss for the previous popup
+        if (dismissTimer !== null) {
+          clearTimeout(dismissTimer);
+        }
+
         // Auto-dismiss popup after 5 seconds
-        setTimeout(() => {
+        dismissTimer = setTimeout(() => {
           set((state) => {
             if (state.realtimePopup?.timestamp === data.timestamp) {
               return { realtimePopup: null };
             }
             return state;
           });
+          dismissTimer = null;
         }, 5000);
 
         // Refetch notifications list
         get().fetchNotifications();
-      });
+      };
+
+      eventHandlers.set(event, handler);
+      onSocketEvent(event, handler);
     });
   },
 
-  dismissPopup: () => set({ realtimePopup: null }),
+  dismissPopup: () => {
+    if (dismissTimer !== null) {
+      clearTimeout(dismissTimer);
+      dismissTimer = null;
+    }
+    set({ realtimePopup: null });
+  },
 
   disconnect: () => {
+    // Remove all registered event listeners before disconnecting
+    SOCKET_EVENTS.forEach((event) => {
+      const handler = eventHandlers.get(event);
+      if (handler) {
+        offSocketEvent(event, handler);
+        eventHandlers.delete(event);
+      }
+    });
+    listenersRegistered = false;
+
+    // Clear pending dismiss timer
+    if (dismissTimer !== null) {
+      clearTimeout(dismissTimer);
+      dismissTimer = null;
+    }
+
     disconnectSocket();
     set({ isConnected: false });
   },
