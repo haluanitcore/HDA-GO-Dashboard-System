@@ -14,14 +14,13 @@ export function useSocket() {
   const isConnected = useNotificationStore((s) => s.isConnected);
 
   useEffect(() => {
-    if (user?.id && !isConnected) {
+    if (user?.id) {
       initSocket(user.id);
+      return () => {
+        disconnect();
+      };
     }
-
-    return () => {
-      disconnect();
-    };
-  }, [user?.id, isConnected, initSocket, disconnect]);
+  }, [user?.id, initSocket, disconnect]);
 
   return { isConnected };
 }
