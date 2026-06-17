@@ -19,7 +19,7 @@ const mockService = {
 
 describe('GmvController', () => {
   let controller: GmvController;
-  const mockReq = { user: { userId: 'user-1' } };
+  const mockReq = { user: { userId: 'user-1', role: 'CM' } };
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -44,7 +44,7 @@ describe('GmvController', () => {
   });
 
   it('submitSelfReport delegates userId and body', async () => {
-    const body = { gmv_amount: 500000 };
+    const body = { gmvAmount: 500000, orderCount: 5, periodDate: '2023-01-01' };
     mockService.submitSelfReport.mockResolvedValue({ id: 'r1' });
     await controller.submitSelfReport(mockReq, body);
     expect(mockService.submitSelfReport).toHaveBeenCalledWith('user-1', body);
@@ -52,10 +52,9 @@ describe('GmvController', () => {
 
   it('verifyGmv delegates id, userId, body', async () => {
     mockService.verifyGmv.mockResolvedValue({ success: true });
-    await controller.verifyGmv('r1', mockReq, { status: 'VERIFIED' });
-    expect(mockService.verifyGmv).toHaveBeenCalledWith('r1', 'user-1', {
-      status: 'VERIFIED',
-    });
+    const dto = { action: 'APPROVE' };
+    await controller.verifyGmv('r1', mockReq, dto as any);
+    expect(mockService.verifyGmv).toHaveBeenCalledWith('r1', 'user-1', 'CM', dto);
   });
 
   it('recordOrder delegates body fields', async () => {
@@ -75,9 +74,9 @@ describe('GmvController', () => {
   });
 
   it('getPendingGmv delegates to service', async () => {
-    mockService.getPendingGmv.mockResolvedValue([]);
-    await controller.getPendingGmv();
-    expect(mockService.getPendingGmv).toHaveBeenCalled();
+    mockService.getPendingGmv.mockResolvedValue({ data: [], total: 0 });
+    await controller.getPendingGmv(1, 50);
+    expect(mockService.getPendingGmv).toHaveBeenCalledWith(1, 50);
   });
 
   it('getMyGMV uses userId', async () => {

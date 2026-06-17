@@ -10,11 +10,14 @@ const mockPrisma = {
     findUnique: jest.fn(),
     findMany: jest.fn(),
     update: jest.fn(),
+    aggregate: jest.fn(),
+    count: jest.fn(),
   },
   creator: { findUnique: jest.fn(), update: jest.fn() },
   creatorProgress: { update: jest.fn() },
   notification: { create: jest.fn() },
   submissionDeliverable: { findMany: jest.fn() },
+  $transaction: jest.fn((cb: any) => cb(mockPrisma)),
 };
 
 const mockLevelsService = {
@@ -107,6 +110,7 @@ describe('GmvService', () => {
 
     it('approves (VERIFY) and updates creator stats', async () => {
       mockPrisma.creatorOrder.findUnique.mockResolvedValue(record);
+      mockPrisma.creator.findUnique.mockResolvedValue({ cm_id: 'cm-1' });
       mockPrisma.creatorOrder.update.mockResolvedValue({
         ...record,
         status: 'VERIFIED',
@@ -118,7 +122,7 @@ describe('GmvService', () => {
       ]);
       mockLevelsService.evaluateLevel.mockResolvedValue({ leveledUp: false });
 
-      await service.verifyGmv('o1', 'cm-1', {
+      await service.verifyGmv('o1', 'cm-1', 'CM', {
         action: 'VERIFY',
       });
 
@@ -133,9 +137,10 @@ describe('GmvService', () => {
 
     it('rejects and does NOT update stats', async () => {
       mockPrisma.creatorOrder.findUnique.mockResolvedValue(record);
+      mockPrisma.creator.findUnique.mockResolvedValue({ cm_id: 'cm-1' });
       mockPrisma.creatorOrder.update.mockResolvedValue({ status: 'REJECTED' });
 
-      const result = await service.verifyGmv('o1', 'cm-1', {
+      const result = await service.verifyGmv('o1', 'cm-1', 'CM', {
         action: 'REJECT',
         rejectReason: 'Screenshot blur',
       });
@@ -146,12 +151,13 @@ describe('GmvService', () => {
 
     it('adjusts GMV amount when action is ADJUST', async () => {
       mockPrisma.creatorOrder.findUnique.mockResolvedValue(record);
+      mockPrisma.creator.findUnique.mockResolvedValue({ cm_id: 'cm-1' });
       mockPrisma.creatorOrder.update.mockResolvedValue({ status: 'ADJUSTED' });
       mockPrisma.creator.update.mockResolvedValue({});
       mockPrisma.creatorProgress.update.mockResolvedValue({});
       mockPrisma.submissionDeliverable.findMany.mockResolvedValue([]);
 
-      await service.verifyGmv('o1', 'cm-1', {
+      await service.verifyGmv('o1', 'cm-1', 'CM', {
         action: 'ADJUST',
         adjustedAmount: 300000,
       });
@@ -169,7 +175,7 @@ describe('GmvService', () => {
       mockPrisma.creatorOrder.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.verifyGmv('ghost', 'cm-1', { action: 'VERIFY' }),
+        service.verifyGmv('ghost', 'cm-1', 'CM', { action: 'VERIFY' }),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -180,12 +186,13 @@ describe('GmvService', () => {
       });
 
       await expect(
-        service.verifyGmv('o1', 'cm-1', { action: 'VERIFY' }),
+        service.verifyGmv('o1', 'cm-1', 'CM', { action: 'VERIFY' }),
       ).rejects.toThrow(BadRequestException);
     });
 
     it('triggers level evaluation when all SOW is finished', async () => {
       mockPrisma.creatorOrder.findUnique.mockResolvedValue(record);
+      mockPrisma.creator.findUnique.mockResolvedValue({ cm_id: 'cm-1' });
       mockPrisma.creatorOrder.update.mockResolvedValue({ status: 'VERIFIED' });
       mockPrisma.creator.update.mockResolvedValue({});
       mockPrisma.creatorProgress.update.mockResolvedValue({});
@@ -195,7 +202,7 @@ describe('GmvService', () => {
       ]);
       mockLevelsService.evaluateLevel.mockResolvedValue({ leveledUp: true });
 
-      await service.verifyGmv('o1', 'cm-1', { action: 'VERIFY' });
+      await service.verifyGmv('o1', 'cm-1', 'CM', { action: 'VERIFY' });
 
       expect(mockLevelsService.evaluateLevel).toHaveBeenCalledWith('u1');
     });
@@ -248,10 +255,10 @@ describe('GmvService', () => {
 
   describe('getPlatformGMV', () => {
     it('returns platform-wide totals', async () => {
-      mockPrisma.creatorOrder.findMany.mockResolvedValue([
-        { gmv_amount: 100, order_count: 1 },
-        { gmv_amount: 200, order_count: 2 },
-      ]);
+      mockPrisma.creatorOrder.aggregate.mockResolvedValue({
+        _sum: { gmv_amount: 300, order_count: 3 },
+        _count: 2,
+      });
 
       const result = await service.getPlatformGMV();
 
@@ -266,10 +273,12 @@ describe('GmvService', () => {
   describe('getPendingGmv', () => {
     it('returns orders pending verification', async () => {
       mockPrisma.creatorOrder.findMany.mockResolvedValue([{ id: 'o1' }]);
+      mockPrisma.creatorOrder.count.mockResolvedValue(1);
 
       const result = await service.getPendingGmv();
 
-      expect(result).toHaveLength(1);
+      expect(result.data).toHaveLength(1);
+      expect(result.total).toBe(1);
       expect(mockPrisma.creatorOrder.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { status: 'PENDING_VERIFICATION' },

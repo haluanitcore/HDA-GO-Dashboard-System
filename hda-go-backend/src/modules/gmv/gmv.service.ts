@@ -2,6 +2,8 @@ import {
   Injectable,
   BadRequestException,
   NotFoundException,
+  ForbiddenException,
+  Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LevelsService } from '../levels/levels.service';
@@ -9,6 +11,8 @@ import * as Tesseract from 'tesseract.js';
 
 @Injectable()
 export class GmvService {
+  private readonly logger = new Logger(GmvService.name);
+
   constructor(
     private prisma: PrismaService,
     private levelsService: LevelsService,
@@ -45,7 +49,7 @@ export class GmvService {
         periodDate: new Date().toISOString().split('T')[0], // Default to today
       };
     } catch (err) {
-      console.error('OCR Error:', err);
+      this.logger.error('OCR Error:', err.stack);
       return { success: false, error: 'Failed to read image' };
     }
   }
@@ -114,7 +118,8 @@ export class GmvService {
   // ══════════════════════════════════════════════
   async verifyGmv(
     recordId: string,
-    cmId: string,
+    verifierId: string,
+    verifierRole: string,
     dto: { action: string; adjustedAmount?: number; rejectReason?: string },
   ) {
     const record = await this.prisma.creatorOrder.findUnique({
@@ -123,6 +128,17 @@ export class GmvService {
     if (!record) throw new NotFoundException('GMV Record not found');
     if (record.status !== 'PENDING_VERIFICATION')
       throw new BadRequestException('Record is already processed');
+
+    // CM can only verify creators assigned to them; ADMIN/QC can verify any
+    if (verifierRole === 'CM') {
+      const creator = await this.prisma.creator.findUnique({
+        where: { user_id: record.creator_id },
+        select: { cm_id: true },
+      });
+      if (creator?.cm_id !== verifierId) {
+        throw new ForbiddenException('You can only verify GMV records for your own creators');
+      }
+    }
 
     let newStatus = 'VERIFIED';
     let finalGmv = record.gmv_amount;
@@ -134,7 +150,7 @@ export class GmvService {
         data: {
           status: newStatus,
           reject_reason: dto.rejectReason,
-          verified_by: cmId,
+          verified_by: verifierId,
           verified_at: new Date(),
         },
       });
@@ -153,7 +169,7 @@ export class GmvService {
         data: {
           status: newStatus,
           adjusted_amount: newStatus === 'ADJUSTED' ? finalGmv : null,
-          verified_by: cmId,
+          verified_by: verifierId,
           verified_at: new Date(),
         },
       });
@@ -294,14 +310,20 @@ export class GmvService {
   }
 
   // ── GET PENDING GMV (CM) ──
-  async getPendingGmv() {
-    return this.prisma.creatorOrder.findMany({
-      where: { status: 'PENDING_VERIFICATION' },
-      include: {
-        creator: { include: { user: { select: { name: true } } } },
-        campaign: { select: { title: true } },
-      },
-      orderBy: { recorded_at: 'asc' },
-    });
+  async getPendingGmv(page: number = 1, limit: number = 50) {
+    const [data, total] = await Promise.all([
+      this.prisma.creatorOrder.findMany({
+        where: { status: 'PENDING_VERIFICATION' },
+        take: Math.min(limit, 100),
+        skip: (page - 1) * limit,
+        include: {
+          creator: { include: { user: { select: { name: true } } } },
+          campaign: { select: { title: true } },
+        },
+        orderBy: { recorded_at: 'desc' },
+      }),
+      this.prisma.creatorOrder.count({ where: { status: 'PENDING_VERIFICATION' } })
+    ]);
+    return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 }
