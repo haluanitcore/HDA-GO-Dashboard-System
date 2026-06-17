@@ -74,7 +74,7 @@ describe('AuthService', () => {
       expect(result.user.email).toBe(dto.email);
       expect(result.user.role).toBe('CREATOR');
       expect(result.accessToken).toBe('mock-token');
-      expect(result.redirectUrl).toBe('/creator/overview');
+      expect(result.redirectUrl).toBe('/creator/onboarding');
 
       expect(txMock.creator.create).toHaveBeenCalledWith(
         expect.objectContaining({
