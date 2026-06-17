@@ -34,9 +34,9 @@ describe('RewardsService', () => {
       expect(result.length).toBeGreaterThan(0);
     });
 
-    it('returns all rewards for level 5', () => {
-      const result = service.getAvailableRewards(5);
-      expect(result).toHaveLength(5);
+    it('returns all rewards for level 4 (max level)', () => {
+      const result = service.getAvailableRewards(4);
+      expect(result).toHaveLength(4);
     });
 
     it('returns subset of rewards for level 3', () => {
@@ -49,23 +49,14 @@ describe('RewardsService', () => {
   // ── getCreatorRewards ────────────────────────────────────────────────────────
 
   describe('getCreatorRewards', () => {
-    it('returns rewards based on creator level', async () => {
-      mockPrisma.creator.findUnique.mockResolvedValue({
-        user_id: 'c1',
-        creator_level: 2,
-      });
-
+    it('returns coming soon message', async () => {
       const result = await service.getCreatorRewards('c1');
 
-      expect(result.length).toBeGreaterThan(0);
-      expect(result.every((r) => r.min_level <= 2)).toBe(true);
-    });
-
-    it('returns empty array when creator not found', async () => {
-      mockPrisma.creator.findUnique.mockResolvedValue(null);
-
-      const result = await service.getCreatorRewards('ghost');
-      expect(result).toEqual([]);
+      expect(result).toEqual({
+        message: 'Reward system coming soon',
+        rewards: [],
+        available: false,
+      });
     });
   });
 });

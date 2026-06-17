@@ -7,6 +7,7 @@ import {
   Body,
   Req,
   UseGuards,
+  ForbiddenException,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../../common/roles.guard';
@@ -71,10 +72,10 @@ export class NotificationsController {
     return this.notificationsService.getUnreadCount(req.user.userId);
   }
 
-  // PATCH /notifications/:id/read — Mark as read
+  // PATCH /notifications/:id/read — Mark as read (ownership verified)
   @Patch(':id/read')
-  markAsRead(@Param('id') id: string) {
-    return this.notificationsService.markAsRead(id);
+  markAsRead(@Param('id') id: string, @Req() req: any) {
+    return this.notificationsService.markAsRead(id, req.user.userId);
   }
 
   // PATCH /notifications/read-all — Mark all as read

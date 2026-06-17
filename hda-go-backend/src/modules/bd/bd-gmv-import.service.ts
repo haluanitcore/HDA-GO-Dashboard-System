@@ -324,6 +324,36 @@ export class BdGmvImportService {
     const skippedRows: SkippedRow[] = [];
     const updatedCreators: UpdatedCreator[] = [];
 
+    // ── Batch Preload Creators ──
+    const allCreatorCodes = parsedRows.slice(1).map(row => (creatorIdIdx !== -1 ? (row[creatorIdIdx] || '').trim() : '')).filter(Boolean);
+    const allUsernames = parsedRows.slice(1).map(row => {
+      let u = usernameIdx !== -1 ? (row[usernameIdx] || '').trim() : '';
+      if (u.startsWith('@')) u = u.substring(1).trim();
+      return u;
+    }).filter(Boolean);
+
+    const creatorsList = await this.prisma.creator.findMany({
+      where: {
+        OR: [
+          { creator_code: { in: allCreatorCodes } },
+          { tiktok_username: { in: allUsernames } },
+        ]
+      },
+      include: { user: true }
+    });
+
+    const creatorByCode = new Map();
+    const creatorByUsername = new Map();
+
+    for (const c of creatorsList) {
+      if (c.creator_code) creatorByCode.set(c.creator_code, c);
+      if (c.tiktok_username) {
+        creatorByUsername.set(c.tiktok_username, c);
+        creatorByUsername.set(c.tiktok_username.toLowerCase(), c);
+        creatorByUsername.set(c.tiktok_username.toUpperCase(), c);
+      }
+    }
+
     for (let i = 1; i < parsedRows.length; i++) {
       const cols = parsedRows[i];
 
@@ -359,23 +389,11 @@ export class BdGmvImportService {
       let creator: any = null;
 
       if (creatorCode) {
-        creator = await this.prisma.creator.findFirst({
-          where: { creator_code: creatorCode },
-          include: { user: true },
-        });
+        creator = creatorByCode.get(creatorCode);
       }
 
       if (!creator && username) {
-        creator = await this.prisma.creator.findFirst({
-          where: {
-            OR: [
-              { tiktok_username: username },
-              { tiktok_username: username.toLowerCase() },
-              { tiktok_username: username.toUpperCase() },
-            ],
-          },
-          include: { user: true },
-        });
+        creator = creatorByUsername.get(username) || creatorByUsername.get(username.toLowerCase()) || creatorByUsername.get(username.toUpperCase());
       }
 
       if (!creator) {
@@ -525,106 +543,111 @@ export class BdGmvImportService {
       }
 
       if (parsedGmv > 0 || parsedOrders > 0) {
-        // ── Get existing weekly stats to calculate differences and prevent double counting ──
-        const existingWeekly = await this.prisma.creatorWeeklyStats.findUnique({
-          where: {
-            creator_id_week_label: {
+        // ── Execute in Transaction to prevent Race Condition ──
+        await this.prisma.$transaction(async (tx) => {
+          const existingWeekly = await tx.creatorWeeklyStats.findUnique({
+            where: {
+              creator_id_week_label: {
+                creator_id: creator.user_id,
+                week_label: weekLabel,
+              },
+            },
+          });
+
+          const oldGmv = existingWeekly ? existingWeekly.gmv : 0;
+          const oldOrders = existingWeekly ? existingWeekly.orders : 0;
+          const diffGmv = parsedGmv - oldGmv;
+          const diffOrders = parsedOrders - oldOrders;
+
+          // ── Weekly Stats (Upsert) ──
+          await tx.creatorWeeklyStats.upsert({
+            where: {
+              creator_id_week_label: {
+                creator_id: creator.user_id,
+                week_label: weekLabel,
+              },
+            },
+            update: {
+              gmv: parsedGmv,
+              orders: parsedOrders,
+              gmv_updated_at: now,
+              source: 'SHEET_SYNC',
+              notes: `Sync dari kolom "${gmvColumnName}" - Sheet row ${i + 1}`,
+            },
+            create: {
               creator_id: creator.user_id,
               week_label: weekLabel,
+              week_start: weekStart,
+              week_end: weekEnd,
+              gmv: parsedGmv,
+              orders: parsedOrders,
+              gmv_updated_at: now,
+              source: 'SHEET_SYNC',
+              notes: `Sync dari kolom "${gmvColumnName}" - Sheet row ${i + 1}`,
             },
-          },
-        });
+          });
 
-        const oldGmv = existingWeekly ? existingWeekly.gmv : 0;
-        const oldOrders = existingWeekly ? existingWeekly.orders : 0;
-        const diffGmv = parsedGmv - oldGmv;
-        const diffOrders = parsedOrders - oldOrders;
-
-        // ── Weekly Stats (Upsert) ──
-        await this.prisma.creatorWeeklyStats.upsert({
-          where: {
-            creator_id_week_label: {
+          // ── Clean up existing SHEET_SYNC creator order for this week to avoid duplication ──
+          await tx.creatorOrder.deleteMany({
+            where: {
               creator_id: creator.user_id,
-              week_label: weekLabel,
+              source: 'SHEET_SYNC',
+              notes: {
+                startsWith: `Sheet Sync (${weekLabel})`,
+              },
             },
-          },
-          update: {
-            gmv: parsedGmv,
-            orders: parsedOrders,
-            gmv_updated_at: now,
-            source: 'SHEET_SYNC',
-            notes: `Sync dari kolom "${gmvColumnName}" - Sheet row ${i + 1}`,
-          },
-          create: {
-            creator_id: creator.user_id,
-            week_label: weekLabel,
-            week_start: weekStart,
-            week_end: weekEnd,
-            gmv: parsedGmv,
-            orders: parsedOrders,
-            gmv_updated_at: now,
-            source: 'SHEET_SYNC',
-            notes: `Sync dari kolom "${gmvColumnName}" - Sheet row ${i + 1}`,
-          },
-        });
+          });
 
-        // ── Clean up existing SHEET_SYNC creator order for this week to avoid duplication ──
-        await this.prisma.creatorOrder.deleteMany({
-          where: {
-            creator_id: creator.user_id,
-            source: 'SHEET_SYNC',
-            notes: {
-              startsWith: `Sheet Sync (${weekLabel})`,
+          // ── Create CreatorOrder record ──
+          const currentPeriod = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+          await tx.creatorOrder.create({
+            data: {
+              creator_id: creator.user_id,
+              campaign_id: campaignId,
+              order_count: parsedOrders,
+              gmv_amount: parsedGmv,
+              source: 'SHEET_SYNC',
+              status: 'VERIFIED',
+              period_date: new Date(),
+              notes: `Sheet Sync (${weekLabel}) for ${gmvColumnName}. Row ${i + 1}`,
             },
-          },
-        });
+          });
 
-        // ── Create CreatorOrder record ──
-        const currentPeriod = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-        await this.prisma.creatorOrder.create({
-          data: {
-            creator_id: creator.user_id,
-            campaign_id: campaignId,
-            order_count: parsedOrders,
-            gmv_amount: parsedGmv,
-            source: 'SHEET_SYNC',
-            status: 'VERIFIED',
-            period_date: new Date(),
-            notes: `Sheet Sync (${weekLabel}) for ${gmvColumnName}. Row ${i + 1}`,
-          },
-        });
-
-        // ── Update Monthly Stats using Difference ──
-        await this.prisma.creatorMonthlyStats.upsert({
-          where: {
-            creator_id_month: {
+          // ── Update Monthly Stats using Difference ──
+          await tx.creatorMonthlyStats.upsert({
+            where: {
+              creator_id_month: {
+                creator_id: creator.user_id,
+                month: currentPeriod,
+              },
+            },
+            update: {
+              gmv: { increment: diffGmv },
+              orders: { increment: diffOrders },
+            },
+            create: {
               creator_id: creator.user_id,
               month: currentPeriod,
+              gmv: parsedGmv,
+              orders: parsedOrders,
             },
-          },
-          update: {
-            gmv: { increment: diffGmv },
-            orders: { increment: diffOrders },
-          },
-          create: {
-            creator_id: creator.user_id,
-            month: currentPeriod,
-            gmv: parsedGmv,
-            orders: parsedOrders,
-          },
-        });
+          });
 
-        // ── Update Creator Aggregates using Difference ──
-        await this.prisma.creator.update({
-          where: { user_id: creator.user_id },
-          data: {
-            gmv_total: { increment: diffGmv },
-            gmv_monthly: { increment: diffGmv },
-            total_orders: { increment: diffOrders },
-          },
-        });
+          // ── Update Creator Aggregates using Difference ──
+          await tx.creator.update({
+            where: { user_id: creator.user_id },
+            data: {
+              gmv_total: { increment: diffGmv },
+              gmv_monthly: { increment: diffGmv },
+              total_orders: { increment: diffOrders },
+            },
+          });
 
-        fieldsChanged.push('gmv', 'orders');
+          fieldsChanged.push('gmv', 'orders');
+          
+          totalGmvAdded += Math.max(0, diffGmv);
+          totalOrdersAdded += Math.max(0, diffOrders);
+        }, { isolationLevel: 'Serializable' });
 
         // ── Level Evaluation ──
         const evalResult = await this.levelsService.evaluateLevel(creator.user_id);
@@ -643,9 +666,6 @@ export class BdGmvImportService {
             levelName: evalResult.levelName,
           });
         }
-
-        totalGmvAdded += Math.max(0, diffGmv);
-        totalOrdersAdded += Math.max(0, diffOrders);
       }
 
       updatedCreators.push({
@@ -878,17 +898,9 @@ export class BdGmvImportService {
       campaign = await this.prisma.campaign.findFirst();
     }
     if (!campaign) {
-      campaign = await this.prisma.campaign.create({
-        data: {
-          title,
-          category: 'HOTEL',
-          sow_total: 1,
-          reward_type: 'COMMISSION',
-          deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-          status: 'ACTIVE',
-          brand_id: 'default-brand-id',
-        },
-      });
+      throw new BadRequestException(
+        'Cannot import GMV: no active campaign found. Please create a campaign first.'
+      );
     }
     return campaign.id;
   }

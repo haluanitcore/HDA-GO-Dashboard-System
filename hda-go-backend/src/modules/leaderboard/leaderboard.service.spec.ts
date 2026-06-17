@@ -3,7 +3,7 @@ import { LeaderboardService } from './leaderboard.service';
 import { PrismaService } from '../../prisma/prisma.service';
 
 const mockPrisma = {
-  creator: { findMany: jest.fn() },
+  creator: { findMany: jest.fn(), findUnique: jest.fn(), count: jest.fn() },
 };
 
 describe('LeaderboardService', () => {
@@ -81,11 +81,10 @@ describe('LeaderboardService', () => {
 
   describe('getCreatorRank', () => {
     it('calculates correct rank and percentile', async () => {
-      mockPrisma.creator.findMany.mockResolvedValue([
-        { user_id: 'u1', gmv_monthly: 3000 },
-        { user_id: 'u2', gmv_monthly: 2000 },
-        { user_id: 'u3', gmv_monthly: 1000 },
-      ]);
+      mockPrisma.creator.findUnique.mockResolvedValue({ gmv_monthly: 2000 });
+      mockPrisma.creator.count
+        .mockResolvedValueOnce(1) // count of creators with gmv_monthly > 2000
+        .mockResolvedValueOnce(3); // total count
 
       const result = await service.getCreatorRank('u2');
 
@@ -95,9 +94,7 @@ describe('LeaderboardService', () => {
     });
 
     it('returns rank 0 when creator not in list', async () => {
-      mockPrisma.creator.findMany.mockResolvedValue([
-        { user_id: 'u1', gmv_monthly: 1000 },
-      ]);
+      mockPrisma.creator.findUnique.mockResolvedValue(null);
 
       const result = await service.getCreatorRank('ghost');
 

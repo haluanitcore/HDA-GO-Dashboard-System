@@ -231,7 +231,7 @@ export class SubmissionsService {
   // SUBMISSION STATUS FLOW
   // QC_REVIEW → APPROVED / REVISION / REJECTED → POSTED → COMPLETED
   // ══════════════════════════════════════════════
-  async review(submissionId: string, dto: ReviewSubmissionDto) {
+  async review(submissionId: string, dto: ReviewSubmissionDto, reviewerId: string) {
     const submission = await this.prisma.submission.findUnique({
       where: { id: submissionId },
       include: { creator: { include: { user: { select: { name: true } } } } },
@@ -252,7 +252,7 @@ export class SubmissionsService {
       schedule_posting: dto.schedule_posting
         ? new Date(dto.schedule_posting)
         : undefined,
-      reviewer_id: dto.reviewer_id !== undefined ? dto.reviewer_id : undefined,
+      reviewer_id: reviewerId,
     };
 
     // Set review timestamp
@@ -328,7 +328,7 @@ export class SubmissionsService {
   }
 
   // ── Stage 4 Bulk Review Workflow ──
-  async bulkReview(dto: BulkReviewDto) {
+  async bulkReview(dto: BulkReviewDto, reviewerId: string) {
     const results: any[] = [];
     for (const subId of dto.submissionIds) {
       try {
@@ -338,8 +338,7 @@ export class SubmissionsService {
           qc_issues: dto.qc_issues,
           internal_tags: dto.internal_tags,
           schedule_posting: dto.schedule_posting,
-          reviewer_id: dto.reviewer_id,
-        });
+        }, reviewerId);
         results.push(res);
       } catch (err) {
         this.logger.error(`Error in bulkReview for submission ${subId}:`, err);
@@ -369,23 +368,27 @@ export class SubmissionsService {
 
   // ── GET SUBMISSIONS BY CREATOR ──
   async findByCreator(creatorId: string, skip: number = 0, take: number = 50) {
-    return this.prisma.submission.findMany({
-      where: { creator_id: creatorId },
-      skip,
-      take,
-      include: {
-        campaign: {
-          select: {
-            title: true,
-            category: true,
-            deadline: true,
-            sow_total: true,
+    const [data, total] = await Promise.all([
+      this.prisma.submission.findMany({
+        where: { creator_id: creatorId },
+        skip,
+        take,
+        include: {
+          campaign: {
+            select: {
+              title: true,
+              category: true,
+              deadline: true,
+              sow_total: true,
+            },
           },
+          deliverable: true,
         },
-        deliverable: true,
-      },
-      orderBy: { submitted_at: 'desc' },
-    });
+        orderBy: { submitted_at: 'desc' },
+      }),
+      this.prisma.submission.count({ where: { creator_id: creatorId } })
+    ]);
+    return { data, total, skip, take };
   }
 
   // ── GET SUBMISSIONS BY CAMPAIGN (for CM QC view) ──
@@ -444,21 +447,25 @@ export class SubmissionsService {
 
   // ── GET ALL PENDING QC (for CM dashboard) ──
   async findPendingQC(skip: number = 0, take: number = 50) {
-    return this.prisma.submission.findMany({
-      where: { status: 'QC_REVIEW' },
-      skip,
-      take,
-      include: {
-        creator: {
-          include: { user: { select: { name: true } } },
+    const [data, total] = await Promise.all([
+      this.prisma.submission.findMany({
+        where: { status: 'QC_REVIEW' },
+        skip,
+        take,
+        include: {
+          creator: {
+            include: { user: { select: { name: true } } },
+          },
+          campaign: {
+            select: { title: true, category: true, qc_checklist: true },
+          },
+          deliverable: true,
         },
-        campaign: {
-          select: { title: true, category: true, qc_checklist: true },
-        },
-        deliverable: true,
-      },
-      orderBy: { submitted_at: 'asc' },
-    });
+        orderBy: { submitted_at: 'asc' },
+      }),
+      this.prisma.submission.count({ where: { status: 'QC_REVIEW' } })
+    ]);
+    return { data, total, skip, take };
   }
 
   // ── GET SOW PROGRESS BY CAMPAIGN ──

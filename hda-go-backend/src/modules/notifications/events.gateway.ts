@@ -5,7 +5,8 @@ import {
   OnGatewayDisconnect,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 
 // ══════════════════════════════════════════════════════════════
 // 29. NOTIFICATION FLOW — Real-time WebSocket Gateway
@@ -21,11 +22,16 @@ import { Logger } from '@nestjs/common';
 // | reward:claim        | Reward Engine |
 // ══════════════════════════════════════════════════════════════
 
+const corsOrigins = (process.env.CORS_ORIGIN || 'http://localhost:3000')
+  .replace(/"/g, '')
+  .replace(/'/g, '')
+  .split(',')
+  .map((o) => o.trim());
+
+@Injectable()
 @WebSocketGateway({
   cors: {
-    origin: (process.env.CORS_ORIGIN || 'http://localhost:3000')
-      .split(',')
-      .map((o) => o.trim()),
+    origin: corsOrigins,
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization'],
   },
@@ -38,28 +44,50 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private readonly logger = new Logger(EventsGateway.name);
   private userSocketMap = new Map<string, string[]>(); // userId -> socketId[]
 
-  // ── Client connects & registers their userId ──
+  constructor(private readonly jwtService: JwtService) {}
+
+  // ── Client connects — JWT verified before joining any room ──
   async handleConnection(client: Socket) {
-    const userId = client.handshake.query.userId as string;
-    if (userId) {
+    const token =
+      (client.handshake.auth?.token as string | undefined) ||
+      (client.handshake.headers?.authorization as string | undefined)
+        ?.split(' ')
+        ?.at(1);
+
+    if (!token) {
+      this.logger.warn(`📡 Connection rejected (no token): ${client.id}`);
+      client.disconnect();
+      return;
+    }
+
+    try {
+      const payload = this.jwtService.verify<{ sub: string; role: string }>(
+        token,
+        { secret: process.env.JWT_SECRET },
+      );
+      const userId = payload.sub;
+
       const existing = this.userSocketMap.get(userId) || [];
       existing.push(client.id);
       this.userSocketMap.set(userId, existing);
       await client.join(`user:${userId}`);
       this.logger.log(`📡 Client connected: ${client.id} (user: ${userId})`);
+    } catch {
+      this.logger.warn(`📡 Connection rejected (invalid token): ${client.id}`);
+      client.disconnect();
     }
   }
 
   handleDisconnect(client: Socket) {
-    const userId = client.handshake.query.userId as string;
-    if (userId) {
-      const sockets = this.userSocketMap.get(userId) || [];
-      this.userSocketMap.set(
-        userId,
-        sockets.filter((s) => s !== client.id),
-      );
-      if (this.userSocketMap.get(userId)?.length === 0) {
-        this.userSocketMap.delete(userId);
+    // Remove socket from all user rooms it may have joined
+    for (const [userId, sockets] of this.userSocketMap.entries()) {
+      const updated = sockets.filter((s) => s !== client.id);
+      if (updated.length !== sockets.length) {
+        if (updated.length === 0) {
+          this.userSocketMap.delete(userId);
+        } else {
+          this.userSocketMap.set(userId, updated);
+        }
       }
     }
     this.logger.log(`📡 Client disconnected: ${client.id}`);

@@ -133,7 +133,7 @@ describe('GDriveService', () => {
           'folder',
         );
 
-        expect(result.webViewLink).toBe(
+        expect(result!.webViewLink).toBe(
           'https://drive.google.com/file/d/file-456/view',
         );
       });

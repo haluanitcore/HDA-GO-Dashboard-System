@@ -6,8 +6,11 @@ describe('EventsGateway', () => {
   let mockServer: Partial<Server>;
   let mockEmit: jest.Mock;
 
+  let mockJwtService: { verify: jest.Mock };
+
   beforeEach(() => {
-    gateway = new EventsGateway();
+    mockJwtService = { verify: jest.fn() };
+    gateway = new EventsGateway(mockJwtService as any);
     mockEmit = jest.fn();
     mockServer = {
       to: jest.fn().mockReturnValue({ emit: mockEmit }),
@@ -19,12 +22,14 @@ describe('EventsGateway', () => {
   // handleConnection / handleDisconnect
   // ══════════════════════════════════════════════════
   describe('handleConnection', () => {
-    it('registers user socket and joins room', async () => {
+    it('registers user socket and joins room when token is valid', async () => {
+      mockJwtService.verify.mockReturnValue({ sub: 'user-1', role: 'CREATOR' });
       const mockJoin = jest.fn();
       const client = {
         id: 'socket-1',
-        handshake: { query: { userId: 'user-1' } },
+        handshake: { auth: { token: 'valid.jwt.token' }, headers: {} },
         join: mockJoin,
+        disconnect: jest.fn(),
       } as unknown as Socket;
 
       await gateway.handleConnection(client);
@@ -32,46 +37,47 @@ describe('EventsGateway', () => {
       expect(mockJoin).toHaveBeenCalledWith('user:user-1');
     });
 
-    it('handles multiple connections from same user', async () => {
-      const mockJoin = jest.fn();
-      const client1 = {
-        id: 'socket-1',
-        handshake: { query: { userId: 'user-1' } },
-        join: mockJoin,
-      } as unknown as Socket;
-      const client2 = {
-        id: 'socket-2',
-        handshake: { query: { userId: 'user-1' } },
-        join: mockJoin,
-      } as unknown as Socket;
-
-      await gateway.handleConnection(client1);
-      await gateway.handleConnection(client2);
-
-      expect(mockJoin).toHaveBeenCalledTimes(2);
-    });
-
-    it('skips registration when userId is missing', async () => {
-      const mockJoin = jest.fn();
+    it('disconnects client when token is missing', async () => {
+      const mockDisconnect = jest.fn();
       const client = {
         id: 'socket-1',
-        handshake: { query: {} },
-        join: mockJoin,
+        handshake: { auth: {}, headers: {} },
+        join: jest.fn(),
+        disconnect: mockDisconnect,
       } as unknown as Socket;
 
       await gateway.handleConnection(client);
 
-      expect(mockJoin).not.toHaveBeenCalled();
+      expect(mockDisconnect).toHaveBeenCalled();
+    });
+
+    it('disconnects client when token is invalid', async () => {
+      mockJwtService.verify.mockImplementation(() => {
+        throw new Error('invalid signature');
+      });
+      const mockDisconnect = jest.fn();
+      const client = {
+        id: 'socket-1',
+        handshake: { auth: { token: 'bad.token' }, headers: {} },
+        join: jest.fn(),
+        disconnect: mockDisconnect,
+      } as unknown as Socket;
+
+      await gateway.handleConnection(client);
+
+      expect(mockDisconnect).toHaveBeenCalled();
     });
   });
 
   describe('handleDisconnect', () => {
-    it('removes socket from user map', async () => {
+    it('removes socket from user map after valid connection', async () => {
+      mockJwtService.verify.mockReturnValue({ sub: 'user-1', role: 'CREATOR' });
       const mockJoin = jest.fn();
       const client = {
         id: 'socket-1',
-        handshake: { query: { userId: 'user-1' } },
+        handshake: { auth: { token: 'valid.jwt.token' }, headers: {} },
         join: mockJoin,
+        disconnect: jest.fn(),
       } as unknown as Socket;
 
       await gateway.handleConnection(client);
@@ -80,13 +86,13 @@ describe('EventsGateway', () => {
       // userSocketMap should be cleaned up
     });
 
-    it('handles disconnect without userId', () => {
+    it('handles disconnect gracefully for unknown socket', () => {
       const client = {
-        id: 'socket-1',
-        handshake: { query: {} },
+        id: 'socket-unknown',
+        handshake: { auth: {}, headers: {} },
+        disconnect: jest.fn(),
       } as unknown as Socket;
 
-      // Should not throw
       expect(() => gateway.handleDisconnect(client)).not.toThrow();
     });
   });

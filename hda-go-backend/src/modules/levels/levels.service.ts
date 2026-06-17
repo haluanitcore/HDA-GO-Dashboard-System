@@ -90,30 +90,37 @@ export class LevelsService {
 
     // ── Calculate progress % toward next level ──
     const currentThresholdIdx = LEVEL_THRESHOLDS.findIndex(t => t.level === newLevel);
-    const nextThreshold =
-      LEVEL_THRESHOLDS[currentThresholdIdx + 1] ||
-      LEVEL_THRESHOLDS[LEVEL_THRESHOLDS.length - 1];
-    const factors = [
-      nextThreshold.minGMV > 0
-        ? (creator.gmv_total / nextThreshold.minGMV) * 100
-        : 100,
-      nextThreshold.minCampaigns > 0
-        ? (creator.total_campaigns / nextThreshold.minCampaigns) * 100
-        : 100,
-      nextThreshold.minOrders > 0
-        ? (creator.total_orders / nextThreshold.minOrders) * 100
-        : 100,
-      nextThreshold.minConsistency > 0
-        ? (creator.posting_consistency / nextThreshold.minConsistency) * 100
-        : 100,
-      nextThreshold.minLive > 0
-        ? (creator.live_participation / nextThreshold.minLive) * 100
-        : 100,
-    ];
-    const progressPercentage = Math.min(
-      factors.reduce((sum, f) => sum + Math.min(f, 100), 0) / factors.length,
-      100,
-    );
+    const isMaxLevel = currentThresholdIdx === LEVEL_THRESHOLDS.length - 1;
+    
+    let targetLevel = newLevel;
+    let progressPercentage = 100;
+    let nextThreshold = LEVEL_THRESHOLDS[currentThresholdIdx];
+
+    if (!isMaxLevel) {
+      nextThreshold = LEVEL_THRESHOLDS[currentThresholdIdx + 1];
+      targetLevel = nextThreshold.level;
+      const factors = [
+        nextThreshold.minGMV > 0
+          ? (creator.gmv_total / nextThreshold.minGMV) * 100
+          : 100,
+        nextThreshold.minCampaigns > 0
+          ? (creator.total_campaigns / nextThreshold.minCampaigns) * 100
+          : 100,
+        nextThreshold.minOrders > 0
+          ? (creator.total_orders / nextThreshold.minOrders) * 100
+          : 100,
+        nextThreshold.minConsistency > 0
+          ? (creator.posting_consistency / nextThreshold.minConsistency) * 100
+          : 100,
+        nextThreshold.minLive > 0
+          ? (creator.live_participation / nextThreshold.minLive) * 100
+          : 100,
+      ];
+      progressPercentage = Math.min(
+        factors.reduce((sum, f) => sum + Math.min(f, 100), 0) / factors.length,
+        100,
+      );
+    }
 
     // ── Update creator level ──
     await this.prisma.creator.update({
@@ -126,7 +133,7 @@ export class LevelsService {
       where: { creator_id: creatorId },
       update: {
         current_level: newLevel,
-        target_level: nextThreshold.level,
+        target_level: targetLevel,
         progress_percentage: progressPercentage,
         gmv_progress: creator.gmv_total,
         campaign_progress: creator.total_campaigns,
@@ -135,7 +142,7 @@ export class LevelsService {
       create: {
         creator_id: creatorId,
         current_level: newLevel,
-        target_level: nextThreshold.level,
+        target_level: targetLevel,
         progress_percentage: progressPercentage,
         gmv_progress: creator.gmv_total,
         campaign_progress: creator.total_campaigns,
@@ -186,6 +193,7 @@ export class LevelsService {
       nextLevelName: nextThreshold.name,
       progressPercentage: Math.round(progressPercentage * 100) / 100,
       leveledUp,
+      isMaxLevel,
       factors: {
         gmv: { current: creator.gmv_total, required: nextThreshold.minGMV },
         campaigns: {

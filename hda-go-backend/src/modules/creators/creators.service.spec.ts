@@ -7,10 +7,11 @@ const mockPrisma = {
     findUnique: jest.fn(),
     findMany: jest.fn(),
     update: jest.fn(),
+    count: jest.fn(),
   },
   campaignParticipant: { findMany: jest.fn() },
   submission: { findMany: jest.fn() },
-  creatorOrder: { findMany: jest.fn() },
+  creatorOrder: { findMany: jest.fn(), aggregate: jest.fn() },
   creatorProgress: { findUnique: jest.fn() },
 };
 
@@ -105,10 +106,9 @@ describe('CreatorsService', () => {
       });
       mockPrisma.campaignParticipant.findMany.mockResolvedValue([]);
       mockPrisma.submission.findMany.mockResolvedValue([]);
-      mockPrisma.creatorOrder.findMany.mockResolvedValue([
-        { gmv_amount: 1000, order_count: 2, campaign: { title: 'Cam A' } },
-        { gmv_amount: 2000, order_count: 5, campaign: { title: 'Cam B' } },
-      ]);
+      mockPrisma.creatorOrder.aggregate
+        .mockResolvedValueOnce({ _sum: { gmv_amount: 3000, order_count: 7 }, _count: 2 })
+        .mockResolvedValueOnce({ _sum: { gmv_amount: 5000 } });
       mockPrisma.creatorProgress.findUnique.mockResolvedValue({
         current_level: 2,
       });
@@ -135,7 +135,9 @@ describe('CreatorsService', () => {
         { status: 'APPROVED', campaign: { title: 'C3' }, deliverable: null },
         { status: 'REVISION', campaign: { title: 'C4' }, deliverable: null },
       ]);
-      mockPrisma.creatorOrder.findMany.mockResolvedValue([]);
+      mockPrisma.creatorOrder.aggregate
+        .mockResolvedValueOnce({ _sum: { gmv_amount: 0, order_count: 0 }, _count: 0 })
+        .mockResolvedValueOnce({ _sum: { gmv_amount: 0 } });
       mockPrisma.creatorProgress.findUnique.mockResolvedValue(null);
 
       const result = await service.getDashboardData('u1');
@@ -174,10 +176,12 @@ describe('CreatorsService', () => {
         { user_id: 'u2', gmv_total: 2000 },
       ];
       mockPrisma.creator.findMany.mockResolvedValue(creators);
+      mockPrisma.creator.count.mockResolvedValue(2);
 
       const result = await service.findAll();
 
-      expect(result).toHaveLength(2);
+      expect(result.data).toHaveLength(2);
+      expect(result.total).toBe(2);
       expect(mockPrisma.creator.findMany).toHaveBeenCalledWith(
         expect.objectContaining({ orderBy: { gmv_total: 'desc' } }),
       );

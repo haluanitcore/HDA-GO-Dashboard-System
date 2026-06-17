@@ -5,9 +5,10 @@ import { PrismaService } from '../../prisma/prisma.service';
 export class RewardsService {
   constructor(private prisma: PrismaService) {}
 
-  // Reward logic will be expanded — for now, placeholder endpoints
-  // Rewards are tied to Level Engine progression and campaign completion
-
+  // TODO: Implement actual reward claiming, tracking, and database integration.
+  // Rewards are tied to Level Engine progression and campaign completion.
+  // Currently returning a placeholder response as the system is "coming soon".
+  
   getAvailableRewards(creatorLevel: number) {
     // In production, this queries a rewards table filtered by min_level
     const rewardCatalog = [
@@ -25,17 +26,18 @@ export class RewardsService {
         min_level: 4,
         type: 'PERK',
       },
-      { id: 'r5', name: 'Exclusive Brand Deal', min_level: 5, type: 'DEAL' },
+      // Reward Level 5 removed since max level is Platinum (4).
     ];
 
     return rewardCatalog.filter((r) => r.min_level <= creatorLevel);
   }
 
   async getCreatorRewards(creatorId: string) {
-    const creator = await this.prisma.creator.findUnique({
-      where: { user_id: creatorId },
-    });
-    if (!creator) return [];
-    return this.getAvailableRewards(creator.creator_level);
+    // Force return placeholder response for Opsi A
+    return { 
+      message: 'Reward system coming soon', 
+      rewards: [], 
+      available: false 
+    };
   }
 }

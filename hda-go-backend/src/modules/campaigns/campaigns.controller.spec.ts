@@ -65,7 +65,7 @@ describe('CampaignsController', () => {
     mockService.findAll.mockResolvedValue([]);
     await controller.findAll(mockReq, 'ACTIVE', 'HOTEL');
     expect(mockService.findAll).toHaveBeenCalledWith(
-      { status: 'ACTIVE', category: 'HOTEL' },
+      { status: 'ACTIVE', category: 'HOTEL', skip: 0, take: 50 },
       mockReq.user,
     );
   });

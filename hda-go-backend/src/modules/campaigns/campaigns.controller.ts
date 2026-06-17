@@ -51,12 +51,14 @@ export class CampaignsController {
 
   // GET /campaigns/categories — List categories
   @Get('categories')
+  @Roles(Role.CREATOR, Role.CM, Role.BD, Role.ADMIN, Role.EXECUTIVE, Role.BRAND)
   getCategories() {
     return this.campaignsService.getCategories();
   }
 
   // GET /campaigns?status=ACTIVE&category=HOTEL — List campaigns
   @Get()
+  @Roles(Role.CREATOR, Role.CM, Role.BD, Role.ADMIN, Role.EXECUTIVE, Role.BRAND)
   findAll(
     @Req() req: any,
     @Query('status') status?: string,
@@ -74,6 +76,7 @@ export class CampaignsController {
 
   // GET /campaigns/:id — Campaign detail
   @Get(':id')
+  @Roles(Role.CREATOR, Role.CM, Role.BD, Role.ADMIN, Role.EXECUTIVE, Role.BRAND)
   findOne(@Param('id') id: string) {
     return this.campaignsService.findOne(id);
   }

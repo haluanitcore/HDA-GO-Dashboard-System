@@ -34,6 +34,12 @@ describe('CreatorsController', () => {
     expect(result).toEqual({ name: 'Alice' });
   });
 
+  it('findAll delegates to service', async () => {
+    mockService.findAll.mockResolvedValue({ data: [], total: 0 });
+    await controller.findAll(1, 50);
+    expect(mockService.findAll).toHaveBeenCalledWith(1, 50);
+  });
+
   it('getMyCM delegates userId', async () => {
     mockService.getMyCM.mockResolvedValue({ cmName: 'CM John' });
     await controller.getMyCM(mockReq);
@@ -52,9 +58,4 @@ describe('CreatorsController', () => {
     expect(mockService.updateStreak).toHaveBeenCalledWith('creator-1');
   });
 
-  it('findAll returns all creators', async () => {
-    mockService.findAll.mockResolvedValue([{ id: 'c1' }]);
-    const result = await controller.findAll();
-    expect(result).toEqual([{ id: 'c1' }]);
-  });
 });

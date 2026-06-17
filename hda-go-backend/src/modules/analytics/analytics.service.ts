@@ -65,7 +65,7 @@ export class AnalyticsService {
         creator: {
           include: {
             user: { select: { name: true } },
-            progress: true,
+            progress: { select: { gmv_progress: true, target_level: true, progress_percentage: true } },
           },
         },
       },

@@ -61,15 +61,15 @@ describe('SubmissionsController', () => {
   it('review delegates to service', async () => {
     const dto = { status: 'APPROVED', quality_score: 85 } as any;
     mockService.review.mockResolvedValue({ success: true });
-    await controller.review('s1', dto);
-    expect(mockService.review).toHaveBeenCalledWith('s1', dto);
+    await controller.review(mockReq, 's1', dto);
+    expect(mockService.review).toHaveBeenCalledWith('s1', dto, mockReq.user.userId);
   });
 
   it('bulkReview delegates to service', async () => {
     const dto = { submission_ids: ['s1', 's2'], status: 'APPROVED' } as any;
     mockService.bulkReview.mockResolvedValue({ processed: 2 });
-    await controller.bulkReview(dto);
-    expect(mockService.bulkReview).toHaveBeenCalledWith(dto);
+    await controller.bulkReview(mockReq, dto);
+    expect(mockService.bulkReview).toHaveBeenCalledWith(dto, mockReq.user.userId);
   });
 
   it('markPosted delegates by ID', async () => {
@@ -87,7 +87,7 @@ describe('SubmissionsController', () => {
   it('findMine uses userId from request', async () => {
     mockService.findByCreator.mockResolvedValue([]);
     await controller.findMine(mockReq);
-    expect(mockService.findByCreator).toHaveBeenCalledWith('creator-1');
+    expect(mockService.findByCreator).toHaveBeenCalledWith('creator-1', 0, 50);
   });
 
   it('findPendingQC delegates to service', async () => {
@@ -111,7 +111,7 @@ describe('SubmissionsController', () => {
   it('findByCampaign delegates by ID', async () => {
     mockService.findByCampaign.mockResolvedValue([]);
     await controller.findByCampaign('c1');
-    expect(mockService.findByCampaign).toHaveBeenCalledWith('c1');
+    expect(mockService.findByCampaign).toHaveBeenCalledWith('c1', 0, 50);
   });
 
   it('submitVtLink delegates with userId and link', async () => {

@@ -176,14 +176,20 @@ describe('BdController', () => {
   });
 
   it('createHotel delegates body', async () => {
-    const body = { name: 'Hotel X' };
+    const body = { name: 'Hotel X', location: 'Bali' };
     mockBdService.createHotel.mockResolvedValue({ success: true });
-    await controller.createHotel(body);
+    await controller.createHotel(body as any);
     expect(mockBdService.createHotel).toHaveBeenCalledWith(body);
   });
 
   it('createHotelVisit delegates body', async () => {
-    const body = { hotel_id: 'h1', visit_type: 'REVIEW' };
+    const body = { 
+      campaign_id: 'c1', 
+      creator_id: 'cr1', 
+      hotel_id: 'h1', 
+      visit_type: 'REVIEW',
+      visit_date: '2023-01-01'
+    };
     mockBdService.createHotelVisit.mockResolvedValue({ success: true });
     await controller.createHotelVisit(body);
     expect(mockBdService.createHotelVisit).toHaveBeenCalledWith(body);

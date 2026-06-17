@@ -7,6 +7,7 @@ const mockPrisma = {
     create: jest.fn(),
     createMany: jest.fn(),
     findMany: jest.fn(),
+    findUnique: jest.fn(),
     update: jest.fn(),
     updateMany: jest.fn(),
     count: jest.fn(),
@@ -93,19 +94,38 @@ describe('NotificationsService', () => {
   // ── MARK AS READ ──────────────────────────────────────────────────────────
 
   describe('markAsRead', () => {
-    it('updates single notification read_status to true', async () => {
+    it('updates notification read_status when user owns it', async () => {
+      mockPrisma.notification.findUnique.mockResolvedValue({
+        id: 'n1',
+        user_id: 'user-1',
+      });
       mockPrisma.notification.update.mockResolvedValue({
         id: 'n1',
         read_status: true,
       });
 
-      const result = await service.markAsRead('n1');
+      const result = await service.markAsRead('n1', 'user-1');
 
       expect(result.read_status).toBe(true);
       expect(mockPrisma.notification.update).toHaveBeenCalledWith({
         where: { id: 'n1' },
         data: { read_status: true },
       });
+    });
+
+    it('throws ForbiddenException when user does not own notification', async () => {
+      mockPrisma.notification.findUnique.mockResolvedValue({
+        id: 'n1',
+        user_id: 'other-user',
+      });
+
+      await expect(service.markAsRead('n1', 'user-1')).rejects.toThrow();
+    });
+
+    it('throws ForbiddenException when notification does not exist', async () => {
+      mockPrisma.notification.findUnique.mockResolvedValue(null);
+
+      await expect(service.markAsRead('n1', 'user-1')).rejects.toThrow();
     });
   });
 

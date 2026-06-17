@@ -1,9 +1,10 @@
-import { Controller, Get, Patch, Req, UseGuards, Body } from '@nestjs/common';
+import { Controller, Get, Patch, Req, UseGuards, Body, Query, DefaultValuePipe, ParseIntPipe } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../../common/roles.guard';
 import { Roles } from '../../common/roles.decorator';
 import { Role } from '../../common/roles.enum';
 import { CreatorsService } from './creators.service';
+import { CompleteOnboardingDto } from './dto/onboarding.dto';
 
 @Controller('creators')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -27,7 +28,7 @@ export class CreatorsController {
   // PATCH /creators/profile — Update profile & complete onboarding
   @Patch('profile')
   @Roles(Role.CREATOR)
-  updateProfile(@Req() req: any, @Body() data: any) {
+  updateProfile(@Req() req: any, @Body() data: CompleteOnboardingDto) {
     return this.creatorsService.completeOnboarding(req.user.userId, data);
   }
 
@@ -55,7 +56,10 @@ export class CreatorsController {
   // GET /creators — All creators (for CM/Admin views)
   @Get()
   @Roles(Role.CM, Role.ADMIN, Role.EXECUTIVE)
-  findAll() {
-    return this.creatorsService.findAll();
+  findAll(
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(50), ParseIntPipe) limit: number,
+  ) {
+    return this.creatorsService.findAll(page, limit);
   }
 }

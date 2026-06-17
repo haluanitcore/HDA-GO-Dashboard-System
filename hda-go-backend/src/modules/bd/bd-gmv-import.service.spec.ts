@@ -32,6 +32,7 @@ const mockPrisma = {
   },
   creator: {
     findFirst: jest.fn(),
+    findMany: jest.fn(),
     update: jest.fn(),
   },
   creatorOrder: {
@@ -48,6 +49,10 @@ const mockPrisma = {
   systemSetting: {
     findUnique: jest.fn(),
   },
+  $transaction: jest.fn((cb: any) => {
+    if (typeof cb === 'function') return cb(mockPrisma);
+    return Promise.all(cb);
+  }),
 };
 
 const mockEventsGateway = {
@@ -264,7 +269,7 @@ describe('BdGmvImportService', () => {
       );
     });
 
-    it('creates default campaign when none exists', async () => {
+    it('throws when no campaign exists', async () => {
       const fs = require('fs');
       const XLSX = require('xlsx');
 
@@ -280,13 +285,10 @@ describe('BdGmvImportService', () => {
       mockPrisma.campaign.findFirst
         .mockResolvedValueOnce(null) // no ACTIVE
         .mockResolvedValueOnce(null); // no any
-      mockPrisma.campaign.create.mockResolvedValue({ id: 'new-camp' });
 
-      mockPrisma.creator.findFirst.mockResolvedValue(null);
-
-      await service.uploadCreatorGmvExcel(mockFile);
-
-      expect(mockPrisma.campaign.create).toHaveBeenCalled();
+      await expect(service.uploadCreatorGmvExcel(mockFile)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('skips rows with empty username', async () => {
@@ -359,11 +361,14 @@ describe('BdGmvImportService', () => {
       });
 
       mockPrisma.campaign.findFirst.mockResolvedValue({ id: 'camp-1' });
-      mockPrisma.creator.findFirst.mockResolvedValue({
-        user_id: 'u1',
-        tiktok_username: 'creator1',
-        user: { name: 'Creator 1' },
-      });
+      mockPrisma.creator.findMany.mockResolvedValue([
+        {
+          user_id: 'u1',
+          tiktok_username: 'creator1',
+          creator_code: null,
+          user: { name: 'Creator 1' },
+        },
+      ]);
       mockPrisma.creatorOrder.create.mockResolvedValue({});
       mockPrisma.creatorMonthlyStats.upsert.mockResolvedValue({});
       mockPrisma.creator.update.mockResolvedValue({});

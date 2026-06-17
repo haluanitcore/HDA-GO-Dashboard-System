@@ -67,10 +67,10 @@ describe('NotificationsController', () => {
     expect(result).toBe(5);
   });
 
-  it('markAsRead delegates by id', async () => {
+  it('markAsRead delegates by id and userId', async () => {
     mockService.markAsRead.mockResolvedValue({ read_status: true });
-    await controller.markAsRead('n1');
-    expect(mockService.markAsRead).toHaveBeenCalledWith('n1');
+    await controller.markAsRead('n1', mockReq);
+    expect(mockService.markAsRead).toHaveBeenCalledWith('n1', 'user-1');
   });
 
   it('markAllAsRead uses userId', async () => {

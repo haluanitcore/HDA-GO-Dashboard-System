@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
@@ -46,9 +46,16 @@ export class NotificationsService {
   }
 
   // ──────────────────────────────────────────────
-  // MARK AS READ
+  // MARK AS READ (ownership enforced)
   // ──────────────────────────────────────────────
-  async markAsRead(notificationId: string) {
+  async markAsRead(notificationId: string, userId: string) {
+    const notif = await this.prisma.notification.findUnique({
+      where: { id: notificationId },
+      select: { user_id: true },
+    });
+    if (!notif || notif.user_id !== userId) {
+      throw new ForbiddenException('Notification not found or access denied');
+    }
     return this.prisma.notification.update({
       where: { id: notificationId },
       data: { read_status: true },

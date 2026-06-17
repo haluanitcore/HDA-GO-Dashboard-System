@@ -50,7 +50,7 @@ export class CmService {
       where: { cm_id: cmUserId },
       include: {
         user: { select: { id: true, name: true, email: true } },
-        progress: true,
+        progress: { select: { gmv_progress: true, target_level: true, progress_percentage: true } },
       },
     });
 
@@ -131,7 +131,7 @@ export class CmService {
       where: { cm_id: cmUserId },
       include: {
         user: { select: { id: true, name: true, email: true } },
-        progress: true,
+        progress: { select: { gmv_progress: true, target_level: true, progress_percentage: true } },
       },
     });
 
@@ -286,7 +286,7 @@ export class CmService {
       where: { cm_id: cmUserId },
       include: {
         user: { select: { name: true } },
-        progress: true,
+        progress: { select: { gmv_progress: true, target_level: true, progress_percentage: true } },
       },
       orderBy: { creator_level: 'desc' },
     });

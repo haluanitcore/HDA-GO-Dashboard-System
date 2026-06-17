@@ -28,6 +28,10 @@ const mockPrisma = {
   notification: {
     create: jest.fn(),
   },
+  $transaction: jest.fn((ops: any) => {
+    if (typeof ops === 'function') return ops(mockPrisma);
+    return Promise.all(ops);
+  }),
 };
 
 const mockGDriveService = {
@@ -143,7 +147,7 @@ describe('SubmissionsService', () => {
       const result = await service.review('sub-1', {
         status: 'APPROVED',
         qc_notes: 'Looks great!',
-      });
+      }, 'cm-1');
 
       expect(result.status).toBe('APPROVED');
       expect(mockPrisma.notification.create).toHaveBeenCalledWith(
@@ -169,7 +173,7 @@ describe('SubmissionsService', () => {
       await service.review('sub-1', {
         status: 'REVISION',
         qc_notes: 'Please fix audio',
-      });
+      }, 'cm-1');
 
       expect(mockPrisma.submission.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -195,7 +199,7 @@ describe('SubmissionsService', () => {
       await service.review('sub-1', {
         status: 'REJECTED',
         qc_notes: 'Off-topic',
-      });
+      }, 'cm-1');
 
       expect(mockPrisma.notification.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -210,7 +214,7 @@ describe('SubmissionsService', () => {
       mockPrisma.submission.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.review('nonexistent', { status: 'APPROVED' }),
+        service.review('nonexistent', { status: 'APPROVED' }, 'cm-1'),
       ).rejects.toThrow(NotFoundException);
     });
   });
@@ -243,7 +247,7 @@ describe('SubmissionsService', () => {
       const result = await service.bulkReview({
         submissionIds: ['sub-1', 'sub-2'],
         status: 'APPROVED',
-      });
+      }, 'cm-1');
 
       expect(result.success).toBe(true);
       expect(result.count).toBe(2);
@@ -298,10 +302,11 @@ describe('SubmissionsService', () => {
         { id: 'sub-2' },
         { id: 'sub-1' },
       ]);
+      mockPrisma.submission.count.mockResolvedValue(2);
 
       const result = await service.findByCreator('creator-1');
 
-      expect(result).toHaveLength(2);
+      expect(result.data).toHaveLength(2);
       expect(mockPrisma.submission.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { creator_id: 'creator-1' },

@@ -1,9 +1,11 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { google } from 'googleapis';
 
 @Injectable()
 export class CreatorsService {
+  private readonly logger = new Logger(CreatorsService.name);
+
   constructor(private prisma: PrismaService) {}
 
   // ──────────────────────────────────────────────
@@ -55,8 +57,8 @@ export class CreatorsService {
   // CREATOR DASHBOARD AGGREGATION
   // Frontend Request Dashboard API → Backend Aggregate → Return all data
   // ──────────────────────────────────────────────
-  async getDashboardData(userId: string) {
-    const [creator, campaigns, submissions, orders, progress] =
+  async getDashboardData(userId: string, skip: number = 0, take: number = 10) {
+    const [creator, campaigns, submissions, orderStats, monthlyStats, progress] =
       await Promise.all([
         // Creator Profile + Stats
         this.prisma.creator.findUnique({
@@ -73,7 +75,8 @@ export class CreatorsService {
             campaign: true,
           },
           orderBy: { joined_at: 'desc' },
-          take: 10,
+          skip,
+          take,
         }),
 
         // Pending Submissions + SOW Progress
@@ -84,15 +87,24 @@ export class CreatorsService {
             deliverable: true,
           },
           orderBy: { submitted_at: 'desc' },
-          take: 10,
+          skip,
+          take,
         }),
 
         // GMV & Orders
-        this.prisma.creatorOrder.findMany({
+        this.prisma.creatorOrder.aggregate({
           where: { creator_id: userId },
-          include: {
-            campaign: { select: { title: true } },
+          _sum: { gmv_amount: true, order_count: true },
+          _count: true
+        }),
+
+        // Monthly Stats (Aggregate)
+        this.prisma.creatorOrder.aggregate({
+          where: {
+            creator_id: userId,
+            recorded_at: { gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) }
           },
+          _sum: { gmv_amount: true }
         }),
 
         // Level Progress
@@ -102,14 +114,14 @@ export class CreatorsService {
       ]);
 
     // Calculate aggregated GMV
-    const totalGMV = orders.reduce((sum, o) => sum + o.gmv_amount, 0);
-    const totalOrders = orders.reduce((sum, o) => sum + o.order_count, 0);
+    const totalGMV = orderStats._sum.gmv_amount || 0;
+    const totalOrders = orderStats._sum.order_count || 0;
 
     return {
       profile: creator,
       gmv: {
         total: totalGMV,
-        monthly: creator?.gmv_monthly || 0,
+        monthly: monthlyStats?._sum?.gmv_amount || creator?.gmv_monthly || 0,
         totalOrders,
       },
       campaigns: {
@@ -149,14 +161,20 @@ export class CreatorsService {
   // ──────────────────────────────────────────────
   // GET ALL CREATORS (for CM/Admin)
   // ──────────────────────────────────────────────
-  async findAll() {
-    return this.prisma.creator.findMany({
-      include: {
-        user: { select: { id: true, name: true, email: true } },
-        progress: true,
-      },
-      orderBy: { gmv_total: 'desc' },
-    });
+  async findAll(page: number = 1, limit: number = 50) {
+    const [data, total] = await Promise.all([
+      this.prisma.creator.findMany({
+        take: Math.min(limit, 100), // max 100 per request
+        skip: (page - 1) * limit,
+        include: {
+          user: { select: { id: true, name: true, email: true } },
+          progress: true,
+        },
+        orderBy: { gmv_total: 'desc' }
+      }),
+      this.prisma.creator.count()
+    ]);
+    return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
   // ──────────────────────────────────────────────
@@ -171,108 +189,122 @@ export class CreatorsService {
   }
 
   // ──────────────────────────────────────────────
-  // COMPLETE ONBOARDING
+  // UPDATE PROFILE / ONBOARDING
   // ──────────────────────────────────────────────
   async completeOnboarding(
     userId: string,
-    data: {
-      name: string;
-      phone_number: string;
-      gender: string;
-      birth_date: string;
-      domicile: string;
-      tiktok_username: string;
-      tiktok_url?: string;
-      tiktok_followers: number;
-      avg_views: number;
-      niche: string[];
-      affiliate_exp: string;
-      cm_id: string;
-    },
+    data: any, // data is now UpdateCreatorProfileDto from controller
   ) {
-    if (!data.cm_id) {
-      throw new BadRequestException('Campaign Manager (CM) wajib dipilih.');
-    }
+    const existingCreator = await this.prisma.creator.findUnique({
+      where: { user_id: userId },
+    });
 
-    const cleanCode = data.tiktok_username.trim().replace(/^@/, '').trim();
-    if (cleanCode) {
-      const existing = await this.prisma.creator.findFirst({
-        where: {
-          creator_code: cleanCode,
-          NOT: { user_id: userId },
+    const isFirstTimeOnboarding = existingCreator?.onboarding_status !== 'ACTIVE';
+
+    if (isFirstTimeOnboarding) {
+      if (!data.cm_id) {
+        throw new BadRequestException('Campaign Manager (CM) wajib dipilih saat onboarding.');
+      }
+      
+      const cleanCode = data.tiktok_username?.trim().replace(/^@/, '').trim();
+      if (cleanCode) {
+        const existing = await this.prisma.creator.findFirst({
+          where: {
+            creator_code: cleanCode,
+            NOT: { user_id: userId },
+          },
+        });
+        if (existing) {
+          throw new BadRequestException('Username TikTok / Creator ID ini sudah terdaftar di sistem.');
+        }
+      }
+
+      // 1. Update User name
+      const user = await this.prisma.user.update({
+        where: { id: userId },
+        data: { name: data.name },
+      });
+
+      // 2. Update Creator fields & set ACTIVE
+      const updatedCreator = await this.prisma.creator.update({
+        where: { user_id: userId },
+        data: {
+          creator_code: cleanCode || null,
+          phone_number: data.phone_number || null,
+          gender: data.gender || null,
+          birth_date: data.birth_date ? new Date(data.birth_date) : null,
+          domicile: data.domicile || null,
+          tiktok_username: data.tiktok_username || null,
+          tiktok_url: data.tiktok_url || (cleanCode ? `https://tiktok.com/@${cleanCode}` : null),
+          tiktok_followers: Number(data.tiktok_followers) || 0,
+          avg_views: Number(data.avg_views) || 0,
+          niche: data.niche ? JSON.stringify(data.niche) : '[]',
+          affiliate_exp: data.affiliate_exp || null,
+          cm_id: data.cm_id,
+          onboarding_status: 'ACTIVE',
+          onboarded_at: new Date(),
+        },
+        include: {
+          user: { select: { id: true, name: true, email: true, role: true } },
         },
       });
-      if (existing) {
-        throw new BadRequestException('Username TikTok / Creator ID ini sudah terdaftar di sistem.');
+
+      // 3. Trigger Google Sheet Sync
+      const cmUser = await this.prisma.user.findUnique({
+        where: { id: data.cm_id },
+      });
+      const cmName = cmUser ? cmUser.name : '';
+
+      const sheetSynced = await this.appendCreatorToGoogleSheets(
+        {
+          creator_code: cleanCode,
+          tiktok_username: data.tiktok_username,
+          tiktok_url: data.tiktok_url || `https://tiktok.com/@${cleanCode}`,
+          tiktok_followers: Number(data.tiktok_followers) || 0,
+          niche: JSON.stringify(data.niche),
+          user: { name: data.name },
+        },
+        cmName,
+      );
+
+      if (sheetSynced) {
+        await this.prisma.creator.update({
+          where: { user_id: userId },
+          data: { sheet_registered: true },
+        });
       }
-    }
 
-    // 1. Update User name
-    const user = await this.prisma.user.update({
-      where: { id: userId },
-      data: { name: data.name },
-    });
+      return {
+        success: true,
+        message: 'Onboarding completed successfully',
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          onboarding_status: 'ACTIVE',
+        },
+      };
+    } else {
+      // REGULAR PROFILE UPDATE (Prevent Mass Assignment via UpdateCreatorProfileDto)
+      // Only fields explicitly provided in the DTO will be updated
+      const updateData: any = {};
+      if (data.tiktok_url !== undefined) updateData.tiktok_url = data.tiktok_url;
+      if (data.niche !== undefined) updateData.niche = JSON.stringify(data.niche);
+      if (data.domicile !== undefined) updateData.domicile = data.domicile;
+      if (data.gender !== undefined) updateData.gender = data.gender;
+      if (data.bio !== undefined) updateData.bio = data.bio;
 
-    // 2. Update Creator fields & set ACTIVE
-    const updatedCreator = await this.prisma.creator.update({
-      where: { user_id: userId },
-      data: {
-        creator_code: cleanCode || null,
-        phone_number: data.phone_number || null,
-        gender: data.gender || null,
-        birth_date: data.birth_date ? new Date(data.birth_date) : null,
-        domicile: data.domicile || null,
-        tiktok_username: data.tiktok_username || null,
-        tiktok_url: data.tiktok_url || (cleanCode ? `https://tiktok.com/@${cleanCode}` : null),
-        tiktok_followers: Number(data.tiktok_followers) || 0,
-        avg_views: Number(data.avg_views) || 0,
-        niche: JSON.stringify(data.niche),
-        affiliate_exp: data.affiliate_exp || null,
-        cm_id: data.cm_id,
-        onboarding_status: 'ACTIVE',
-        onboarded_at: new Date(),
-      },
-      include: {
-        user: { select: { id: true, name: true, email: true, role: true } },
-      },
-    });
-
-    // 3. Trigger Google Sheet Sync
-    const cmUser = await this.prisma.user.findUnique({
-      where: { id: data.cm_id },
-    });
-    const cmName = cmUser ? cmUser.name : '';
-
-    const sheetSynced = await this.appendCreatorToGoogleSheets(
-      {
-        creator_code: cleanCode,
-        tiktok_username: data.tiktok_username,
-        tiktok_url: data.tiktok_url || `https://tiktok.com/@${cleanCode}`,
-        tiktok_followers: Number(data.tiktok_followers) || 0,
-        niche: JSON.stringify(data.niche),
-        user: { name: data.name },
-      },
-      cmName,
-    );
-
-    if (sheetSynced) {
       await this.prisma.creator.update({
         where: { user_id: userId },
-        data: { sheet_registered: true },
+        data: updateData,
       });
-    }
 
-    return {
-      success: true,
-      message: 'Onboarding completed successfully',
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        onboarding_status: 'ACTIVE',
-      },
-    };
+      return {
+        success: true,
+        message: 'Profile updated successfully',
+      };
+    }
   }
 
   // ──────────────────────────────────────────────
@@ -282,7 +314,7 @@ export class CreatorsService {
     try {
       const keyJson = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
       if (!keyJson) {
-        console.warn('GOOGLE_SERVICE_ACCOUNT_KEY not set — skipping Google Sheet sync');
+        this.logger.warn('GOOGLE_SERVICE_ACCOUNT_KEY not set — skipping Google Sheet sync');
         return false;
       }
 
@@ -290,14 +322,14 @@ export class CreatorsService {
         where: { key: 'google_sheets_url' },
       });
       if (!dbUrlSetting?.value) {
-        console.warn('google_sheets_url not set in database — skipping Google Sheet sync');
+        this.logger.warn('google_sheets_url not set in database — skipping Google Sheet sync');
         return false;
       }
 
       const match = dbUrlSetting.value.match(/\/d\/([a-zA-Z0-9-_]+)/);
       const spreadsheetId = match ? match[1] : null;
       if (!spreadsheetId) {
-        console.warn('Invalid google_sheets_url format — skipping Google Sheet sync');
+        this.logger.warn('Invalid google_sheets_url format — skipping Google Sheet sync');
         return false;
       }
 
@@ -335,10 +367,10 @@ export class CreatorsService {
         requestBody: { values },
       });
 
-      console.log(`✅ Successfully appended creator ${creator.tiktok_username} to Google Sheet.`);
+      this.logger.log(`✅ Successfully appended creator ${creator.tiktok_username} to Google Sheet.`);
       return true;
     } catch (error) {
-      console.error('❌ Failed to append creator to Google Sheet:', error);
+      this.logger.error('❌ Failed to append creator to Google Sheet:', error.stack);
       return false;
     }
   }

@@ -12,6 +12,7 @@ export class LeaderboardController {
 
   // GET /leaderboard/gmv?limit=10
   @Get('gmv')
+  @Roles(Role.CREATOR, Role.CM, Role.BD, Role.ADMIN, Role.EXECUTIVE)
   getTopGMV(@Query('limit') limit?: string) {
     const n = parseInt(limit ?? '', 10);
     const take = isNaN(n) || n < 1 ? 10 : Math.min(n, 50);
@@ -20,6 +21,7 @@ export class LeaderboardController {
 
   // GET /leaderboard/orders
   @Get('orders')
+  @Roles(Role.CREATOR, Role.CM, Role.BD, Role.ADMIN, Role.EXECUTIVE)
   getTopOrders(@Query('limit') limit?: string) {
     const n = parseInt(limit ?? '', 10);
     const take = isNaN(n) || n < 1 ? 10 : Math.min(n, 50);
@@ -28,6 +30,7 @@ export class LeaderboardController {
 
   // GET /leaderboard/streak
   @Get('streak')
+  @Roles(Role.CREATOR, Role.CM, Role.BD, Role.ADMIN, Role.EXECUTIVE)
   getTopStreak(@Query('limit') limit?: string) {
     const n = parseInt(limit ?? '', 10);
     const take = isNaN(n) || n < 1 ? 10 : Math.min(n, 50);
