@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -31,6 +32,13 @@ import { GDriveModule } from './modules/gdrive/gdrive.module';
 
     // Cron scheduler for analytics aggregation
     ScheduleModule.forRoot(),
+
+    // Rate Limiting
+    ThrottlerModule.forRoot([{
+      name: 'default',
+      ttl: 60000,
+      limit: 100,
+    }]),
 
     // Database
     PrismaModule,

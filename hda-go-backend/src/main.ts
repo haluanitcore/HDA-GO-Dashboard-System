@@ -29,7 +29,7 @@ async function bootstrap() {
   app.use(cookieParser());
 
   // Enable helmet for security headers (disable crossOriginResourcePolicy to allow local files rendering)
-  app.use(helmet({ crossOriginResourcePolicy: false }));
+  app.use(helmet({ crossOriginResourcePolicy: { policy: 'same-site' } }));
 
   // Apply global rate limiting to all endpoints (500 requests per 15 minutes)
   app.use(

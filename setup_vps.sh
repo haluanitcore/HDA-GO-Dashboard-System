@@ -211,6 +211,13 @@ NGINX_CONF="server {
     listen 80;
     server_name $DOMAIN www.$DOMAIN;
 
+    # Security headers
+    add_header Strict-Transport-Security \"max-age=31536000; includeSubDomains; preload\" always;
+    add_header X-Frame-Options \"DENY\" always;
+    add_header X-Content-Type-Options \"nosniff\" always;
+    add_header Referrer-Policy \"strict-origin-when-cross-origin\" always;
+    add_header Permissions-Policy \"camera=(), microphone=(), geolocation=()\" always;
+
     location / {
         proxy_pass http://localhost:3000;
         proxy_http_version 1.1;
@@ -280,7 +287,8 @@ echo "  🌐 URL Website:   https://$DOMAIN"
 echo "  👤 API Endpoint:  https://$DOMAIN/api"
 echo "  📦 Backend PM2:   Running (Port 4000)"
 echo "  💻 Frontend PM2:  Running (Port 3000)"
-echo "  📁 DB Location:   /var/www/hda-go/hda-go-backend/prisma/dev.db"
+echo "  🐘 Database:       PostgreSQL (hdago_dev @ localhost:5432)"
+echo "  👤 DB User:        hdago_admin"
 echo "  🛡️ SSL status:     Let's Encrypt HTTPS (Auto-renew active)"
 echo -e "\n\e[36mPM2 Processes Status:\e[0m"
 sudo -u hdago pm2 status
