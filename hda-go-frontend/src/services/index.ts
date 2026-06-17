@@ -93,6 +93,10 @@ export const notificationService = {
 
 export const rewardService = {
   getMyRewards: () => api.get<any>('/rewards/my'),
+  getMilestones: () => api.get<any>('/rewards/milestones'),
+  claimMilestone: (rewardId: string) => api.post<any>('/rewards/claim', { rewardId }),
+  getCmPendingClaims: () => api.get<any>('/rewards/cm/pending'),
+  approveClaim: (claimId: string) => api.patch<any>(`/rewards/cm/claims/${claimId}/approve`, {}),
 };
 
 // ── CM Services ──

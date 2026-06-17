@@ -15,6 +15,8 @@ async function main() {
   console.log('   Database: PostgreSQL');
 
   // ── CLEAR EXISTING DATA ──
+  await prisma.creatorMilestoneClaim.deleteMany();
+  await prisma.milestoneReward.deleteMany();
   await prisma.campaignEditLog.deleteMany();
   await prisma.brandBDAssignment.deleteMany();
   await prisma.notification.deleteMany();
@@ -117,8 +119,11 @@ async function main() {
       followers: 1163,
       niche: '["Attraction", "F&B", "Hotel"]',
       level: 1,
-      gmv: 0,
-      orders: 0,
+      gmv: 6000000,
+      orders: 12,
+      campaigns: 3,
+      live: 5,
+      consistency: 80,
       profileUrl: 'https://www.tiktok.com/@ulanberkelana'
     },
     {
@@ -265,11 +270,11 @@ async function main() {
         gmv_total: c.gmv,
         gmv_monthly: c.gmv,
         total_orders: c.orders,
-        total_campaigns: 2,
+        total_campaigns: (c as any).campaigns ?? 2,
         total_posts: 5,
         streak_days: 3,
-        live_participation: 1,
-        posting_consistency: 80,
+        live_participation: (c as any).live ?? 1,
+        posting_consistency: (c as any).consistency ?? 80,
         cm_id: cmId,
         tiktok_username: c.username,
         tiktok_url: c.profileUrl,
@@ -375,6 +380,94 @@ async function main() {
   for (const c of realCreators) {
     console.log(`     - Name: ${c.name.padEnd(25)} Email: ${c.email.padEnd(30)} Username: @${c.username}`);
   }
+  console.log('--------------------------------------------------------');
+  
+  // ── SEED MILESTONE REWARDS ──
+  console.log('   🌱 Seeding Milestone Rewards...');
+  const milestoneRewards = [
+    // GMV Track
+    { track: 'GMV', stage: 1, target_value: 1000000.0, reward_name: 'Voucher Shopee 25K', reward_type: 'VOUCHER', reward_value: 25000.0, description: 'Mencapai total GMV Rp 1.000.000' },
+    { track: 'GMV', stage: 2, target_value: 5000000.0, reward_name: 'Voucher Shopee 100K', reward_type: 'VOUCHER', reward_value: 100000.0, description: 'Mencapai total GMV Rp 5.000.000' },
+    { track: 'GMV', stage: 3, target_value: 25000000.0, reward_name: 'Cash Reward Rp 500K', reward_type: 'CASH', reward_value: 500000.0, description: 'Mencapai total GMV Rp 25.000.000' },
+    { track: 'GMV', stage: 4, target_value: 100000000.0, reward_name: 'Eksklusif Partnership HDA', reward_type: 'PERK', reward_value: 0.0, description: 'Mencapai total GMV Rp 100.000.000' },
+    
+    // ORDERS Track
+    { track: 'ORDERS', stage: 1, target_value: 5.0, reward_name: 'Voucher GoPay 50K', reward_type: 'VOUCHER', reward_value: 50000.0, description: 'Mencapai 5 Pesanan Produk' },
+    { track: 'ORDERS', stage: 2, target_value: 10.0, reward_name: 'Voucher GoPay 150K', reward_type: 'VOUCHER', reward_value: 150000.0, description: 'Mencapai 10 Pesanan Produk' },
+    { track: 'ORDERS', stage: 3, target_value: 25.0, reward_name: 'Cash Reward Rp 300K', reward_type: 'CASH', reward_value: 300000.0, description: 'Mencapai 25 Pesanan Produk' },
+    { track: 'ORDERS', stage: 4, target_value: 50.0, reward_name: 'Merchandise Eksklusif HDA GO', reward_type: 'PERK', reward_value: 0.0, description: 'Mencapai 50 Pesanan Produk' },
+
+    // CAMPAIGNS Track
+    { track: 'CAMPAIGNS', stage: 1, target_value: 1.0, reward_name: 'Badge Rising Creator', reward_type: 'PERK', reward_value: 0.0, description: 'Mengikuti 1 Kampanye' },
+    { track: 'CAMPAIGNS', stage: 2, target_value: 5.0, reward_name: 'Prioritas Kampanye Barter', reward_type: 'PERK', reward_value: 0.0, description: 'Mengikuti 5 Kampanye' },
+    { track: 'CAMPAIGNS', stage: 3, target_value: 15.0, reward_name: 'Undangan Creator Gathering', reward_type: 'PERK', reward_value: 0.0, description: 'Mengikuti 15 Kampanye' },
+    { track: 'CAMPAIGNS', stage: 4, target_value: 30.0, reward_name: 'Akses Kampanye Retainer', reward_type: 'PERK', reward_value: 0.0, description: 'Mengikuti 30 Kampanye' },
+
+    // CONSISTENCY Track
+    { track: 'CONSISTENCY', stage: 1, target_value: 30.0, reward_name: 'Tips Konten Kretif HDA', reward_type: 'PERK', reward_value: 0.0, description: 'Mencapai konsistensi posting 30%' },
+    { track: 'CONSISTENCY', stage: 2, target_value: 50.0, reward_name: 'Support Promosi Akun', reward_type: 'PERK', reward_value: 0.0, description: 'Mencapai konsistensi posting 50%' },
+    { track: 'CONSISTENCY', stage: 3, target_value: 75.0, reward_name: '1-on-1 Mentoring CM', reward_type: 'PERK', reward_value: 0.0, description: 'Mencapai konsistensi posting 75%' },
+    { track: 'CONSISTENCY', stage: 4, target_value: 90.0, reward_name: 'Spotlight Creator of Month', reward_type: 'PERK', reward_value: 0.0, description: 'Mencapai konsistensi posting 90%' },
+
+    // LIVE Track
+    { track: 'LIVE', stage: 1, target_value: 1.0, reward_name: 'Live Tools Starter Kit', reward_type: 'PERK', reward_value: 0.0, description: 'Berpartisipasi 1 Sesi LIVE' },
+    { track: 'LIVE', stage: 2, target_value: 5.0, reward_name: 'Voucher Giveaway Live 100K', reward_type: 'VOUCHER', reward_value: 100000.0, description: 'Berpartisipasi 5 Sesi LIVE' },
+    { track: 'LIVE', stage: 3, target_value: 15.0, reward_name: 'Kolaborasi Live Official HDA', reward_type: 'PERK', reward_value: 0.0, description: 'Berpartisipasi 15 Sesi LIVE' },
+    { track: 'LIVE', stage: 4, target_value: 30.0, reward_name: 'Co-Hosting Brand Campaign Live', reward_type: 'PERK', reward_value: 0.0, description: 'Berpartisipasi 30 Sesi LIVE' }
+  ];
+
+  const rewardRecords: Record<string, string> = {};
+  for (const reward of milestoneRewards) {
+    const created = await prisma.milestoneReward.create({
+      data: reward
+    });
+    rewardRecords[`${reward.track}:${reward.stage}`] = created.id;
+  }
+  console.log('   ✅ Milestone Rewards catalog created.');
+
+  // ── SEED INITIAL CLAIMS FOR ULAN ──
+  console.log('   🌱 Seeding Initial Milestone Claims for Ulan...');
+  const ulanId = '7145781983607374874';
+  
+  // Claim GMV Stage 1 (COMPLETED)
+  const gmvStage1Id = rewardRecords['GMV:1'];
+  if (gmvStage1Id) {
+    await prisma.creatorMilestoneClaim.create({
+      data: {
+        creator_id: ulanId,
+        reward_id: gmvStage1Id,
+        status: 'COMPLETED',
+        claimed_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
+      }
+    });
+  }
+
+  // Claim CONSISTENCY Stage 1 (COMPLETED)
+  const consStage1Id = rewardRecords['CONSISTENCY:1'];
+  if (consStage1Id) {
+    await prisma.creatorMilestoneClaim.create({
+      data: {
+        creator_id: ulanId,
+        reward_id: consStage1Id,
+        status: 'COMPLETED',
+        claimed_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
+      }
+    });
+  }
+
+  // Claim CONSISTENCY Stage 2 (COMPLETED)
+  const consStage2Id = rewardRecords['CONSISTENCY:2'];
+  if (consStage2Id) {
+    await prisma.creatorMilestoneClaim.create({
+      data: {
+        creator_id: ulanId,
+        reward_id: consStage2Id,
+        status: 'COMPLETED',
+        claimed_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000)
+      }
+    });
+  }
+  console.log('   ✅ Initial claims for Ulan seeded.');
   console.log('--------------------------------------------------------');
   console.log('   Creator Manager (CM) Accounts:');
   for (const cm of cmList) {

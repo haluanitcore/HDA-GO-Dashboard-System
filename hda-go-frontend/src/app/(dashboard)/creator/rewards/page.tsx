@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { rewardService, levelService } from '@/services';
-import { useCreatorStore } from '@/store';
+import { rewardService } from '@/services';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   Gift,
@@ -13,49 +12,82 @@ import {
   Sparkles,
   Lock,
   CheckCircle2,
-  ChevronRight,
   Loader2,
   Zap,
   Trophy,
   Target,
+  Clock,
+  TrendingUp,
+  Package,
+  Calendar,
+  Video,
 } from 'lucide-react';
+import { toast } from 'react-hot-toast';
+import { motion, AnimatePresence } from 'framer-motion';
 
-// All level milestones with their corresponding rewards
-const LEVEL_MILESTONES = [
-  { level: 0, name: 'Newcomer', reward: null, icon: '🌱' },
-  { level: 1, name: 'Starter', reward: 'Voucher Shopee 50K', icon: '⭐' },
-  { level: 2, name: 'Rising', reward: 'Bonus Commission +2%', icon: '🚀' },
-  { level: 3, name: 'Pro', reward: 'Voucher GoPay 100K', icon: '💎' },
-  { level: 4, name: 'Expert', reward: 'Priority Campaign Access', icon: '👑' },
-  { level: 5, name: 'Master', reward: 'Exclusive Brand Deal', icon: '🏆' },
-  { level: 6, name: 'Legend', reward: 'Legend Exclusive Package', icon: '🔥' },
-];
+const TRACK_CONFIG: Record<string, { label: string; icon: any; color: string; bg: string; format: (val: number) => string }> = {
+  GMV: {
+    label: 'GMV Penjualan',
+    icon: TrendingUp,
+    color: 'text-amber-400',
+    bg: 'from-amber-500/20 to-orange-500/20',
+    format: (val) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(val),
+  },
+  ORDERS: {
+    label: 'Pesanan/Orders',
+    icon: ShoppingCart,
+    color: 'text-emerald-400',
+    bg: 'from-emerald-500/20 to-teal-500/20',
+    format: (val) => `${val} Pesanan`,
+  },
+  CAMPAIGNS: {
+    label: 'Kampanye Diikuti',
+    icon: Package,
+    color: 'text-blue-400',
+    bg: 'from-blue-500/20 to-indigo-500/20',
+    format: (val) => `${val} Kampanye`,
+  },
+  CONSISTENCY: {
+    label: 'Konsistensi Posting',
+    icon: Calendar,
+    color: 'text-pink-400',
+    bg: 'from-pink-500/20 to-rose-500/20',
+    format: (val) => `${val}%`,
+  },
+  LIVE: {
+    label: 'Partisipasi LIVE',
+    icon: Video,
+    color: 'text-purple-400',
+    bg: 'from-purple-500/20 to-violet-500/20',
+    format: (val) => `${val} Sesi`,
+  },
+};
 
-const REWARD_TYPE_CONFIG: Record<string, { icon: typeof Gift; color: string; bg: string; border: string }> = {
+const REWARD_TYPE_CONFIG: Record<string, { icon: any; color: string; bg: string; border: string }> = {
   VOUCHER: { icon: ShoppingCart, color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' },
   COMMISSION: { icon: Percent, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20' },
   PERK: { icon: Star, color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/20' },
-  DEAL: { icon: Crown, color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20' },
+  CASH: { icon: Crown, color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20' },
 };
 
 export default function CreatorRewards() {
-  const { dashboard, fetchAll } = useCreatorStore();
-  const [rewards, setRewards] = useState<any[]>([]);
-  const [levelProgress, setLevelProgress] = useState<any>(null);
+  const [tracks, setTracks] = useState<any[]>([]);
+  const [metrics, setMetrics] = useState<Record<string, number>>({});
+  const [activeTrackKey, setActiveTrackKey] = useState<string>('GMV');
   const [isLoading, setIsLoading] = useState(true);
+  const [isClaiming, setIsClaiming] = useState<string | null>(null);
+
+  // Confetti Particle state for custom effect
+  const [showConfetti, setShowConfetti] = useState(false);
 
   const loadData = async () => {
-    setIsLoading(true);
     try {
-      const [rewardData, levelData, _] = await Promise.all([
-        rewardService.getMyRewards(),
-        levelService.getProgress(),
-        fetchAll(),
-      ]);
-      setRewards(rewardData);
-      setLevelProgress(levelData);
-    } catch (err) {
-      console.error('Failed to load rewards:', err);
+      const response = await rewardService.getMilestones();
+      setTracks(response.tracks || []);
+      setMetrics(response.current_metrics || {});
+    } catch (err: any) {
+      toast.error('Gagal memuat data rewards');
+      console.error(err);
     } finally {
       setIsLoading(false);
     }
@@ -65,179 +97,304 @@ export default function CreatorRewards() {
     loadData();
   }, []);
 
+  const handleClaim = async (rewardId: string, rewardName: string) => {
+    setIsClaiming(rewardId);
+    try {
+      await rewardService.claimMilestone(rewardId);
+      toast.success(`Klaim untuk ${rewardName} berhasil diajukan!`);
+      
+      // Trigger confetti effect
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 4000);
+
+      // Reload data to update UI state to PENDING
+      await loadData();
+    } catch (err: any) {
+      const errMsg = err.response?.data?.message || 'Gagal mengajukan klaim reward';
+      toast.error(errMsg);
+      console.error(err);
+    } finally {
+      setIsClaiming(null);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
-        <Loader2 className="h-8 w-8 text-blue-500 animate-spin" />
+        <Loader2 className="h-8 w-8 text-[#F6D145] animate-spin" />
       </div>
     );
   }
 
-  const currentLevel = levelProgress?.current_level ?? 0;
-  const unlockedIds = new Set(rewards.map((r: any) => r.id));
+  const activeTrackData = tracks.find((t) => t.track === activeTrackKey) || {
+    track: activeTrackKey,
+    current_value: metrics[activeTrackKey] || 0,
+    milestones: [],
+  };
+
+  const activeConfig = TRACK_CONFIG[activeTrackKey];
+
+  // Calculate next target and overall progress bar
+  const currentVal = activeTrackData.current_value;
+  const milestones = activeTrackData.milestones || [];
+  
+  const nextLockedMilestone = milestones.find((m: any) => m.status === 'LOCKED');
+  const maxMilestoneTarget = milestones.length > 0 ? milestones[milestones.length - 1].target_value : 100;
+  const currentTarget = nextLockedMilestone ? nextLockedMilestone.target_value : maxMilestoneTarget;
+  
+  const progressPercent = Math.min(100, Math.max(0, (currentVal / currentTarget) * 100));
 
   return (
-    <div className="space-y-8 pb-12 max-w-5xl">
-      {/* Page Header */}
-      <div>
-        <h1 className="text-3xl font-black text-white tracking-tight">Rewards</h1>
-        <p className="text-gray-500 font-medium mt-1">Level up to unlock exclusive rewards and perks.</p>
-      </div>
-
-      {/* Current Level Banner */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-amber-500/70 via-orange-500/70 to-pink-500/70 backdrop-blur-xl rounded-[28px] p-7 shadow-2xl shadow-orange-500/20 border border-white/10">
-        <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full -mr-16 -mt-16 blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full -ml-10 -mb-10 blur-2xl" />
-        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-          <div className="flex items-center gap-4">
-            <div className="h-16 w-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/20">
-              <span className="text-3xl">{LEVEL_MILESTONES[currentLevel]?.icon || '🌱'}</span>
-            </div>
-            <div>
-              <p className="text-xs font-bold text-white/60 uppercase tracking-widest">Your Level</p>
-              <h2 className="text-3xl font-black text-white">
-                Level {currentLevel}
-                <span className="text-lg font-bold text-white/70 ml-2">{LEVEL_MILESTONES[currentLevel]?.name}</span>
-              </h2>
-            </div>
-          </div>
-          <div className="flex items-center gap-3 bg-white/15 backdrop-blur-sm rounded-2xl px-5 py-3 border border-white/20">
-            <Gift className="h-5 w-5 text-white" />
-            <div>
-              <p className="text-2xl font-black text-white">{rewards.length}</p>
-              <p className="text-[10px] font-bold text-white/60 uppercase tracking-widest">Unlocked</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Unlocked Rewards */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-amber-400" />
-          <h2 className="text-xl font-bold text-white">Your Rewards</h2>
-        </div>
-
-        {rewards.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {rewards.map((reward: any) => {
-              const config = REWARD_TYPE_CONFIG[reward.type] || REWARD_TYPE_CONFIG.VOUCHER;
-              const Icon = config.icon;
+    <div className="space-y-8 pb-12 max-w-5xl relative">
+      {/* Custom Confetti Animation Overlay */}
+      <AnimatePresence>
+        {showConfetti && (
+          <div className="fixed inset-0 z-50 pointer-events-none flex items-center justify-center overflow-hidden">
+            {[...Array(60)].map((_, i) => {
+              const left = Math.random() * 100;
+              const delay = Math.random() * 2;
+              const duration = 2 + Math.random() * 2;
+              const size = 6 + Math.random() * 10;
+              const color = ['#F6D145', '#10B981', '#3B82F6', '#EC4899', '#8B5CF6'][Math.floor(Math.random() * 5)];
               return (
-                <Card key={reward.id} className={`glass-card rounded-2xl border-0 group cursor-pointer`}>
-                  <CardContent className="p-5">
-                    <div className="flex items-start gap-4">
-                      <div className={`p-3 rounded-xl ${config.bg} flex-shrink-0`}>
-                        <Icon className={`h-6 w-6 ${config.color}`} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-base font-bold text-white group-hover:text-blue-400 transition-colors">{reward.name}</h3>
-                        <div className="flex items-center gap-2 mt-2">
-                          <span className={`text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-widest ${config.bg} ${config.color}`}>
-                            {reward.type}
-                          </span>
-                          <span className="text-[10px] font-bold text-gray-600">Min Level {reward.min_level}</span>
-                        </div>
-                      </div>
-                      <div className="flex-shrink-0">
-                        <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                <motion.div
+                  key={i}
+                  initial={{ y: -50, x: `${left}vw`, opacity: 1, rotate: 0 }}
+                  animate={{ y: '105vh', x: `${left + (Math.random() * 10 - 5)}vw`, opacity: 0, rotate: 360 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration, delay, ease: 'easeOut' }}
+                  style={{
+                    position: 'absolute',
+                    width: size,
+                    height: size,
+                    backgroundColor: color,
+                    borderRadius: Math.random() > 0.5 ? '50%' : '20%',
+                  }}
+                />
               );
             })}
           </div>
-        ) : (
-          <Card className="glass-card border-dashed">
-            <CardContent className="p-12 text-center">
-              <Gift className="h-12 w-12 text-gray-700 mx-auto mb-4" />
-              <p className="text-gray-400 font-medium">No rewards unlocked yet.</p>
-              <p className="text-sm text-gray-600 mt-1">Reach Level 1 to unlock your first reward!</p>
-            </CardContent>
-          </Card>
         )}
+      </AnimatePresence>
+
+      {/* Page Header */}
+      <div>
+        <h1 className="text-3xl font-black text-white tracking-tight">Milestone Rewards</h1>
+        <p className="text-gray-500 font-medium mt-1">
+          Dapatkan reward untuk setiap pencapaian indikator performa Anda secara mandiri.
+        </p>
       </div>
 
-      {/* Level Milestone Roadmap */}
+      {/* Track Tabs Selector */}
+      <div className="flex flex-wrap gap-2 p-1.5 bg-[#14171A] border border-white/5 rounded-2xl">
+        {Object.entries(TRACK_CONFIG).map(([key, config]) => {
+          const Icon = config.icon;
+          const isActive = activeTrackKey === key;
+          const trackData = tracks.find((t) => t.track === key);
+          const currentVal = trackData?.current_value ?? 0;
+          
+          return (
+            <button
+              key={key}
+              onClick={() => setActiveTrackKey(key)}
+              className={`flex items-center gap-2.5 px-4 py-3 text-sm font-bold rounded-xl transition-all ${
+                isActive
+                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/15 border border-blue-500/20'
+                  : 'text-gray-400 hover:text-white hover:bg-white/[0.03]'
+              }`}
+            >
+              <Icon className={`h-4.5 w-4.5 ${isActive ? 'text-white' : config.color}`} />
+              <span>{config.label}</span>
+              <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-md ${
+                isActive ? 'bg-white/20 text-white' : 'bg-white/5 text-gray-500'
+              }`}>
+                {config.format(currentVal)}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Main Track Detail Header Banner */}
+      <div className={`relative overflow-hidden bg-gradient-to-br ${activeConfig.bg} backdrop-blur-xl rounded-[28px] p-8 shadow-2xl border border-white/5`}>
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-20 -mt-20 blur-3xl" />
+        <div className="relative z-10 space-y-6">
+          <div className="flex items-center gap-4">
+            <div className="h-14 w-14 rounded-2xl bg-[#0C0E10] border border-white/10 flex items-center justify-center">
+              {(() => {
+                const Icon = activeConfig.icon;
+                return <Icon className={`h-7 w-7 ${activeConfig.color}`} />;
+              })()}
+            </div>
+            <div>
+              <p className="text-xs font-bold text-white/50 uppercase tracking-widest">Metrik Aktif</p>
+              <h2 className="text-2xl font-black text-white">{activeConfig.label}</h2>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
+            <div className="space-y-2">
+              <div className="flex justify-between items-end">
+                <span className="text-xs font-bold text-gray-400">Pencapaian Saat Ini</span>
+                <span className="text-sm font-bold text-white">
+                  {activeConfig.format(currentVal)} / {activeConfig.format(currentTarget)}
+                </span>
+              </div>
+              <div className="h-3 w-full bg-[#0C0E10] rounded-full overflow-hidden p-[2px] border border-white/5">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progressPercent}%` }}
+                  transition={{ duration: 0.8, ease: 'easeOut' }}
+                  className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full"
+                />
+              </div>
+              <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider">
+                {progressPercent >= 100 
+                  ? '🎉 Milestone target berikutnya telah tercapai!' 
+                  : `Tingkatkan ${activeConfig.format(currentTarget - currentVal)} lagi untuk membuka reward berikutnya.`}
+              </p>
+            </div>
+
+            <div className="flex justify-start md:justify-end gap-3">
+              <div className="bg-[#0C0E10]/60 border border-white/5 px-5 py-3 rounded-2xl flex items-center gap-3">
+                <Trophy className="h-5 w-5 text-amber-400" />
+                <div>
+                  <span className="text-xl font-black text-white">
+                    {milestones.filter((m: any) => m.status === 'CLAIMED').length}
+                  </span>
+                  <span className="text-[9px] text-gray-500 font-bold block uppercase tracking-widest">Claimed</span>
+                </div>
+              </div>
+              <div className="bg-[#0C0E10]/60 border border-white/5 px-5 py-3 rounded-2xl flex items-center gap-3">
+                <Gift className="h-5 w-5 text-blue-400" />
+                <div>
+                  <span className="text-xl font-black text-white">
+                    {milestones.filter((m: any) => m.status === 'CLAIMABLE').length}
+                  </span>
+                  <span className="text-[9px] text-gray-500 font-bold block uppercase tracking-widest">Tersedia</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Milestone Roadmap & Claims Grid */}
       <div className="space-y-4">
         <div className="flex items-center gap-2">
-          <Trophy className="h-5 w-5 text-purple-400" />
-          <h2 className="text-xl font-bold text-white">Level Roadmap</h2>
+          <Target className="h-5 w-5 text-indigo-400" />
+          <h2 className="text-xl font-bold text-white">Milestone Tahapan</h2>
         </div>
 
-        <div className="glass-panel rounded-[24px] overflow-hidden">
-          <div className="divide-y divide-white/5">
-            {LEVEL_MILESTONES.map((milestone) => {
-              const isUnlocked = currentLevel >= milestone.level;
-              const isCurrent = currentLevel === milestone.level;
-              return (
-                <div
-                  key={milestone.level}
-                  className={`flex items-center gap-4 px-6 py-4 transition-colors ${
-                    isCurrent ? 'bg-blue-600/5 border-l-2 border-l-blue-500' : 'hover:bg-white/[0.02]'
-                  }`}
-                >
-                  {/* Level Badge */}
-                  <div className={`h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                    isUnlocked ? 'bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/30' : 'bg-white/5 border border-white/10'
-                  }`}>
-                    <span className="text-lg">{milestone.icon}</span>
-                  </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {milestones.map((milestone: any) => {
+            const config = REWARD_TYPE_CONFIG[milestone.reward_type] || REWARD_TYPE_CONFIG.VOUCHER;
+            const Icon = config.icon;
+            
+            const isClaimed = milestone.status === 'CLAIMED';
+            const isPending = milestone.status === 'PENDING';
+            const isClaimable = milestone.status === 'CLAIMABLE';
+            const isLocked = milestone.status === 'LOCKED';
 
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h3 className={`text-sm font-bold ${isUnlocked ? 'text-white' : 'text-gray-500'}`}>
-                        Level {milestone.level} — {milestone.name}
-                      </h3>
-                      {isCurrent && (
-                        <span className="text-[10px] font-black text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-full uppercase tracking-widest">
-                          Current
+            return (
+              <motion.div
+                key={milestone.id}
+                layout
+                className={`relative overflow-hidden rounded-2xl border transition-all duration-300 ${
+                  isClaimed 
+                    ? 'bg-[#10B981]/5 border-[#10B981]/20' 
+                    : isPending
+                    ? 'bg-amber-500/[0.03] border-amber-500/20'
+                    : isClaimable
+                    ? 'bg-blue-600/[0.05] border-blue-500/40 shadow-lg shadow-blue-500/5'
+                    : 'bg-[#14171A] border-white/5 opacity-70'
+                }`}
+              >
+                {/* Glow for claimable rewards */}
+                {isClaimable && (
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl pointer-events-none" />
+                )}
+
+                <CardContent className="p-6">
+                  <div className="flex items-start gap-4">
+                    <div className={`p-3.5 rounded-xl ${config.bg} ${config.color} flex-shrink-0 border ${config.border}`}>
+                      <Icon className="h-6 w-6" />
+                    </div>
+
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-black text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-md uppercase tracking-wider">
+                          Stage {milestone.stage}
+                        </span>
+                        <span className="text-xs text-gray-500 font-bold">
+                          Target: {activeConfig.format(milestone.target_value)}
+                        </span>
+                      </div>
+
+                      <h3 className="text-lg font-bold text-white truncate">{milestone.reward_name}</h3>
+                      <p className="text-xs text-gray-500 font-medium leading-relaxed">{milestone.description}</p>
+                    </div>
+
+                    {/* Status Badge */}
+                    <div className="flex-shrink-0">
+                      {isClaimed && (
+                        <span className="flex items-center gap-1.5 text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          Claimed
+                        </span>
+                      )}
+                      {isPending && (
+                        <span className="flex items-center gap-1.5 text-xs font-bold text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">
+                          <Clock className="h-3.5 w-3.5 animate-pulse" />
+                          Pending CM
+                        </span>
+                      )}
+                      {isLocked && (
+                        <span className="flex items-center gap-1.5 text-xs font-bold text-gray-500 bg-white/5 px-2.5 py-1 rounded-full border border-white/5">
+                          <Lock className="h-3.5 w-3.5" />
+                          Kunci
                         </span>
                       )}
                     </div>
-                    <p className={`text-xs mt-0.5 ${isUnlocked ? 'text-gray-400' : 'text-gray-600'}`}>
-                      {milestone.reward || 'Starting point — no reward'}
-                    </p>
                   </div>
 
-                  {/* Status */}
-                  <div className="flex-shrink-0">
-                    {isUnlocked ? (
-                      <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-                    ) : (
-                      <Lock className="h-5 w-5 text-gray-700" />
+                  {/* Actions & Progress details */}
+                  <div className="mt-5 pt-4 border-t border-white/5 flex items-center justify-between gap-4">
+                    <div className="text-xs text-gray-500 font-semibold">
+                      {isLocked ? (
+                        <span>Kurang {activeConfig.format(milestone.target_value - currentVal)} lagi</span>
+                      ) : isClaimable ? (
+                        <span className="text-blue-400">Pencapaian terpenuhi!</span>
+                      ) : isPending ? (
+                        <span className="text-amber-500/70">CM sedang melakukan verifikasi data</span>
+                      ) : (
+                        <span className="text-emerald-500/70">Didistribusikan pada dompet/profil</span>
+                      )}
+                    </div>
+
+                    {isClaimable && (
+                      <motion.button
+                        whileHover={{ scale: 1.03 }}
+                        whileTap={{ scale: 0.97 }}
+                        onClick={() => handleClaim(milestone.id, milestone.reward_name)}
+                        disabled={isClaiming !== null}
+                        className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-bold rounded-xl border border-blue-500/20 flex items-center gap-1.5 hover:shadow-lg hover:shadow-blue-500/20 transition-all cursor-pointer"
+                      >
+                        {isClaiming === milestone.id ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Gift className="h-3.5 w-3.5" />
+                        )}
+                        Klaim Reward
+                      </motion.button>
                     )}
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                </CardContent>
+              </motion.div>
+            );
+          })}
         </div>
       </div>
-
-      {/* Next Reward CTA */}
-      {currentLevel < 6 && (
-        <div className="bg-gradient-to-br from-indigo-500/10 to-purple-600/10 border border-indigo-500/15 backdrop-blur-xl rounded-[24px] p-6 relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-3">
-            <Target className="h-14 w-14 text-indigo-500/15" />
-          </div>
-          <div className="relative z-10">
-            <h3 className="text-lg font-black text-white tracking-tight mb-1">Next Reward</h3>
-            <p className="text-sm text-gray-400 font-medium mb-1">
-              Reach <span className="text-indigo-400 font-bold">Level {currentLevel + 1} — {LEVEL_MILESTONES[currentLevel + 1]?.name}</span> to unlock:
-            </p>
-            <p className="text-xl font-black text-indigo-400 mt-2">{LEVEL_MILESTONES[currentLevel + 1]?.reward}</p>
-            <div className="mt-4 flex items-center gap-2">
-              <Zap className="h-4 w-4 text-amber-400" />
-              <span className="text-xs text-gray-500 font-medium">
-                Progress: {Math.round(levelProgress?.progress_percentage || 0)}% complete
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

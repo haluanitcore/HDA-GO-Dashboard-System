@@ -69,6 +69,7 @@ model Creator {
   submissions       Submission[]
   orders            CreatorOrder[]
   rewards           CreatorReward[]
+  milestoneClaims   CreatorMilestoneClaim[]
   monthlyStats      CreatorMonthlyStats[]
   weeklyStats       CreatorWeeklyStats[]
   hotelVisits       HotelVisit[]
@@ -474,5 +475,35 @@ model SystemSetting {
   key        String   @id
   value      String
   updated_at DateTime @updatedAt
+}
+
+model MilestoneReward {
+  id           String   @id @default(uuid())
+  track        String   // GMV, ORDERS, CAMPAIGNS, CONSISTENCY, LIVE
+  stage        Int      // 1, 2, 3, 4
+  target_value Float    // Nilai target yang harus dicapai
+  reward_name  String   // Nama reward (e.g. "Voucher Shopee 50K")
+  reward_type  String   // VOUCHER, COMMISSION, PERK, CASH
+  reward_value Float    // Nilai nominal reward jika ada
+  description  String?  // Deskripsi detail reward
+  created_at   DateTime @default(now())
+
+  claims       CreatorMilestoneClaim[]
+
+  @@unique([track, stage])
+}
+
+model CreatorMilestoneClaim {
+  id           String          @id @default(uuid())
+  creator_id   String
+  reward_id    String
+  claimed_at   DateTime        @default(now())
+  status       String          @default("PENDING") // PENDING, APPROVED, COMPLETED
+  
+  // Relasi
+  creator      Creator         @relation(fields: [creator_id], references: [user_id])
+  reward       MilestoneReward @relation(fields: [reward_id], references: [id])
+
+  @@unique([creator_id, reward_id])
 }
 
