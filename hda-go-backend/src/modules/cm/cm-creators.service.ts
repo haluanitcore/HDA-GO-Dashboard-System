@@ -204,17 +204,18 @@ export class CmCreatorsService {
 
   // ── LIST ALL CMs (for dropdown) ──
   async getCMList() {
-    const cms = await this.prisma.user.findMany({
-      where: { role: 'CM' },
-      select: { id: true, name: true, email: true, created_at: true },
-    });
-    return Promise.all(
-      cms.map(async (cm) => ({
-        ...cm,
-        creatorCount: await this.prisma.creator.count({
-          where: { cm_id: cm.id },
-        }),
-      })),
-    );
+    const [cms, creatorCounts] = await Promise.all([
+      this.prisma.user.findMany({
+        where: { role: 'CM' },
+        select: { id: true, name: true, email: true, created_at: true },
+      }),
+      this.prisma.creator.groupBy({
+        by: ['cm_id'],
+        _count: { cm_id: true },
+        where: { cm_id: { not: null } },
+      }),
+    ]);
+    const countMap = new Map(creatorCounts.map((c) => [c.cm_id, c._count.cm_id]));
+    return cms.map((cm) => ({ ...cm, creatorCount: countMap.get(cm.id) ?? 0 }));
   }
 }

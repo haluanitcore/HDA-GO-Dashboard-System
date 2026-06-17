@@ -23,6 +23,7 @@ const mockPrisma = {
     findMany: jest.fn(),
     update: jest.fn(),
     count: jest.fn(),
+    groupBy: jest.fn(),
   },
   creatorProgress: { create: jest.fn() },
   notification: { create: jest.fn() },
@@ -265,7 +266,9 @@ describe('CmCreatorsService', () => {
       mockPrisma.user.findMany.mockResolvedValue([
         { id: 'cm1', name: 'Alice', email: 'a@t.com', created_at: new Date() },
       ]);
-      mockPrisma.creator.count.mockResolvedValue(5);
+      mockPrisma.creator.groupBy.mockResolvedValue([
+        { cm_id: 'cm1', _count: { cm_id: 5 } },
+      ]);
 
       const result = await service.getCMList();
 

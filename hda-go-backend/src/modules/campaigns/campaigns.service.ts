@@ -75,16 +75,16 @@ export class CampaignsService {
 
       const bdUserIds = bdAssignments.map((a) => a.bd_user_id);
 
-      // Persistent notification
-      for (const bdId of bdUserIds) {
-        await this.prisma.notification.create({
-          data: {
+      // Persistent notification (batch insert, no N+1)
+      if (bdUserIds.length > 0) {
+        await this.prisma.notification.createMany({
+          data: bdUserIds.map((bdId) => ({
             user_id: bdId,
             title: '📥 Campaign Baru Masuk',
             message: `${brand?.name || 'Brand'} mengirimkan campaign "${campaign.title}". Silakan review.`,
             type: 'CAMPAIGN',
             read_status: false,
-          },
+          })),
         });
       }
 
@@ -190,80 +190,82 @@ export class CampaignsService {
   // Creator Click Apply → Participant Created → Counters Updated → Dashboards Updated
   // ══════════════════════════════════════════════
   async joinCampaign(creatorId: string, dto: JoinCampaignDto) {
-    const campaign = await this.prisma.campaign.findUnique({
-      where: { id: dto.campaign_id },
-      include: { _count: { select: { participants: true } } },
-    });
-
-    if (!campaign) throw new NotFoundException('Campaign not found');
-    if (!['ACTIVE', 'BD_APPROVED'].includes(campaign.status)) {
-      throw new BadRequestException(
-        `Campaign belum bisa diikuti. Status: "${campaign.status}"`,
-      );
-    }
-
-    // Check slot availability
-    if (campaign.slot > 0 && campaign._count.participants >= campaign.slot) {
-      throw new BadRequestException('Campaign slots are full');
-    }
-
-    // Check creator level requirement
     const creator = await this.prisma.creator.findUnique({
       where: { user_id: creatorId },
       include: { user: { select: { name: true } } },
     });
-
     if (!creator) throw new NotFoundException('Creator profile not found');
-    if (creator.creator_level < campaign.min_level) {
-      throw new BadRequestException(
-        `Level kamu (${creator.creator_level}) belum memenuhi syarat minimum (Level ${campaign.min_level})`,
-      );
-    }
 
-    // Check if already joined
-    const existing = await this.prisma.campaignParticipant.findUnique({
-      where: {
-        campaign_id_creator_id: {
-          campaign_id: dto.campaign_id,
-          creator_id: creatorId,
-        },
-      },
-    });
-    if (existing)
-      throw new BadRequestException('Kamu sudah bergabung di campaign ini');
+    const result = await this.prisma.$transaction(async (tx) => {
+      const campaign = await tx.campaign.findUnique({
+        where: { id: dto.campaign_id },
+        include: { _count: { select: { participants: true } } },
+      });
 
-    // ── Join campaign ──
-    const participant = await this.prisma.campaignParticipant.create({
-      data: {
-        campaign_id: dto.campaign_id,
-        creator_id: creatorId,
-        status: 'JOINED',
-      },
-    });
+      if (!campaign) throw new NotFoundException('Campaign not found');
+      if (!['ACTIVE', 'BD_APPROVED'].includes(campaign.status)) {
+        throw new BadRequestException(
+          `Campaign belum bisa diikuti. Status: "${campaign.status}"`,
+        );
+      }
 
-    // Update creator total_campaigns
-    await this.prisma.creator.update({
-      where: { user_id: creatorId },
-      data: { total_campaigns: { increment: 1 } },
-    });
+      // Check slot availability
+      if (campaign.slot > 0 && campaign._count.participants >= campaign.slot) {
+        throw new BadRequestException('Campaign slots are full');
+      }
 
-    // Notify CM about new join
-    if (creator.cm_id) {
-      await this.prisma.notification.create({
-        data: {
-          user_id: creator.cm_id,
-          title: '👤 Creator Joined Campaign',
-          message: `${creator.user.name} bergabung di campaign "${campaign.title}".`,
-          type: 'CAMPAIGN',
-          read_status: false,
+      if (creator.creator_level < campaign.min_level) {
+        throw new BadRequestException(
+          `Level kamu (${creator.creator_level}) belum memenuhi syarat minimum (Level ${campaign.min_level})`,
+        );
+      }
+
+      const existing = await tx.campaignParticipant.findUnique({
+        where: {
+          campaign_id_creator_id: {
+            campaign_id: dto.campaign_id,
+            creator_id: creatorId,
+          },
         },
       });
-    }
+      if (existing)
+        throw new BadRequestException('Kamu sudah bergabung di campaign ini');
 
-    return {
-      participant,
-      slotRemaining: campaign.slot - campaign._count.participants - 1,
-    };
+      // ── Join campaign ──
+      const participant = await tx.campaignParticipant.create({
+        data: {
+          campaign_id: dto.campaign_id,
+          creator_id: creatorId,
+          status: 'JOINED',
+        },
+      });
+
+      // Update creator total_campaigns
+      await tx.creator.update({
+        where: { user_id: creatorId },
+        data: { total_campaigns: { increment: 1 } },
+      });
+
+      // Notify CM about new join
+      if (creator.cm_id) {
+        await tx.notification.create({
+          data: {
+            user_id: creator.cm_id,
+            title: '👤 Creator Joined Campaign',
+            message: `${creator.user.name} bergabung di campaign "${campaign.title}".`,
+            type: 'CAMPAIGN',
+            read_status: false,
+          },
+        });
+      }
+
+      return {
+        participant,
+        slotRemaining: campaign.slot - campaign._count.participants - 1,
+      };
+    }, { isolationLevel: 'Serializable' });
+
+    return result;
   }
 
   // ══════════════════════════════════════════════

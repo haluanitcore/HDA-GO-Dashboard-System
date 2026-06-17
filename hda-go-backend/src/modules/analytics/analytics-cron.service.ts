@@ -46,75 +46,94 @@ export class AnalyticsCronService {
     const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    const creators = await this.prisma.creator.findMany({
-      include: {
-        submissions: { where: { submitted_at: { gte: monthStart } } },
-        orders: { where: { recorded_at: { gte: monthStart } } },
-        participants: { where: { joined_at: { gte: monthStart } } },
+    const BATCH_SIZE = 50;
+    let cursor: string | undefined = undefined;
+    let totalProcessed = 0;
+    
+    while (true) {
+      const creators = await this.prisma.creator.findMany({
+        take: BATCH_SIZE,
+        skip: cursor ? 1 : 0,
+        cursor: cursor ? { user_id: cursor } : undefined,
+        include: {
+          submissions: { where: { submitted_at: { gte: monthStart } } },
+          orders: { where: { recorded_at: { gte: monthStart } } },
+          participants: { where: { joined_at: { gte: monthStart } } },
+        },
+        orderBy: { user_id: 'asc' }
+      });
+      
+      if (creators.length === 0) break;
+      
+      // Process batch ini
+      await Promise.all(creators.map(c => this.processOneCreatorMonthlyStatInMemory(c, month, now)));
+      
+      totalProcessed += creators.length;
+      cursor = creators[creators.length - 1].user_id;
+      if (creators.length < BATCH_SIZE) break;
+    }
+
+    this.logger.log(`  📊 Creator monthly stats: ${totalProcessed} creators processed.`);
+  }
+
+  private async processOneCreatorMonthlyStatInMemory(creator: any, month: string, now: Date) {
+    if (!creator) return;
+
+    const gmv = creator.orders.reduce((sum, o) => sum + o.gmv_amount, 0);
+    const orders = creator.orders.reduce((sum, o) => sum + o.order_count, 0);
+    const campaignsJoined = creator.participants.length;
+    const completedSubs = creator.submissions.filter(
+      (s) =>
+        s.status === 'COMPLETED' ||
+        s.status === 'APPROVED' ||
+        s.status === 'POSTED',
+    ).length;
+    const completionRate =
+      creator.submissions.length > 0
+        ? (completedSubs / creator.submissions.length) * 100
+        : 0;
+
+    // Posting consistency = unique active days / total days in month
+    const totalDays = new Date(
+      now.getFullYear(),
+      now.getMonth() + 1,
+      0,
+    ).getDate();
+    const activeDays = new Set(
+      creator.submissions.map(
+        (s) => s.submitted_at.toISOString().split('T')[0],
+      ),
+    ).size;
+    const consistency = (activeDays / totalDays) * 100;
+
+    await this.prisma.creatorMonthlyStats.upsert({
+      where: { creator_id_month: { creator_id: creator.user_id, month } },
+      update: {
+        gmv,
+        orders,
+        campaigns_joined: campaignsJoined,
+        campaigns_completed: completedSubs,
+        posts_count: creator.submissions.length,
+        completion_rate: Math.round(completionRate * 100) / 100,
+        calculated_at: now,
+      },
+      create: {
+        creator_id: creator.user_id,
+        month,
+        gmv,
+        orders,
+        campaigns_joined: campaignsJoined,
+        campaigns_completed: completedSubs,
+        posts_count: creator.submissions.length,
+        completion_rate: Math.round(completionRate * 100) / 100,
       },
     });
 
-    for (const creator of creators) {
-      const gmv = creator.orders.reduce((sum, o) => sum + o.gmv_amount, 0);
-      const orders = creator.orders.reduce((sum, o) => sum + o.order_count, 0);
-      const campaignsJoined = creator.participants.length;
-      const completedSubs = creator.submissions.filter(
-        (s) =>
-          s.status === 'COMPLETED' ||
-          s.status === 'APPROVED' ||
-          s.status === 'POSTED',
-      ).length;
-      const completionRate =
-        creator.submissions.length > 0
-          ? (completedSubs / creator.submissions.length) * 100
-          : 0;
-
-      // Posting consistency = unique active days / total days in month
-      const totalDays = new Date(
-        now.getFullYear(),
-        now.getMonth() + 1,
-        0,
-      ).getDate();
-      const activeDays = new Set(
-        creator.submissions.map(
-          (s) => s.submitted_at.toISOString().split('T')[0],
-        ),
-      ).size;
-      const consistency = (activeDays / totalDays) * 100;
-
-      await this.prisma.creatorMonthlyStats.upsert({
-        where: { creator_id_month: { creator_id: creator.user_id, month } },
-        update: {
-          gmv,
-          orders,
-          campaigns_joined: campaignsJoined,
-          campaigns_completed: completedSubs,
-          posts_count: creator.submissions.length,
-          completion_rate: Math.round(completionRate * 100) / 100,
-          calculated_at: now,
-        },
-        create: {
-          creator_id: creator.user_id,
-          month,
-          gmv,
-          orders,
-          campaigns_joined: campaignsJoined,
-          campaigns_completed: completedSubs,
-          posts_count: creator.submissions.length,
-          completion_rate: Math.round(completionRate * 100) / 100,
-        },
-      });
-
-      // Update posting_consistency on creator record
-      await this.prisma.creator.update({
-        where: { user_id: creator.user_id },
-        data: { posting_consistency: Math.round(consistency * 100) / 100 },
-      });
-    }
-
-    this.logger.log(
-      `  📊 Creator monthly stats: ${creators.length} creators processed.`,
-    );
+    // Update posting_consistency on creator record
+    await this.prisma.creator.update({
+      where: { user_id: creator.user_id },
+      data: { posting_consistency: Math.round(consistency * 100) / 100 },
+    });
   }
 
   // ──────────────────────────────────────────────
@@ -131,45 +150,40 @@ export class AnalyticsCronService {
       },
     });
 
-    for (const campaign of campaigns) {
-      const approved = campaign.submissions.filter((s) =>
-        ['APPROVED', 'POSTED', 'COMPLETED'].includes(s.status),
-      ).length;
-      const totalGMV = campaign.orders.reduce(
-        (sum, o) => sum + o.gmv_amount,
-        0,
-      );
-      const totalOrders = campaign.orders.reduce(
-        (sum, o) => sum + o.order_count,
-        0,
-      );
-      const rate =
-        campaign._count.submissions > 0
-          ? (approved / campaign._count.submissions) * 100
-          : 0;
-
-      await this.prisma.campaignAnalytics.upsert({
-        where: { campaign_id: campaign.id },
-        update: {
-          total_participants: campaign._count.participants,
-          total_submissions: campaign._count.submissions,
-          approved_submissions: approved,
-          total_orders: totalOrders,
-          total_gmv: totalGMV,
-          completion_rate: Math.round(rate * 100) / 100,
-          calculated_at: new Date(),
-        },
-        create: {
-          campaign_id: campaign.id,
-          total_participants: campaign._count.participants,
-          total_submissions: campaign._count.submissions,
-          approved_submissions: approved,
-          total_orders: totalOrders,
-          total_gmv: totalGMV,
-          completion_rate: Math.round(rate * 100) / 100,
-        },
-      });
-    }
+    await Promise.all(
+      campaigns.map((campaign) => {
+        const approved = campaign.submissions.filter((s) =>
+          ['APPROVED', 'POSTED', 'COMPLETED'].includes(s.status),
+        ).length;
+        const totalGMV = campaign.orders.reduce((sum, o) => sum + o.gmv_amount, 0);
+        const totalOrders = campaign.orders.reduce((sum, o) => sum + o.order_count, 0);
+        const rate =
+          campaign._count.submissions > 0
+            ? (approved / campaign._count.submissions) * 100
+            : 0;
+        return this.prisma.campaignAnalytics.upsert({
+          where: { campaign_id: campaign.id },
+          update: {
+            total_participants: campaign._count.participants,
+            total_submissions: campaign._count.submissions,
+            approved_submissions: approved,
+            total_orders: totalOrders,
+            total_gmv: totalGMV,
+            completion_rate: Math.round(rate * 100) / 100,
+            calculated_at: new Date(),
+          },
+          create: {
+            campaign_id: campaign.id,
+            total_participants: campaign._count.participants,
+            total_submissions: campaign._count.submissions,
+            approved_submissions: approved,
+            total_orders: totalOrders,
+            total_gmv: totalGMV,
+            completion_rate: Math.round(rate * 100) / 100,
+          },
+        });
+      }),
+    );
 
     this.logger.log(
       `  📢 Campaign analytics: ${campaigns.length} campaigns processed.`,
@@ -188,18 +202,21 @@ export class AnalyticsCronService {
       totalCampaigns,
       activeCampaigns,
       totalSubmissions,
-      orders,
+      orderStats,
     ] = await Promise.all([
       this.prisma.creator.count(),
       this.prisma.creator.count({ where: { gmv_monthly: { gt: 0 } } }),
       this.prisma.campaign.count(),
       this.prisma.campaign.count({ where: { status: 'ACTIVE' } }),
       this.prisma.submission.count(),
-      this.prisma.creatorOrder.findMany(),
+      this.prisma.creatorOrder.aggregate({
+        _sum: { gmv_amount: true, order_count: true },
+        _count: true
+      }),
     ]);
 
-    const totalGMV = orders.reduce((sum, o) => sum + o.gmv_amount, 0);
-    const totalOrders = orders.reduce((sum, o) => sum + o.order_count, 0);
+    const totalGMV = orderStats._sum.gmv_amount ?? 0;
+    const totalOrders = orderStats._sum.order_count ?? 0;
 
     await this.prisma.platformMetrics.upsert({
       where: { date: today },
@@ -283,16 +300,17 @@ export class AnalyticsCronService {
       }
     });
 
-    // Notify each CM
-    for (const [cmId, creatorNames] of Object.entries(byCM)) {
-      await this.prisma.notification.create({
-        data: {
+    // Notify each CM (batch insert)
+    const cmEntries = Object.entries(byCM);
+    if (cmEntries.length > 0) {
+      await this.prisma.notification.createMany({
+        data: cmEntries.map(([cmId, creatorNames]) => ({
           user_id: cmId,
           title: '⚠️ Dormant Creator Alert',
           message: `${creatorNames.length} creator dormant perlu perhatian: ${creatorNames.slice(0, 5).join(', ')}${creatorNames.length > 5 ? '...' : ''}.`,
           type: 'SYSTEM',
           read_status: false,
-        },
+        })),
       });
     }
 

@@ -17,10 +17,10 @@ const mockPrisma = {
   campaign: { findMany: jest.fn(), count: jest.fn() },
   campaignAnalytics: { upsert: jest.fn() },
   submission: { count: jest.fn() },
-  creatorOrder: { findMany: jest.fn() },
+  creatorOrder: { findMany: jest.fn(), aggregate: jest.fn() },
   platformMetrics: { upsert: jest.fn() },
   creatorProgress: { upsert: jest.fn() },
-  notification: { create: jest.fn() },
+  notification: { create: jest.fn(), createMany: jest.fn() },
 };
 
 describe('AnalyticsCronService', () => {
@@ -177,10 +177,10 @@ describe('AnalyticsCronService', () => {
         .mockResolvedValueOnce(50) // totalCampaigns
         .mockResolvedValueOnce(10); // activeCampaigns
       mockPrisma.submission.count.mockResolvedValue(500);
-      mockPrisma.creatorOrder.findMany.mockResolvedValue([
-        { gmv_amount: 2000000, order_count: 20 },
-        { gmv_amount: 3000000, order_count: 30 },
-      ]);
+      mockPrisma.creatorOrder.aggregate.mockResolvedValue({
+        _sum: { gmv_amount: 5000000, order_count: 50 },
+        _count: 2,
+      });
       mockPrisma.platformMetrics.upsert.mockResolvedValue({});
 
       await service.aggregatePlatformMetrics();
@@ -246,18 +246,19 @@ describe('AnalyticsCronService', () => {
         { user_id: 'u2', cm_id: 'cm-1', user: { name: 'Bob' } },
         { user_id: 'u3', cm_id: 'cm-2', user: { name: 'Charlie' } },
       ]);
-      mockPrisma.notification.create.mockResolvedValue({});
+      mockPrisma.notification.createMany.mockResolvedValue({ count: 2 });
 
       await service.detectAndNotifyDormantCreators();
 
-      // 2 CMs notified
-      expect(mockPrisma.notification.create).toHaveBeenCalledTimes(2);
-      expect(mockPrisma.notification.create).toHaveBeenCalledWith(
+      // 2 CMs notified via createMany
+      expect(mockPrisma.notification.createMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({
-            user_id: 'cm-1',
-            title: '⚠️ Dormant Creator Alert',
-          }),
+          data: expect.arrayContaining([
+            expect.objectContaining({
+              user_id: 'cm-1',
+              title: '⚠️ Dormant Creator Alert',
+            }),
+          ]),
         }),
       );
     });

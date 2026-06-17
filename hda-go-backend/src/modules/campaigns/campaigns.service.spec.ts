@@ -21,6 +21,10 @@ const mockPrisma = {
   user: { findUnique: jest.fn() },
   notification: { create: jest.fn(), createMany: jest.fn() },
   brandBDAssignment: { findMany: jest.fn() },
+  $transaction: jest.fn((cb: any) => {
+    if (typeof cb === 'function') return cb(mockPrisma);
+    return Promise.all(cb);
+  }),
 };
 
 const mockEventsGateway = {
@@ -90,7 +94,14 @@ describe('CampaignsService', () => {
 
       await service.create(dto);
 
-      expect(mockPrisma.notification.create).toHaveBeenCalledTimes(2);
+      expect(mockPrisma.notification.createMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.arrayContaining([
+            expect.objectContaining({ user_id: 'bd-1' }),
+            expect.objectContaining({ user_id: 'bd-2' }),
+          ]),
+        }),
+      );
       expect(mockEventsGateway.emitBDNewCampaign).toHaveBeenCalledWith(
         ['bd-1', 'bd-2'],
         expect.objectContaining({ campaignId: 'c1' }),

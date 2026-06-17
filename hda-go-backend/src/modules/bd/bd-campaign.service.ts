@@ -34,6 +34,7 @@ export class BdCampaignService {
     const allCampaigns = await this.prisma.campaign.findMany({
       where: whereClause,
       orderBy: { created_at: 'desc' },
+      take: 200,
     });
 
     const pendingCount = allCampaigns.filter(

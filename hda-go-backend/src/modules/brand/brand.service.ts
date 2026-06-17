@@ -37,10 +37,12 @@ export class BrandService {
     const allCampaigns = await this.prisma.campaign.findMany({
       where: { brand_id: brandId },
       include: {
-        participants: true,
-        orders: true,
-        analytics: true,
+        participants: { select: { creator_id: true } },
+        orders: { select: { gmv_amount: true } },
+        analytics: { select: { total_gmv: true, total_orders: true } },
       },
+      take: 200,
+      orderBy: { created_at: 'desc' },
     });
 
     const activeCampaigns = allCampaigns.filter((c) =>
@@ -84,9 +86,11 @@ export class BrandService {
     const allCampaigns = await this.prisma.campaign.findMany({
       where: { brand_id: brandId },
       include: {
-        orders: true,
-        analytics: true,
+        orders: { select: { gmv_amount: true } },
+        analytics: { select: { total_gmv: true, total_orders: true } },
       },
+      take: 200,
+      orderBy: { created_at: 'desc' },
     });
 
     const totalSpend = allCampaigns.reduce((sum, c) => sum + c.budget, 0);
