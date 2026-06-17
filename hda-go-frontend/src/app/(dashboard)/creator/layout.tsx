@@ -35,6 +35,16 @@ export default function CreatorLayout({ children }: { children: React.ReactNode 
 
   const isOnboarding = pathname === '/creator/onboarding';
 
+  // Jika user PENDING dan bukan di halaman onboarding, tampilkan spinner
+  // sambil menunggu redirect dari useEffect (mencegah Sidebar/Navbar crash)
+  if (user?.onboarding_status === 'PENDING' && !isOnboarding) {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-[#0C0E10]">
+        <Loader2 className="h-8 w-8 text-[#F6D145] animate-spin" />
+      </div>
+    );
+  }
+
   if (isOnboarding) {
     return (
       <div className="min-h-screen bg-[#0C0E10] text-white">

@@ -1,4 +1,4 @@
-import { IsString, MaxLength, IsOptional, IsNumber, Min, IsDateString, IsIn } from 'class-validator';
+import { IsString, MaxLength, IsOptional, IsNumber, Min, IsDateString, IsIn, IsArray } from 'class-validator';
 
 export class CompleteOnboardingDto {
   @IsString()
@@ -20,10 +20,10 @@ export class CompleteOnboardingDto {
   @IsOptional()
   birth_date?: string;
 
-  @IsString()
+  @IsArray()
+  @IsString({ each: true })
   @IsOptional()
-  @MaxLength(100)
-  niche?: string;
+  niche?: string[];
 
   @IsString()
   @IsOptional()

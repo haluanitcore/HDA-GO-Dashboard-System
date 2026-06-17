@@ -59,11 +59,24 @@ export default function CreatorOnboardingPage() {
   ];
 
   useEffect(() => {
-    // Fetch CM List
+    // Double-protection: jika user sudah ACTIVE, redirect ke dashboard
+    if (user?.onboarding_status === 'ACTIVE') {
+      router.replace('/creator/overview');
+      return;
+    }
+
+    // Fetch CM List + prefill cm_id jika sudah ada dari registrasi
     const fetchCMs = async () => {
       try {
-        const response = await api.get<{ id: string; name: string }[]>('/creators/cm-list');
-        setCmList(response);
+        // Fetch daftar CM untuk dropdown
+        const cmData = await api.get<{ id: string; name: string }[]>('/creators/cm-list');
+        setCmList(cmData);
+
+        // Fetch profil creator untuk prefill cm_id jika sudah dipilih saat register
+        const profile = await api.get<any>('/creators/profile');
+        if (profile?.cm_id) {
+          setFormData(prev => ({ ...prev, cm_id: profile.cm_id }));
+        }
       } catch (err) {
         console.error('Failed to fetch CM list', err);
         toast.error('Gagal mengambil daftar Campaign Manager');
@@ -72,7 +85,7 @@ export default function CreatorOnboardingPage() {
       }
     };
     fetchCMs();
-  }, []);
+  }, [user, router]);
 
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));

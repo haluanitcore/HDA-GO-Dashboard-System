@@ -87,7 +87,8 @@ export class AuthService {
         onboarding_status: 'PENDING',
       },
       ...tokens,
-      redirectUrl: this.getRedirectUrl(user.role),
+      // Creator baru selalu PENDING → langsung ke halaman onboarding
+      redirectUrl: '/creator/onboarding',
     };
   }
 
