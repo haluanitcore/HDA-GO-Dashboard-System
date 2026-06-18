@@ -171,6 +171,7 @@ export default function CMDashboard() {
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">Creator</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">Status</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">GMV (Monthly)</th>
+                  <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">Orders</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">Progress</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">Action</th>
                 </tr>
@@ -183,6 +184,7 @@ export default function CMDashboard() {
                                       'text-amber-500 bg-amber-500/10';
                   const creatorName = item.user?.name || 'Unknown';
                   const progressVal = item.progress?.progress_percentage || 0;
+                  const ordersCount = item.total_orders !== undefined ? item.total_orders : (item.orders || 0);
 
                   return (
                     <tr key={item.user_id || `item-${idx}`} className="hover:bg-white/[0.02] transition-colors group">
@@ -205,6 +207,9 @@ export default function CMDashboard() {
                       </td>
                       <td className="px-6 py-4 text-sm font-bold text-white">
                         Rp {(item.gmv_monthly || 0).toLocaleString()}
+                      </td>
+                      <td className="px-6 py-4 text-sm font-bold text-white">
+                        {ordersCount.toLocaleString()}
                       </td>
                       <td className="px-6 py-4">
                         <div className="w-32 space-y-1.5">

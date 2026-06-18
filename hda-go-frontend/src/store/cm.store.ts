@@ -40,7 +40,8 @@ export const useCMStore = create<CMState>((set) => ({
     set({ isLoading: true });
     try {
       const data = await cmService.getPipeline(status);
-      set({ pipeline: data, isLoading: false });
+      const pipelineData = data && data.pipeline ? data.pipeline : data;
+      set({ pipeline: Array.isArray(pipelineData) ? pipelineData : [], isLoading: false });
     } catch (err: any) {
       set({ error: err.message, isLoading: false });
     }
