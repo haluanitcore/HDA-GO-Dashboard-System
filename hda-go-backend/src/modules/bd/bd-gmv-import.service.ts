@@ -278,8 +278,9 @@ export class BdGmvImportService {
       return -1;
     };
 
-    // Match GMV column with prefix (handles "GMV Jun", "GMV Jul", etc.)
-    const findGmvIndex = () => {
+    // KPI column contains total GMV in Rupiah format (e.g., "Rp3.719.645")
+    // GMV Jun/Jul/etc column contains Orders as raw number (e.g., "491316587")
+    const findGmvJunIndex = () => {
       const idx = headers.findIndex((h) => h.startsWith('gmv'));
       if (idx !== -1) return idx;
       return findIndex(['omset', 'penjualan', 'salesamount', 'salesvalue']);
@@ -295,11 +296,12 @@ export class BdGmvImportService {
     const followersIdx = findIndex(['followers', 'follower']);
     const categoryIdx = findIndex(['categoryproper', 'category', 'niche', 'kategori']);
     const salesLevelIdx = findIndex(['saleslevel', 'level']);
-    const gmvIdx = findGmvIndex();
+    const kpiIdx = findIndex(['kpi']);           // KPI = Total GMV kumulatif (Rp format)
+    const gmvJunIdx = findGmvJunIndex();          // GMV Jun = Orders (raw number)
     const ordersIdx = findIndex(['order', 'orders', 'pesanan']);
 
     // Determine the GMV column name for response (e.g., "GMV Jun")
-    const gmvColumnName = gmvIdx !== -1 ? parsedRows[0][gmvIdx] : 'GMV';
+    const gmvColumnName = gmvJunIdx !== -1 ? parsedRows[0][gmvJunIdx] : 'GMV';
 
     // At minimum we need either creatorId or username, plus GMV
     if (usernameIdx === -1 && creatorIdIdx === -1) {
@@ -370,8 +372,13 @@ export class BdGmvImportService {
       const salesLevelRaw = salesLevelIdx !== -1 ? (cols[salesLevelIdx] || '').trim() : '';
       const fenoyRaw = fenoyIdx !== -1 ? (cols[fenoyIdx] || '').trim() : '';
       const expiredRaw = expiredIdx !== -1 ? (cols[expiredIdx] || '').trim() : '';
-      const rawGmv = gmvIdx !== -1 ? (cols[gmvIdx] || '0').trim() : '0';
-      const rawOrders = ordersIdx !== -1 ? (cols[ordersIdx] || '0').trim() : '0';
+      // KPI column = Total GMV (Rp format like "Rp3.719.645")
+      // GMV Jun column = Orders (raw number like "491316587")
+      const rawKpiGmv = kpiIdx !== -1 ? (cols[kpiIdx] || '0').trim() : '0';
+      const rawGmvJunOrders = gmvJunIdx !== -1 ? (cols[gmvJunIdx] || '0').trim() : '0';
+      // If explicit orders column exists, use it; otherwise GMV Jun IS the orders
+      const rawOrders = ordersIdx !== -1 ? (cols[ordersIdx] || '0').trim() : rawGmvJunOrders;
+      const rawGmv = rawKpiGmv;
 
       // Skip empty rows
       if (!creatorCode && !username) {
@@ -506,18 +513,31 @@ export class BdGmvImportService {
 
       // ── Update CM Assignment ──
       if (cmName) {
-        // Try matching CM by cm_code first, then by name
+        // Old CM name aliases → new cm_code mapping
+        const cmAliasMap: Record<string, string> = {
+          'azwa': 'CITRA',
+          'putri': 'NOVEL',
+          'atar': 'NAUFAL',
+          'octa': 'OKTA',
+          'raykhaan': 'RAYHAAN',
+          'arin': 'ARINDA',
+        };
+        const resolvedCmCode = cmAliasMap[cmName.toLowerCase()] || cmName.toUpperCase();
+
+        // Try matching CM by resolved cm_code first (case-insensitive)
         let cmUser = await this.prisma.user.findFirst({
-          where: { cm_code: cmName, role: 'CM' },
+          where: { cm_code: resolvedCmCode, role: 'CM' },
         });
         if (!cmUser) {
+          // Fallback: match by name (case-insensitive)
           cmUser = await this.prisma.user.findFirst({
             where: {
-              name: { contains: cmName },
+              name: { contains: cmName, mode: 'insensitive' },
               role: 'CM',
             },
           });
         }
+
         if (cmUser && cmUser.id !== creator.cm_id) {
           await this.prisma.creator.update({
             where: { user_id: creator.user_id },
@@ -527,12 +547,11 @@ export class BdGmvImportService {
         }
       }
 
-      // ── Process GMV & Orders ──
+      // ── Process GMV Juni (from KPI/col K) & Total Orders (from GMV Jun/col L) ──
+      // rawGmv = KPI column (Rp format e.g. "Rp3.719.645") → GMV Juni
+      // rawOrders = GMV Jun column (raw number e.g. "491316587") → Total Orders
       const parsedGmv = this.parseGmv(rawGmv);
-      let parsedOrders = parseInt(rawOrders.replace(/[^\d]/g, ''), 10) || 0;
-      if (parsedOrders === 0 && parsedGmv > 0) {
-        parsedOrders = Math.floor(parsedGmv / 100000) || 1;
-      }
+      const parsedOrders = parseInt(rawOrders.replace(/[^\d]/g, ''), 10) || 0;
 
       // Mark sheet_registered
       if (!creator.sheet_registered) {
@@ -948,8 +967,6 @@ export class BdGmvImportService {
       if (ordersKey && row[ordersKey] !== undefined && row[ordersKey] !== '') {
         const rawOrders = String(row[ordersKey]).replace(/[^\d]/g, '');
         parsedOrders = parseInt(rawOrders, 10) || 0;
-      } else {
-        parsedOrders = Math.floor(parsedGmv / 100000) || 1;
       }
 
       let parsedPeriod = currentPeriod;
