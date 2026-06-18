@@ -101,8 +101,8 @@ export class BdService {
     return this.gmvImportService.uploadCreatorGmvExcel(file);
   }
 
-  syncGoogleSpreadsheet() {
-    return this.gmvImportService.syncGoogleSpreadsheet();
+  syncGoogleSpreadsheet(bdUserId = 'unknown', bdUserName = 'BD User') {
+    return this.gmvImportService.syncGoogleSpreadsheet(bdUserId, bdUserName);
   }
 
   getWeeklyStats(week?: string) {

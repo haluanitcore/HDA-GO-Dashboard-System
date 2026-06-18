@@ -477,6 +477,38 @@ model SystemSetting {
   updated_at DateTime @updatedAt
 }
 
+// ═══════════════════════════════════════════════════
+// ADMIN AUDIT LOGS
+// ═══════════════════════════════════════════════════
+
+model ResetLog {
+  id           String   @id @default(uuid())
+  triggered_by String   // User ID atau "AUTO_MONTHLY"
+  trigger_type String   // "MANUAL" | "AUTO_MONTHLY"
+  scope        String   // "ALL" | "GMV_ONLY" | "ORDERS_ONLY" | "STATS_ONLY"
+  notes        String?  // Catatan wajib untuk reset manual
+  created_at   DateTime @default(now())
+  // Snapshot sebelum reset (JSON string)
+  snapshot_gmv    Float @default(0)
+  snapshot_orders Int   @default(0)
+  snapshot_creators Int @default(0)
+}
+
+model SyncLog {
+  id           String    @id @default(uuid())
+  triggered_by String    // BD User ID
+  started_at   DateTime  @default(now())
+  completed_at DateTime?
+  status       String    @default("RUNNING") // RUNNING, COMPLETED, FAILED
+  total_rows   Int       @default(0)
+  updated      Int       @default(0)
+  skipped      Int       @default(0)
+  leveled_up   Int       @default(0)
+  gmv_added    Float     @default(0)
+  orders_added Int       @default(0)
+  error_msg    String?
+}
+
 model MilestoneReward {
   id           String   @id @default(uuid())
   track        String   // GMV, ORDERS, CAMPAIGNS, CONSISTENCY, LIVE

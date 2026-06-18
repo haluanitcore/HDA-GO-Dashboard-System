@@ -235,7 +235,7 @@ export class BdGmvImportService {
   // ══════════════════════════════════════════════════
   // DIRECT LIVE GOOGLE SHEETS SYNC (ALL 12 COLUMNS)
   // ══════════════════════════════════════════════════
-  async syncGoogleSpreadsheet() {
+  async syncGoogleSpreadsheet(bdUserId = 'unknown', bdUserName = 'BD User') {
     // Retrieve URL and GID dynamically from database
     const dbUrlSetting = await this.prisma.systemSetting.findUnique({
       where: { key: 'google_sheets_url' },
@@ -331,6 +331,23 @@ export class BdGmvImportService {
     const skippedRows: SkippedRow[] = [];
     const updatedCreators: UpdatedCreator[] = [];
 
+    // ── Create SyncLog + emit sync:started ──
+    const totalDataRows = parsedRows.length - 1;
+    let syncLogId = 'unknown';
+    try {
+      const syncLog = await this.prisma.syncLog.create({
+        data: { triggered_by: bdUserId, total_rows: totalDataRows, status: 'RUNNING' },
+      });
+      syncLogId = syncLog.id;
+    } catch (_) { /* ignore if SyncLog table not yet migrated */ }
+
+    this.eventsGateway.emitSyncStarted({
+      triggeredBy: bdUserId,
+      triggeredByName: bdUserName,
+      totalRows: totalDataRows,
+      syncLogId,
+    });
+
     // ══════════════════════════════════════════════════
     // CREATOR MATCHING STRATEGY
     //
@@ -380,12 +397,20 @@ export class BdGmvImportService {
       const salesLevelRaw = salesLevelIdx !== -1 ? (cols[salesLevelIdx] || '').trim() : '';
       const fenoyRaw = fenoyIdx !== -1 ? (cols[fenoyIdx] || '').trim() : '';
       const expiredRaw = expiredIdx !== -1 ? (cols[expiredIdx] || '').trim() : '';
-      // Kolom K (KPI) = GMV Juni (format Rp, contoh: "Rp3.719.645")
-      // Kolom L (GMV Jun) = Orders = jumlah produk terjual (angka mentah)
-      const rawKpiGmv = kpiIdx !== -1 ? (cols[kpiIdx] || '0').trim() : '0';
-      const rawGmvJunOrders = gmvJunIdx !== -1 ? (cols[gmvJunIdx] || '0').trim() : '0';
-      const rawOrders = ordersIdx !== -1 ? (cols[ordersIdx] || '0').trim() : rawGmvJunOrders;
-      const rawGmv = rawKpiGmv;
+
+      // ── Mapping Kolom Sheet (Aktual) ──
+      // Sheet headers: ..., Sales level, GMV Jun, Order
+      // Kolom K = "GMV Jun"  → GMV bulan ini (format Rp, contoh: "Rp754.390")
+      // Kolom L = "Order"    → Jumlah orders (angka mentah, contoh: 12)
+      //
+      // gmvJunIdx = index kolom yang header-nya starts with 'gmv' → Kolom K
+      // ordersIdx  = index kolom yang header-nya 'order'/'orders'  → Kolom L
+      //
+      // rawGmv   = nilai GMV dari Kolom K (GMV Jun)
+      // rawOrders = nilai Orders dari Kolom L (Order)
+      const rawGmv = gmvJunIdx !== -1 ? (cols[gmvJunIdx] || '0').trim() : '0';
+      const rawOrders = ordersIdx !== -1 ? (cols[ordersIdx] || '0').trim() : '0';
+
 
       // ── Wajib: Creator ID (Kolom C) harus diisi ──
       if (!creatorCode) {
@@ -650,20 +675,26 @@ export class BdGmvImportService {
             },
           });
 
-          // ── Update Creator Aggregates using Difference ──
+          // ── Update Creator Aggregates ──
+          // gmv_monthly & total_orders → nilai ABSOLUT dari sheet (bukan increment)
+          //   Karena sheet sudah berisi total akumulatif bulan berjalan.
+          //   Setelah reset, nilai ini akan langsung terisi dari sheet.
+          // gmv_total → TETAP increment dengan diff (kumulatif semua waktu, tidak direset)
           await tx.creator.update({
             where: { user_id: creator.user_id },
             data: {
-              gmv_total: { increment: diffGmv },
-              gmv_monthly: { increment: diffGmv },
-              total_orders: { increment: diffOrders },
+              gmv_total: { increment: Math.max(0, diffGmv) },
+              gmv_monthly: parsedGmv,          // SET absolut, bukan increment
+              total_orders: parsedOrders,       // SET absolut, bukan increment
             },
           });
 
           fieldsChanged.push('gmv', 'orders');
-          
-          totalGmvAdded += Math.max(0, diffGmv);
-          totalOrdersAdded += Math.max(0, diffOrders);
+
+          // Counter summary menggunakan nilai absolut dari sheet
+          totalGmvAdded += parsedGmv;
+          totalOrdersAdded += parsedOrders;
+
         }, { isolationLevel: 'Serializable' });
 
         // ── Level Evaluation ──
@@ -695,7 +726,44 @@ export class BdGmvImportService {
       });
 
       totalUpdated++;
+
+      // Emit progress every 50 creators processed
+      const processedCount = (i - 1);
+      if (processedCount > 0 && processedCount % 50 === 0) {
+        this.eventsGateway.emitSyncProgress({
+          syncLogId,
+          processed: processedCount,
+          total: totalDataRows,
+        });
+      }
     }
+
+    // ── Emit sync:completed + update SyncLog ──
+    this.eventsGateway.emitSyncCompleted({
+      syncLogId,
+      triggeredByName: bdUserName,
+      updated: totalUpdated,
+      skipped: skippedRows.length,
+      leveledUp: leveledUpCreators.length,
+      gmvAdded: totalGmvAdded,
+      ordersAdded: totalOrdersAdded,
+    });
+
+    // Update SyncLog record
+    try {
+      await this.prisma.syncLog.update({
+        where: { id: syncLogId },
+        data: {
+          status: 'COMPLETED',
+          completed_at: new Date(),
+          updated: totalUpdated,
+          skipped: skippedRows.length,
+          leveled_up: leveledUpCreators.length,
+          gmv_added: totalGmvAdded,
+          orders_added: totalOrdersAdded,
+        },
+      });
+    } catch (_) { /* ignore if SyncLog not yet migrated */ }
 
     return {
       success: true,

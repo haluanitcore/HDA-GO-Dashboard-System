@@ -66,12 +66,21 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         { secret: process.env.JWT_SECRET },
       );
       const userId = payload.sub;
+      const userRole = payload.role;
 
       const existing = this.userSocketMap.get(userId) || [];
       existing.push(client.id);
       this.userSocketMap.set(userId, existing);
       await client.join(`user:${userId}`);
-      this.logger.log(`📡 Client connected: ${client.id} (user: ${userId})`);
+
+      // Admin & Executive join shared admin room for broadcast events
+      if (userRole === 'ADMIN' || userRole === 'EXECUTIVE') {
+        await client.join('room:admin');
+        this.logger.log(`📡 Admin joined room:admin: ${client.id} (user: ${userId})`);
+      }
+
+      this.logger.log(`📡 Client connected: ${client.id} (user: ${userId}, role: ${userRole})`);
+
     } catch {
       this.logger.warn(`📡 Connection rejected (invalid token): ${client.id}`);
       client.disconnect();
@@ -209,6 +218,71 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         message: `Campaign "${data.title}" telah di-approve oleh ${data.bdName}. Siap dikelola.`,
         timestamp: new Date(),
       });
+    });
+  }
+
+  // ══════════════════════════════════════════════
+  // SYNC MONITOR EVENTS — Dikirim ke room:admin
+  // ══════════════════════════════════════════════
+
+  // BD memulai sync Google Sheet
+  emitSyncStarted(data: { triggeredBy: string; triggeredByName: string; totalRows: number; syncLogId: string }) {
+    this.server.to('room:admin').emit('sync:started', {
+      type: 'sync:started',
+      title: '🔄 Sync Google Sheet Dimulai',
+      message: `${data.triggeredByName} memulai sinkronisasi (${data.totalRows} baris)`,
+      ...data,
+      timestamp: new Date(),
+    });
+  }
+
+  // Progress sync berjalan
+  emitSyncProgress(data: { syncLogId: string; processed: number; total: number }) {
+    this.server.to('room:admin').emit('sync:progress', {
+      type: 'sync:progress',
+      percentage: Math.round((data.processed / data.total) * 100),
+      ...data,
+      timestamp: new Date(),
+    });
+  }
+
+  // Sync selesai
+  emitSyncCompleted(data: {
+    syncLogId: string;
+    triggeredByName: string;
+    updated: number;
+    skipped: number;
+    leveledUp: number;
+    gmvAdded: number;
+    ordersAdded: number;
+  }) {
+    this.server.to('room:admin').emit('sync:completed', {
+      type: 'sync:completed',
+      title: '✅ Sync Google Sheet Selesai',
+      message: `${data.updated} creator terupdate, ${data.skipped} dilewati, ${data.leveledUp} naik level`,
+      ...data,
+      timestamp: new Date(),
+    });
+  }
+
+  // ══════════════════════════════════════════════
+  // RESET EVENTS — Dikirim ke room:admin
+  // ══════════════════════════════════════════════
+
+  // Reset data selesai (manual atau auto)
+  emitResetCompleted(data: {
+    scope: string;
+    triggerType: string;
+    triggeredByName: string;
+    snapshotGmv: number;
+    snapshotOrders: number;
+  }) {
+    this.server.to('room:admin').emit('admin:reset-completed', {
+      type: 'admin:reset-completed',
+      title: '🔄 Data Reset Selesai',
+      message: `Reset ${data.scope} oleh ${data.triggeredByName} — sebelum: GMV Rp${data.snapshotGmv?.toLocaleString('id-ID')}, Orders ${data.snapshotOrders}`,
+      ...data,
+      timestamp: new Date(),
     });
   }
 }

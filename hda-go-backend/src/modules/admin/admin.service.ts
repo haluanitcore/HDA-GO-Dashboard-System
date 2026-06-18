@@ -188,25 +188,44 @@ export class AdminService {
       }),
     );
 
-    // 6. GMV Trend and Revenue chart data (Last 14 days from PlatformMetrics)
-    const metricsHistory = await this.prisma.platformMetrics.findMany({
-      orderBy: { date: 'desc' },
-      take: 14,
+    // 6. GMV Trend from CreatorWeeklyStats (grouped by week, last 8 weeks)
+    // Use real sync data instead of empty PlatformMetrics table
+    const weeklyStatsRaw = await this.prisma.creatorWeeklyStats.groupBy({
+      by: ['week_label', 'week_start'],
+      _sum: { gmv: true, orders: true },
+      orderBy: { week_start: 'desc' },
+      take: 8,
     });
 
-    // Reverse to chronological order (past to present) for chart rendering
-    const sortedHistory = [...metricsHistory].reverse();
+    // Reverse to chronological order for chart (oldest → newest)
+    const sortedWeekly = [...weeklyStatsRaw].reverse();
 
-    const gmv_trend = sortedHistory.map((m) => {
-      const gmv = m.total_gmv;
-      const revenue = (revenuePercent / 100.0) * gmv;
-      return {
-        date: m.date,
-        gmv,
-        revenue,
-        orders: m.total_orders,
-      };
-    });
+    let gmv_trend: { date: string; gmv: number; revenue: number; orders: number }[];
+
+    if (sortedWeekly.length > 0) {
+      gmv_trend = sortedWeekly.map((w) => {
+        const gmv = Number(w._sum.gmv || 0);
+        const revenue = (revenuePercent / 100.0) * gmv;
+        return {
+          date: w.week_start
+            ? w.week_start.toISOString().substring(0, 10)
+            : w.week_label,
+          gmv,
+          revenue,
+          orders: Number(w._sum.orders || 0),
+        };
+      });
+    } else {
+      // Fallback: use current platform totals as single data point for today
+      const today = new Date().toISOString().substring(0, 10);
+      gmv_trend = [{
+        date: today,
+        gmv: Number(platform_gmv),
+        revenue: (revenuePercent / 100.0) * Number(platform_gmv),
+        orders: Number(total_orders),
+      }];
+    }
+
 
     return {
       summary: {

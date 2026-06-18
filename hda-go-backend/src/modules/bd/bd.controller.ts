@@ -7,6 +7,7 @@ import {
   Body,
   Query,
   Req,
+  Request,
   UseGuards,
   UseInterceptors,
   UploadedFile,
@@ -170,8 +171,10 @@ export class BdController {
   // POST /bd/creators/sync-spreadsheet — Direct live sync from Google Sheet
   @Post('creators/sync-spreadsheet')
   @Roles(Role.BD, Role.ADMIN)
-  syncGoogleSpreadsheet() {
-    return this.bdService.syncGoogleSpreadsheet();
+  syncGoogleSpreadsheet(@Request() req: any) {
+    const bdUserId = req.user?.userId || req.user?.sub || 'unknown';
+    const bdUserName = req.user?.name || req.user?.email || 'BD User';
+    return this.bdService.syncGoogleSpreadsheet(bdUserId, bdUserName);
   }
 
   // GET /bd/hotels — List all hotel partners

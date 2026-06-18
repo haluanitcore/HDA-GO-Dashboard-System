@@ -24,6 +24,23 @@ export default function AdminPage() {
   const [selectedCreator, setSelectedCreator] = useState<any>(null);
   const [notifFilter, setNotifFilter] = useState<string>('ALL');
 
+  // ── Sync Monitor State ──
+  const [syncEvents, setSyncEvents] = useState<any[]>([]);
+  const [syncProgress, setSyncProgress] = useState<{processed: number; total: number; pct: number} | null>(null);
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'running' | 'completed'>('idle');
+  const [syncHistory, setSyncHistory] = useState<any[]>([]);
+
+  // ── Reset Control State ──
+  const [resetScope, setResetScope] = useState<'ALL' | 'GMV_ONLY' | 'ORDERS_ONLY' | 'STATS_ONLY'>('ALL');
+  const [resetNotes, setResetNotes] = useState('');
+  const [resetConfirm, setResetConfirm] = useState('');
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetResult, setResetResult] = useState<any>(null);
+  const [resetHistory, setResetHistory] = useState<any[]>([]);
+  const [resetConfig, setResetConfig] = useState<{enabled: boolean; next_reset: string} | null>(null);
+  const [isTogglingAuto, setIsTogglingAuto] = useState(false);
+  const [showResetHistory, setShowResetHistory] = useState(false);
+
   // GMV Override Modal State
   const [isGmvModalOpen, setIsGmvModalOpen] = useState(false);
   const [recordData, setRecordData] = useState({ creator_id: '', campaign_id: '', order_count: '', gmv_amount: '' });
@@ -129,7 +146,109 @@ export default function AdminPage() {
     fetchDashboard();
     fetchNotifications();
     fetchOptions();
+    fetchResetData();
+    fetchSyncHistory();
   }, []);
+
+  // ── Fetch reset config + history ──
+  const fetchResetData = async () => {
+    try {
+      const [cfg, hist] = await Promise.all([
+        api.get('/admin/reset/config'),
+        api.get('/admin/reset/history?limit=10'),
+      ]);
+      setResetConfig((cfg as any) || null);
+      setResetHistory(Array.isArray(hist) ? hist : []);
+    } catch (err) {
+      console.error('Error fetching reset data:', err);
+    }
+  };
+
+  const fetchSyncHistory = async () => {
+    try {
+      const hist: any = await api.get('/admin/sync/history?limit=5');
+      setSyncHistory(Array.isArray(hist) ? hist : []);
+    } catch (_) {}
+  };
+
+  // ── Socket.io: Listen for sync events ──
+  useEffect(() => {
+    const token = localStorage.getItem('hda_access_token') || '';
+    if (!token) return;
+
+    let socket: any;
+    const connectSocket = async () => {
+      try {
+        const { io } = await import('socket.io-client');
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+        socket = io(`${API_URL}/events`, {
+          auth: { token },
+          transports: ['websocket'],
+        });
+
+        socket.on('sync:started', (data: any) => {
+          setSyncStatus('running');
+          setSyncProgress({ processed: 0, total: data.totalRows, pct: 0 });
+          setSyncEvents(prev => [{ ...data, time: new Date().toLocaleTimeString('id-ID') }, ...prev].slice(0, 20));
+        });
+
+        socket.on('sync:progress', (data: any) => {
+          setSyncProgress({ processed: data.processed, total: data.total, pct: data.percentage });
+        });
+
+        socket.on('sync:completed', (data: any) => {
+          setSyncStatus('completed');
+          setSyncProgress(null);
+          setSyncEvents(prev => [{ ...data, time: new Date().toLocaleTimeString('id-ID') }, ...prev].slice(0, 20));
+          fetchSyncHistory();
+          fetchDashboard();
+          setTimeout(() => setSyncStatus('idle'), 5000);
+        });
+
+        socket.on('admin:reset-completed', (data: any) => {
+          setSyncEvents(prev => [{ ...data, time: new Date().toLocaleTimeString('id-ID') }, ...prev].slice(0, 20));
+          fetchResetData();
+          fetchDashboard();
+        });
+      } catch (_) {}
+    };
+
+    connectSocket();
+    return () => { socket?.disconnect(); };
+  }, []);
+
+  // ── Manual Reset Handler ──
+  const handleManualReset = async () => {
+    if (resetConfirm !== 'RESET') return;
+    setIsResetting(true);
+    setResetResult(null);
+    try {
+      const res: any = await api.post('/admin/reset/manual', { scope: resetScope, notes: resetNotes || 'Manual reset by Admin' });
+      setResetResult(res);
+      setResetConfirm('');
+      setResetNotes('');
+      fetchResetData();
+      fetchDashboard();
+    } catch (err: any) {
+      setResetResult({ error: err?.message || 'Gagal melakukan reset' });
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
+  // ── Toggle Auto Reset ──
+  const handleToggleAutoReset = async () => {
+    if (!resetConfig) return;
+    setIsTogglingAuto(true);
+    try {
+      await api.post('/admin/reset/config', { enabled: !resetConfig.enabled });
+      fetchResetData();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsTogglingAuto(false);
+    }
+  };
 
   const handleSync = async () => {
     setIsLoadingDashboard(true);
@@ -235,8 +354,14 @@ export default function AdminPage() {
     { name: 'Pending Rewards', value: summary.pending_reward_claims, icon: Trophy, color: 'text-yellow-400', bg: 'bg-yellow-500/10' },
   ];
 
-  // Max value for Chart Scaling
-  const maxGmvVal = gmv_trend.length > 0 ? (Math.max(...gmv_trend.map((t: any) => t.gmv)) || 1) : 1;
+  // Max value for Chart Scaling — cap at 100% to prevent overflow
+  const maxGmvVal = gmv_trend.length > 0 ? (Math.max(...gmv_trend.map((t: any) => Math.max(t.gmv || 0, t.revenue || 0))) || 1) : 1;
+  const formatGmvShort = (val: number) => {
+    if (val >= 1_000_000_000) return `${(val / 1_000_000_000).toFixed(1)}M`;
+    if (val >= 1_000_000) return `${(val / 1_000_000).toFixed(0)}jt`;
+    if (val >= 1_000) return `${(val / 1_000).toFixed(0)}k`;
+    return String(val);
+  };
 
   // Print layout handler for PDF export
   const handlePrint = () => {
@@ -402,59 +527,356 @@ export default function AdminPage() {
         ))}
       </div>
 
-      {/* Row 2: Charts & Leaderboard */}
+      {/* ════════════════════════════════════════════════════ */}
+      {/* SYNC MONITOR + RESET CONTROL CENTER                  */}
+      {/* ════════════════════════════════════════════════════ */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        {/* 📡 SYNC MONITOR */}
+        <div className="bg-[#0E0E0E] border border-white/8 rounded-[28px] overflow-hidden shadow-2xl">
+          <div className="px-6 pt-5 pb-4 flex items-center justify-between border-b border-white/5">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-500/10 rounded-xl">
+                <Activity className="h-5 w-5 text-blue-400" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-white tracking-tight">📡 Sync Monitor</h3>
+                <p className="text-[10px] text-gray-500 mt-0.5">Live feed sinkronisasi Google Sheet</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {syncStatus === 'running' && (
+                <span className="flex items-center gap-1.5 text-[10px] font-black text-blue-400 bg-blue-500/10 border border-blue-500/20 px-3 py-1 rounded-full animate-pulse">
+                  <span className="h-1.5 w-1.5 bg-blue-400 rounded-full" />
+                  LIVE
+                </span>
+              )}
+              {syncStatus === 'completed' && (
+                <span className="flex items-center gap-1.5 text-[10px] font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full">
+                  <CheckCircle className="h-3 w-3" />
+                  DONE
+                </span>
+              )}
+              {syncStatus === 'idle' && (
+                <span className="flex items-center gap-1.5 text-[10px] font-bold text-gray-500">
+                  <span className="h-1.5 w-1.5 bg-gray-600 rounded-full" />
+                  STANDBY
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Progress Bar */}
+          {syncProgress && (
+            <div className="px-6 py-3 border-b border-white/5">
+              <div className="flex justify-between text-[10px] font-bold text-gray-400 mb-1.5">
+                <span>Memproses creator...</span>
+                <span>{syncProgress.processed}/{syncProgress.total} ({syncProgress.pct}%)</span>
+              </div>
+              <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-blue-600 to-cyan-400 rounded-full transition-all duration-500"
+                  style={{ width: `${syncProgress.pct}%` }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Event Timeline */}
+          <div className="divide-y divide-white/5 max-h-48 overflow-y-auto">
+            {syncEvents.length === 0 && syncHistory.length === 0 ? (
+              <div className="px-6 py-8 text-center">
+                <Server className="h-8 w-8 text-gray-700 mx-auto mb-2" />
+                <p className="text-xs text-gray-600">Belum ada aktivitas sync</p>
+                <p className="text-[10px] text-gray-700 mt-1">Event akan muncul saat BD melakukan sync</p>
+              </div>
+            ) : (
+              [...syncEvents, ...syncHistory.map(h => ({
+                type: h.status === 'COMPLETED' ? 'sync:completed' : 'sync:started',
+                time: new Date(h.completed_at || h.started_at).toLocaleTimeString('id-ID'),
+                updated: h.updated,
+                skipped: h.skipped,
+                leveledUp: h.leveled_up,
+                totalRows: h.total_rows,
+                triggeredByName: h.triggered_by,
+                isHistory: true,
+              }))].slice(0, 10).map((evt: any, i: number) => (
+                <div key={i} className="px-6 py-3 flex items-start gap-3">
+                  <span className="text-[9px] text-gray-600 font-mono mt-0.5 flex-shrink-0">{evt.time}</span>
+                  <div className="flex-1 min-w-0">
+                    {evt.type === 'sync:started' && (
+                      <p className="text-xs text-blue-400 font-bold truncate">🔄 Sync dimulai oleh {evt.triggeredByName} ({evt.totalRows} baris)</p>
+                    )}
+                    {evt.type === 'sync:completed' && (
+                      <div>
+                        <p className="text-xs text-emerald-400 font-bold">✅ Sync selesai — {evt.updated} terupdate, {evt.skipped} dilewati</p>
+                        {evt.leveledUp > 0 && <p className="text-[10px] text-[#F6D145] mt-0.5">🎉 {evt.leveledUp} creator naik level!</p>}
+                      </div>
+                    )}
+                    {evt.type === 'admin:reset-completed' && (
+                      <p className="text-xs text-purple-400 font-bold">🔄 Data di-reset ({evt.scope})</p>
+                    )}
+                  </div>
+                  {evt.isHistory && <span className="text-[9px] text-gray-700 flex-shrink-0">history</span>}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* 🔄 RESET CONTROL CENTER */}
+        <div className="bg-[#0E0E0E] border border-red-500/10 rounded-[28px] overflow-hidden shadow-2xl">
+          <div className="px-6 pt-5 pb-4 flex items-center justify-between border-b border-red-500/10">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-red-500/10 rounded-xl">
+                <Database className="h-5 w-5 text-red-400" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-white tracking-tight">🔄 Reset Control Center</h3>
+                <p className="text-[10px] text-gray-500 mt-0.5">Kelola reset GMV & Orders kreator</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-6 space-y-5">
+            {/* Auto Monthly Toggle */}
+            <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-black text-white">Auto Reset Bulanan</p>
+                  <p className="text-[10px] text-gray-500 mt-0.5">
+                    Otomatis reset setiap tanggal 1 pukul 00:01 WIB
+                  </p>
+                  {resetConfig?.next_reset && (
+                    <p className="text-[10px] text-blue-400 font-bold mt-1">
+                      Reset berikutnya: {new Date(resetConfig.next_reset).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    </p>
+                  )}
+                </div>
+                <button
+                  id="btn-toggle-auto-reset"
+                  onClick={handleToggleAutoReset}
+                  disabled={isTogglingAuto}
+                  className={`relative w-12 h-6 rounded-full transition-all duration-300 flex-shrink-0 ${
+                    resetConfig?.enabled ? 'bg-emerald-500' : 'bg-gray-700'
+                  } ${isTogglingAuto ? 'opacity-50' : ''}`}
+                >
+                  <span className={`absolute top-1 h-4 w-4 bg-white rounded-full shadow transition-all duration-300 ${
+                    resetConfig?.enabled ? 'left-7' : 'left-1'
+                  }`} />
+                </button>
+              </div>
+            </div>
+
+            {/* Manual Reset */}
+            <div className="space-y-3">
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Reset Manual</p>
+
+              {/* Scope Selector */}
+              <div className="grid grid-cols-2 gap-2">
+                {(['ALL', 'GMV_ONLY', 'ORDERS_ONLY', 'STATS_ONLY'] as const).map(scope => (
+                  <button
+                    key={scope}
+                    id={`btn-scope-${scope.toLowerCase()}`}
+                    onClick={() => setResetScope(scope)}
+                    className={`text-[10px] font-black px-3 py-2 rounded-xl border transition-all ${
+                      resetScope === scope
+                        ? 'bg-red-500/20 border-red-500/40 text-red-300'
+                        : 'bg-white/5 border-white/5 text-gray-500 hover:border-white/10'
+                    }`}
+                  >
+                    {scope === 'ALL' ? '🔴 Semua Data' :
+                     scope === 'GMV_ONLY' ? '💰 GMV Saja' :
+                     scope === 'ORDERS_ONLY' ? '📦 Orders Saja' :
+                     '📊 Stats Saja'}
+                  </button>
+                ))}
+              </div>
+
+              {/* Notes */}
+              <input
+                id="input-reset-notes"
+                type="text"
+                placeholder="Catatan reset (wajib)..."
+                value={resetNotes}
+                onChange={e => setResetNotes(e.target.value)}
+                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-red-500/40 transition-colors"
+              />
+
+              {/* Confirm Input */}
+              <div>
+                <p className="text-[10px] text-gray-500 mb-1">Ketik <span className="text-red-400 font-black">RESET</span> untuk konfirmasi:</p>
+                <input
+                  id="input-reset-confirm"
+                  type="text"
+                  placeholder="Ketik RESET"
+                  value={resetConfirm}
+                  onChange={e => setResetConfirm(e.target.value)}
+                  className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-red-500/40 transition-colors"
+                />
+              </div>
+
+              {/* Reset Button */}
+              <button
+                id="btn-execute-reset"
+                onClick={handleManualReset}
+                disabled={isResetting || resetConfirm !== 'RESET' || !resetNotes.trim()}
+                className="w-full py-3 rounded-2xl text-xs font-black transition-all flex items-center justify-center gap-2
+                  disabled:opacity-40 disabled:cursor-not-allowed
+                  bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/30 hover:border-red-500/50"
+              >
+                {isResetting ? (
+                  <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Mereset data...</>
+                ) : (
+                  <><RefreshCw className="h-3.5 w-3.5" /> Eksekusi Reset {resetScope === 'ALL' ? 'Semua Data' : resetScope.replace('_', ' ')}</>
+                )}
+              </button>
+
+              {/* Reset Result */}
+              {resetResult && (
+                <div className={`p-3 rounded-xl text-[10px] font-bold border ${
+                  resetResult.error
+                    ? 'bg-red-500/10 border-red-500/20 text-red-400'
+                    : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                }`}>
+                  {resetResult.error ? (
+                    <span>❌ {resetResult.error}</span>
+                  ) : (
+                    <span>✅ Reset berhasil! GMV sebelum: Rp {Number(resetResult.snapshot?.gmv_before || 0).toLocaleString('id-ID')}</span>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* History Toggle */}
+            <button
+              id="btn-show-reset-history"
+              onClick={() => setShowResetHistory(!showResetHistory)}
+              className="text-[10px] font-bold text-gray-500 hover:text-white transition-colors flex items-center gap-1"
+            >
+              <Calendar className="h-3 w-3" />
+              {showResetHistory ? 'Sembunyikan' : 'Lihat'} Riwayat Reset ({resetHistory.length})
+            </button>
+
+            {showResetHistory && resetHistory.length > 0 && (
+              <div className="space-y-2 max-h-36 overflow-y-auto">
+                {resetHistory.map((log: any, i: number) => (
+                  <div key={i} className="bg-white/[0.02] border border-white/5 rounded-xl px-4 py-2.5 flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] font-bold text-white">
+                        {log.trigger_type === 'AUTO_MONTHLY' ? '🤖 Auto' : '👤 Manual'}
+                        {' · '}{log.scope}
+                      </p>
+                      <p className="text-[9px] text-gray-600 mt-0.5 truncate">{log.notes || '-'}</p>
+                    </div>
+                    <span className="text-[9px] text-gray-600 flex-shrink-0 font-mono">
+                      {new Date(log.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: '2-digit' })}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* GMV & Revenue Chart */}
         <div className="lg:col-span-2 space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-black text-white tracking-tight">GMV & Revenue Trajectory</h2>
+            <div>
+              <h2 className="text-xl font-black text-white tracking-tight">GMV & Revenue Trajectory</h2>
+              <p className="text-[11px] text-gray-500 mt-0.5">Data mingguan dari sinkronisasi Google Sheet</p>
+            </div>
             <div className="flex items-center gap-4 text-xs font-bold text-gray-500">
               <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 bg-blue-500 rounded-full" /> Platform GMV</span>
               <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 bg-amber-500 rounded-full" /> Revenue ({summary.revenue_percentage}%)</span>
             </div>
           </div>
-          <div className="bg-[#121212] border border-white/5 rounded-[32px] p-8 shadow-2xl relative overflow-hidden">
+          <div className="bg-[#121212] border border-white/5 rounded-[32px] p-6 shadow-2xl relative overflow-hidden">
             <div className="absolute -top-24 -right-24 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl" />
-            <div className="h-64 flex items-end gap-3 sm:gap-4 relative z-10">
-              {gmv_trend.map((t: any, i: number) => {
-                const gmvHeight = (t.gmv / maxGmvVal) * 100;
-                const revenueHeight = (t.revenue / maxGmvVal) * 100;
 
-                return (
-                  <div key={i} className="flex-1 flex flex-col items-center justify-end gap-3 group h-full">
-                    {/* Tooltip on Hover */}
-                    <div className="absolute bottom-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/90 border border-white/10 p-2 rounded-xl text-[9px] font-black text-white z-20 pointer-events-none whitespace-nowrap shadow-2xl">
-                      <p className="text-blue-400">GMV: Rp {t.gmv.toLocaleString('id-ID')}</p>
-                      <p className="text-amber-400 mt-0.5">Rev: Rp {t.revenue.toLocaleString('id-ID')}</p>
-                    </div>
+            {/* Y-axis label + chart area */}
+            <div className="flex gap-3 relative z-10">
+              {/* Y-axis */}
+              <div className="flex flex-col justify-between text-right pr-2 border-r border-white/5 py-1" style={{ minWidth: 48 }}>
+                <span className="text-[9px] font-bold text-gray-600">{formatGmvShort(maxGmvVal)}</span>
+                <span className="text-[9px] font-bold text-gray-600">{formatGmvShort(maxGmvVal * 0.5)}</span>
+                <span className="text-[9px] font-bold text-gray-600">0</span>
+              </div>
 
-                    {/* Dual bars */}
-                    <div className="w-full flex gap-1 h-full items-end">
-                      {/* GMV Bar */}
-                      <div className="flex-1 relative bg-white/5 rounded-t-md overflow-hidden hover:bg-white/10 transition-colors h-full">
-                        {gmvHeight > 0 && (
-                          <div 
-                            className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-blue-600 to-cyan-400 rounded-t-md group-hover:shadow-[0_0_15px_rgba(59,130,246,0.3)] transition-all duration-500"
-                            style={{ height: `${gmvHeight}%` }}
-                          />
-                        )}
+              {/* Bars */}
+              {gmv_trend.length === 0 ? (
+                <div className="flex-1 h-56 flex flex-col items-center justify-center gap-2">
+                  <BarChart3 className="h-10 w-10 text-gray-700" />
+                  <p className="text-xs text-gray-600 font-semibold">Belum ada data GMV</p>
+                  <p className="text-[10px] text-gray-700">Sync Google Sheet untuk mengisi data</p>
+                </div>
+              ) : (
+                <div className="flex-1 h-56 flex items-end gap-2 sm:gap-3">
+                  {gmv_trend.map((t: any, i: number) => {
+                    const gmvPct = Math.min((Number(t.gmv || 0) / maxGmvVal) * 100, 100);
+                    const revPct = Math.min((Number(t.revenue || 0) / maxGmvVal) * 100, 100);
+                    const dateLabel = (() => {
+                      try {
+                        const d = new Date(t.date);
+                        return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+                      } catch { return t.date; }
+                    })();
+
+                    return (
+                      <div key={i} className="flex-1 flex flex-col items-center justify-end gap-1.5 group h-full relative">
+                        {/* Tooltip on Hover */}
+                        <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-200 bg-[#0a0a0a] border border-white/10 p-2.5 rounded-2xl text-[9px] font-bold text-white z-30 pointer-events-none whitespace-nowrap shadow-2xl">
+                          <p className="text-[10px] font-black text-white mb-1">{dateLabel}</p>
+                          <p className="text-blue-400">GMV: <span className="text-white">Rp {Number(t.gmv || 0).toLocaleString('id-ID')}</span></p>
+                          <p className="text-amber-400 mt-0.5">Revenue: <span className="text-white">Rp {Number(t.revenue || 0).toLocaleString('id-ID')}</span></p>
+                          <p className="text-gray-400 mt-0.5">Orders: <span className="text-white">{Number(t.orders || 0).toLocaleString('id-ID')}</span></p>
+                        </div>
+
+                        {/* Dual bars side by side */}
+                        <div className="w-full flex gap-0.5 h-full items-end">
+                          {/* GMV Bar */}
+                          <div className="flex-1 flex flex-col justify-end h-full">
+                            <div
+                              className="w-full bg-gradient-to-t from-blue-700 to-cyan-400 rounded-t-lg transition-all duration-700 ease-out group-hover:shadow-[0_0_12px_rgba(59,130,246,0.4)]"
+                              style={{ height: gmvPct > 0 ? `${Math.max(gmvPct, 3)}%` : '3%', opacity: gmvPct > 0 ? 1 : 0.15 }}
+                            />
+                          </div>
+                          {/* Revenue Bar */}
+                          <div className="flex-1 flex flex-col justify-end h-full">
+                            <div
+                              className="w-full bg-gradient-to-t from-amber-700 to-yellow-400 rounded-t-lg transition-all duration-700 ease-out group-hover:shadow-[0_0_12px_rgba(245,158,11,0.4)]"
+                              style={{ height: revPct > 0 ? `${Math.max(revPct, 3)}%` : '3%', opacity: revPct > 0 ? 1 : 0.15 }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* X-axis label */}
+                        <span className="text-[8px] font-bold text-gray-600 select-none whitespace-nowrap">
+                          {dateLabel}
+                        </span>
                       </div>
-                      {/* Revenue Bar */}
-                      <div className="flex-1 relative bg-white/5 rounded-t-md overflow-hidden hover:bg-white/10 transition-colors h-full">
-                        {revenueHeight > 0 && (
-                          <div 
-                            className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-amber-600 to-yellow-400 rounded-t-md group-hover:shadow-[0_0_15px_rgba(245,158,11,0.3)] transition-all duration-500"
-                            style={{ height: `${revenueHeight}%` }}
-                          />
-                        )}
-                      </div>
-                    </div>
-                    <span className="text-[9px] font-bold text-gray-500 select-none">
-                      {new Date(t.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
-                    </span>
-                  </div>
-                );
-              })}
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Summary bar below chart */}
+            <div className="mt-4 pt-4 border-t border-white/5 grid grid-cols-3 gap-3">
+              <div className="text-center">
+                <p className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Total GMV</p>
+                <p className="text-sm font-black text-blue-400 mt-0.5">Rp {Number(summary.platform_gmv || 0).toLocaleString('id-ID')}</p>
+              </div>
+              <div className="text-center border-x border-white/5">
+                <p className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Revenue ({summary.revenue_percentage}%)</p>
+                <p className="text-sm font-black text-amber-400 mt-0.5">Rp {Number(summary.revenue_total || 0).toLocaleString('id-ID')}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Total Orders</p>
+                <p className="text-sm font-black text-emerald-400 mt-0.5">{Number(summary.total_orders || 0).toLocaleString('id-ID')}</p>
+              </div>
             </div>
           </div>
         </div>

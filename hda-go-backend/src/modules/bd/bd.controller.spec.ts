@@ -165,7 +165,7 @@ describe('BdController', () => {
 
   it('syncGoogleSpreadsheet delegates to service', async () => {
     mockBdService.syncGoogleSpreadsheet.mockResolvedValue({ synced: 10 });
-    await controller.syncGoogleSpreadsheet();
+    await controller.syncGoogleSpreadsheet(mockReq as any);
     expect(mockBdService.syncGoogleSpreadsheet).toHaveBeenCalled();
   });
 
