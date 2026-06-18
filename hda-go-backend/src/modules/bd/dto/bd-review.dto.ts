@@ -66,6 +66,11 @@ export class BDEditCampaignDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(100)
+  status?: string;
+
+  @IsOptional()
+  @IsString()
   @MaxLength(2000)
   notes?: string; // Edit reason / notes
 

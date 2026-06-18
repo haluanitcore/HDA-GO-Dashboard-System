@@ -15,7 +15,9 @@ export default function ExecutiveLayout({ children }: { children: React.ReactNod
     if (!isInitialized) return;
     if (!isAuthenticated) {
       router.push('/login');
-    } else if (user?.role !== 'EXECUTIVE') {
+    } else if (user?.role === 'EXECUTIVE') {
+      router.push('/admin');
+    } else {
       router.push(`/${user?.role?.toLowerCase() ?? 'login'}`);
     }
   }, [isAuthenticated, isInitialized, user, router]);

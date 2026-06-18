@@ -323,7 +323,7 @@ export class BdCampaignService {
     await this.prisma.notification.create({
       data: {
         user_id: campaign.brand_id,
-        title: '🔄 Revisi Diperlukan',
+        title: '[Revisi] Revisi Diperlukan',
         message: `Campaign "${campaign.title}" memerlukan revisi dari ${bdUser?.name || 'BD'}: "${notes}"`,
         type: 'CAMPAIGN',
         read_status: false,
@@ -331,7 +331,7 @@ export class BdCampaignService {
     });
 
     this.eventsGateway.emitNotification(campaign.brand_id, {
-      title: '🔄 Revisi Diperlukan',
+      title: '[Revisi] Revisi Diperlukan',
       message: `Campaign "${campaign.title}" perlu revisi: "${notes}"`,
       type: 'CAMPAIGN',
     });
@@ -364,6 +364,12 @@ export class BdCampaignService {
       notes: string | null;
     }> = [];
 
+    const editor = await this.prisma.user.findUnique({
+      where: { id: bdUserId },
+      select: { role: true },
+    });
+    const editorRole = editor?.role || 'BD';
+
     const fieldMap: Record<string, string> = {
       title: 'title',
       category: 'category',
@@ -374,6 +380,7 @@ export class BdCampaignService {
       budget: 'budget',
       slot: 'slot',
       brief_url: 'brief_url',
+      status: 'status',
       target_creators_count: 'target_creators_count',
       collaboration_type: 'collaboration_type',
       start_date: 'start_date',
@@ -396,7 +403,7 @@ export class BdCampaignService {
           editLogs.push({
             campaign_id: campaignId,
             editor_id: bdUserId,
-            editor_role: 'BD',
+            editor_role: editorRole,
             field_name: dbField,
             old_value: String(oldValue ?? ''),
             new_value: String(newValue),

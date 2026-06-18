@@ -33,6 +33,7 @@ export default function AdminSettingsPage() {
 
   const [googleSheetsUrl, setGoogleSheetsUrl] = useState('');
   const [googleSheetsGid, setGoogleSheetsGid] = useState('');
+  const [revenuePercentage, setRevenuePercentage] = useState('10');
 
   useEffect(() => {
     const fetchGlobalSettings = async () => {
@@ -41,6 +42,7 @@ export default function AdminSettingsPage() {
         if (res) {
           setGoogleSheetsUrl(res.google_sheets_url || '');
           setGoogleSheetsGid(res.google_sheets_gid || '');
+          setRevenuePercentage(res.revenue_percentage || '10');
         }
       } catch (err) {
         console.error('Failed to fetch global settings:', err);
@@ -55,6 +57,7 @@ export default function AdminSettingsPage() {
       await api.patch('/settings/global', {
         google_sheets_url: googleSheetsUrl,
         google_sheets_gid: googleSheetsGid,
+        revenue_percentage: revenuePercentage,
       });
       alert('System configurations have been successfully updated & saved to the database!');
     } catch (err) {
@@ -233,6 +236,18 @@ export default function AdminSettingsPage() {
                     type="number" 
                     value={system.defaultCampaignSlots} 
                     onChange={e => setSystem({...system, defaultCampaignSlots: parseInt(e.target.value, 10)})}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-gray-400">Platform Revenue Share (%)</label>
+                  <input 
+                    type="number" 
+                    min="0"
+                    max="100"
+                    value={revenuePercentage} 
+                    onChange={e => setRevenuePercentage(e.target.value)}
                     className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white"
                   />
                 </div>

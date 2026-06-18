@@ -34,9 +34,11 @@ export function Sidebar() {
   };
 
   const getMenuItems = () => {
-    if (user?.role === 'ADMIN') {
+    if (user?.role === 'ADMIN' || user?.role === 'EXECUTIVE') {
       return [
-        { name: 'System Control', href: '/admin', icon: ShieldCheck },
+        { name: 'Command Center', href: '/admin', icon: ShieldCheck },
+        { name: 'KPI & Analytics', href: '/admin/kpi', icon: BarChart3 },
+        { name: 'Leaderboard', href: '/admin/leaderboard', icon: Trophy },
         { name: 'User Management', href: '/admin/users', icon: Users },
         { name: 'CM Management', href: '/admin/cm-management', icon: Users },
         { name: 'Configuration', href: '/admin/settings', icon: Settings },
@@ -54,13 +56,6 @@ export function Sidebar() {
     if (user?.role === 'QC') {
       return [
         { name: 'QC Dashboard', href: '/qc', icon: ShieldCheck },
-      ];
-    }
-    if (user?.role === 'EXECUTIVE') {
-      return [
-        { name: 'Analytics', href: '/executive', icon: BarChart3 },
-        { name: 'KPI Overview', href: '/executive/kpi', icon: TrendingUp },
-        { name: 'Leaderboard', href: '/executive/leaderboard', icon: Trophy },
       ];
     }
     if (user?.role === 'BRAND') {

@@ -193,7 +193,7 @@ export class CmCreatorsService {
       await tx.notification.create({
         data: {
           user_id: toCmId,
-          title: '🔄 Creator Ditransfer',
+          title: '[Transfer] Creator Ditransfer',
           message: `Creator telah ditransfer kepada Anda oleh CM lain.`,
           type: 'SYSTEM',
         },

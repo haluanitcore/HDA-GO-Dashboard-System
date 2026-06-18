@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Users, UserPlus, Search, ShieldAlert, CheckCircle, Ban, Filter, ChevronRight, Loader2 } from 'lucide-react';
+import { Users, UserPlus, Search, ShieldAlert, CheckCircle, Ban, Filter, ChevronRight, Loader2, Award, ShoppingBag } from 'lucide-react';
 import { api } from '@/services/api';
 
 export default function AdminUsersPage() {
@@ -14,10 +14,8 @@ export default function AdminUsersPage() {
   const fetchUsers = async () => {
     setIsLoading(true);
     try {
-      // Fetch all system creators or general users if endpoint exists, or mock fallback
-      const res: any = await api.get('/creators').catch(() => []);
+      const res: any = await api.get('/creators').catch(() => ({ data: [] }));
       
-      // Let's create a curated combined list of system accounts from seed.ts for display
       const defaultUsers = [
         { id: '1', name: 'Sarah CM', email: 'cm1@hdago.com', role: 'CM', status: 'ACTIVE', joinDate: '2026-01-15' },
         { id: '2', name: 'Budi CM', email: 'cm2@hdago.com', role: 'CM', status: 'ACTIVE', joinDate: '2026-02-10' },
@@ -28,17 +26,20 @@ export default function AdminUsersPage() {
         { id: '7', name: 'GlowUp Beauty', email: 'glowup@brand.com', role: 'BRAND', status: 'SUSPENDED', joinDate: '2026-03-12' },
       ];
 
-      // Merge with fetched creators if any
-      const fetchedCreators = Array.isArray(res) 
-        ? res.map((c: any) => ({
-            id: c.user_id || c.id,
-            name: c.user?.name || 'Creator',
-            email: c.user?.email || 'creator@hdago.com',
-            role: 'CREATOR',
-            status: 'ACTIVE',
-            joinDate: c.onboarded_at ? new Date(c.onboarded_at).toISOString().split('T')[0] : '2026-04-10'
-          }))
-        : [];
+      const rawCreators = res?.data || (Array.isArray(res) ? res : []);
+      const fetchedCreators = rawCreators.map((c: any) => ({
+        id: c.user_id || c.id,
+        name: c.user?.name || 'Creator',
+        email: c.user?.email || 'creator@hdago.com',
+        role: 'CREATOR',
+        status: c.onboarding_status || 'ACTIVE',
+        joinDate: c.onboarded_at ? new Date(c.onboarded_at).toISOString().split('T')[0] : '2026-04-10',
+        tiktok_username: c.tiktok_username || '',
+        tiktok_followers: c.tiktok_followers || 0,
+        level: c.creator_level || c.level || 1,
+        gmv_total: c.gmv_total || 0,
+        total_orders: c.total_orders || 0,
+      }));
 
       setUsers([...defaultUsers, ...fetchedCreators]);
     } catch (err) {
@@ -49,6 +50,13 @@ export default function AdminUsersPage() {
   };
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const search = params.get('search');
+      if (search) {
+        setSearchQuery(search);
+      }
+    }
     fetchUsers();
   }, []);
 
@@ -66,9 +74,11 @@ export default function AdminUsersPage() {
   };
 
   const filteredUsers = users.filter(user => {
-    const matchesSearch = 
-      user.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      user.email.toLowerCase().includes(searchQuery.toLowerCase());
+    const name = user.name.toLowerCase();
+    const email = user.email.toLowerCase();
+    const tiktok = (user.tiktok_username || '').toLowerCase();
+    const query = searchQuery.toLowerCase();
+    const matchesSearch = name.includes(query) || email.includes(query) || tiktok.includes(query);
     
     if (activeFilter === 'ALL') return matchesSearch;
     return matchesSearch && user.role === activeFilter;
@@ -100,7 +110,7 @@ export default function AdminUsersPage() {
           <Search className="absolute left-4 top-3.5 h-4 w-4 text-gray-500" />
           <input
             type="text"
-            placeholder="Cari nama atau email..."
+            placeholder="Cari nama, email, atau tiktok..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             className="w-full bg-white/5 border border-white/10 rounded-xl pl-11 pr-4 py-3 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition-all"
@@ -136,7 +146,7 @@ export default function AdminUsersPage() {
               <thead>
                 <tr className="border-b border-white/5 bg-white/[0.02]">
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">User / Name</th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">Email</th>
+                  <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">Email & Stats</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">Role / Akses</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">Status</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">Join Date</th>
@@ -152,7 +162,7 @@ export default function AdminUsersPage() {
                   </tr>
                 ) : (
                   filteredUsers.map(user => {
-                    const isSuspended = user.status === 'SUSPENDED';
+                    const isSuspended = user.status === 'SUSPENDED' || user.status === 'INACTIVE';
                     const roleColorMap: Record<string, string> = {
                       ADMIN: 'text-red-400 bg-red-400/10 border-red-500/20',
                       CM: 'text-[#F6D145] bg-[#F6D145]/10 border-[#F6D145]/20',
@@ -168,12 +178,28 @@ export default function AdminUsersPage() {
                             <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500/20 to-indigo-500/20 flex items-center justify-center border border-white/5">
                               <span className="text-xs font-black text-white">{user.name.charAt(0)}</span>
                             </div>
-                            <span className="text-sm font-bold text-white group-hover:text-blue-400 transition-colors">
-                              {user.name}
-                            </span>
+                            <div className="flex flex-col">
+                              <span className="text-sm font-bold text-white group-hover:text-blue-400 transition-colors">
+                                {user.name}
+                              </span>
+                              {user.role === 'CREATOR' && (
+                                <span className="text-[10px] text-gray-500 font-medium mt-0.5">
+                                  TikTok: @{user.tiktok_username || 'no-username'} | Lvl {user.level} | {(user.tiktok_followers || 0).toLocaleString('id-ID')} followers
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-400">{user.email}</td>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col">
+                            <span className="text-sm text-gray-400">{user.email}</span>
+                            {user.role === 'CREATOR' && (
+                              <span className="text-[10px] text-emerald-400 font-black mt-0.5">
+                                GMV: Rp {(user.gmv_total || 0).toLocaleString('id-ID')} ({(user.total_orders || 0).toLocaleString('id-ID')} orders)
+                              </span>
+                            )}
+                          </div>
+                        </td>
                         <td className="px-6 py-4">
                           <span className={`text-[9px] font-black px-2 py-0.5 rounded border uppercase tracking-wider ${roleColorMap[user.role] || 'text-gray-400 bg-gray-500/10 border-white/5'}`}>
                             {user.role}

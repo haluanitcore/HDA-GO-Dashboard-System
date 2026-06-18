@@ -186,5 +186,13 @@ export const settingsService = {
   updateProfile: (data: any) => api.patch<any>('/settings/profile', data),
   updatePassword: (data: any) => api.patch<any>('/settings/password', data),
   updateNotifications: (data: any) => api.patch<any>('/settings/notifications', data),
+  getGlobalSettings: () => api.get<any>('/settings/global'),
+  updateGlobalSettings: (data: Record<string, string>) => api.patch<any>('/settings/global', data),
 };
+
+// ── Admin Services ──
+export const adminService = {
+  getDashboard: () => api.get<any>('/admin/dashboard'),
+};
+
 

@@ -292,7 +292,7 @@ export class SubmissionsService {
       await this.prisma.notification.create({
         data: {
           user_id: submission.creator_id,
-          title: '✅ Submission Approved!',
+          title: '[Setuju] Submission Approved!',
           message: `Konten kamu telah disetujui oleh QC. ${dto.qc_notes || ''}`,
           type: 'QC',
           read_status: false,
@@ -304,7 +304,7 @@ export class SubmissionsService {
       await this.prisma.notification.create({
         data: {
           user_id: submission.creator_id,
-          title: '🔄 Revision Diperlukan',
+          title: '[Revisi] Revision Diperlukan',
           message: `Konten kamu perlu direvisi. Catatan: ${dto.qc_notes || 'Silakan cek kembali.'}`,
           type: 'QC',
           read_status: false,
