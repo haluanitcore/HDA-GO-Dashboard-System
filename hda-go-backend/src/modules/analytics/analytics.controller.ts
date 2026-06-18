@@ -57,7 +57,8 @@ export class AnalyticsController {
   // GET /analytics/run-aggregation — Manual trigger
   @Get('run-aggregation')
   @Roles(Role.ADMIN, Role.EXECUTIVE)
-  runAggregation() {
-    return this.analyticsCronService.runDailyAggregation();
+  async runAggregation() {
+    await this.analyticsCronService.runDailyAggregation();
+    return { success: true };
   }
 }
