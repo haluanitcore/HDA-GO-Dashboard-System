@@ -13,16 +13,21 @@ import * as fs from 'fs';
 // Sheet Columns (Creator HDA-GO):
 // A: Fenoy (Tanggal Awal Kontrak)
 // B: Tanggal Expired (Akhir Kontrak)
-// C: Creator ID (Primary Key bisnis)
-// D: Nama (Nama Asli)
-// E: Creator Username (Nama Panggung TikTok)
+// C: Creator ID — PRIMARY KEY ✔ (TikTok User ID, unik & permanen)
+// D: Nama (Nama Asli — hanya di-update, bukan untuk lookup)
+// E: Creator Username (Nama TikTok — hanya di-update, bukan untuk lookup)
 // F: CM (Creator Manager)
 // G: Link Profile (URL TikTok)
 // H: Followers
 // I: Category Proper (Niche)
 // J: Sales Level (1-4)
-// K: GMV (Per Minggu, nama kolom berubah: "GMV Jun", "GMV Jul", dll)
-// L: Order (Per Minggu)
+// K: KPI = GMV creator (format Rp, contoh "Rp3.719.645")
+// L: GMV Jun = Total Orders (jumlah produk terjual, angka mentah)
+//
+// MATCHING STRATEGY:
+// Creator ID (Kolom C) adalah SATU-SATUNYA key untuk lookup creator.
+// Username/nama/CM TIDAK digunakan sebagai identifier.
+// Ini memastikan sync tetap akurat meskipun creator ganti username.
 // ══════════════════════════════════════════════════════════════
 
 export interface LeveledUpCreator {
@@ -326,41 +331,44 @@ export class BdGmvImportService {
     const skippedRows: SkippedRow[] = [];
     const updatedCreators: UpdatedCreator[] = [];
 
-    // ── Batch Preload Creators ──
-    const allCreatorCodes = parsedRows.slice(1).map(row => (creatorIdIdx !== -1 ? (row[creatorIdIdx] || '').trim() : '')).filter(Boolean);
-    const allUsernames = parsedRows.slice(1).map(row => {
-      let u = usernameIdx !== -1 ? (row[usernameIdx] || '').trim() : '';
-      if (u.startsWith('@')) u = u.substring(1).trim();
-      return u;
-    }).filter(Boolean);
+    // ══════════════════════════════════════════════════
+    // CREATOR MATCHING STRATEGY
+    //
+    // PRIMARY KEY: Creator ID (Kolom C) — SATU-SATUNYA key
+    // Alasan: Username TikTok bisa berubah kapan saja.
+    // Creator ID (TikTok User ID) bersifat permanen dan unik.
+    //
+    // TIDAK ADA fallback ke username/nama.
+    // Jika Creator ID kosong atau tidak ada di database → SKIP row.
+    // Username/nama tetap di-update jika ada perubahan, tapi
+    // TIDAK digunakan untuk pencarian/matching creator.
+    // ══════════════════════════════════════════════════
+
+    // ── Batch Preload Creators — HANYA berdasarkan Creator ID ──
+    const allCreatorCodes = parsedRows.slice(1)
+      .map(row => (creatorIdIdx !== -1 ? (row[creatorIdIdx] || '').trim() : ''))
+      .filter(Boolean);
 
     const creatorsList = await this.prisma.creator.findMany({
       where: {
-        OR: [
-          { creator_code: { in: allCreatorCodes } },
-          { tiktok_username: { in: allUsernames } },
-        ]
+        creator_code: { in: allCreatorCodes },
       },
-      include: { user: true }
+      include: { user: true },
     });
 
-    const creatorByCode = new Map();
-    const creatorByUsername = new Map();
-
+    // Map: creator_code → creator record
+    const creatorByCode = new Map<string, any>();
     for (const c of creatorsList) {
       if (c.creator_code) creatorByCode.set(c.creator_code, c);
-      if (c.tiktok_username) {
-        creatorByUsername.set(c.tiktok_username, c);
-        creatorByUsername.set(c.tiktok_username.toLowerCase(), c);
-        creatorByUsername.set(c.tiktok_username.toUpperCase(), c);
-      }
     }
 
     for (let i = 1; i < parsedRows.length; i++) {
       const cols = parsedRows[i];
 
-      // Extract values from each column
+      // ── Kolom C: Creator ID (Primary Key) ──
       const creatorCode = creatorIdIdx !== -1 ? (cols[creatorIdIdx] || '').trim() : '';
+
+      // ── Kolom E: Username (hanya untuk update, bukan lookup) ──
       let username = usernameIdx !== -1 ? (cols[usernameIdx] || '').trim() : '';
       if (username.startsWith('@')) username = username.substring(1).trim();
 
@@ -372,42 +380,32 @@ export class BdGmvImportService {
       const salesLevelRaw = salesLevelIdx !== -1 ? (cols[salesLevelIdx] || '').trim() : '';
       const fenoyRaw = fenoyIdx !== -1 ? (cols[fenoyIdx] || '').trim() : '';
       const expiredRaw = expiredIdx !== -1 ? (cols[expiredIdx] || '').trim() : '';
-      // KPI column = Total GMV (Rp format like "Rp3.719.645")
-      // GMV Jun column = Orders (raw number like "491316587")
+      // Kolom K (KPI) = GMV Juni (format Rp, contoh: "Rp3.719.645")
+      // Kolom L (GMV Jun) = Orders = jumlah produk terjual (angka mentah)
       const rawKpiGmv = kpiIdx !== -1 ? (cols[kpiIdx] || '0').trim() : '0';
       const rawGmvJunOrders = gmvJunIdx !== -1 ? (cols[gmvJunIdx] || '0').trim() : '0';
-      // If explicit orders column exists, use it; otherwise GMV Jun IS the orders
       const rawOrders = ordersIdx !== -1 ? (cols[ordersIdx] || '0').trim() : rawGmvJunOrders;
       const rawGmv = rawKpiGmv;
 
-      // Skip empty rows
-      if (!creatorCode && !username) {
+      // ── Wajib: Creator ID (Kolom C) harus diisi ──
+      if (!creatorCode) {
         skippedRows.push({
           row: i + 1,
-          username: '',
-          reason: 'Creator ID dan Username kosong',
+          username: username || '(tidak ada username)',
+          reason: `Kolom C (Creator ID) kosong. Setiap baris wajib memiliki Creator ID yang valid.`,
         });
         continue;
       }
 
-      // ── Find creator in database ──
-      // Priority 1: Match by creator_code
-      // Priority 2: Match by tiktok_username
-      let creator: any = null;
-
-      if (creatorCode) {
-        creator = creatorByCode.get(creatorCode);
-      }
-
-      if (!creator && username) {
-        creator = creatorByUsername.get(username) || creatorByUsername.get(username.toLowerCase()) || creatorByUsername.get(username.toUpperCase());
-      }
+      // ── Cari creator HANYA berdasarkan Creator ID (Kolom C) ──
+      // Username/nama bisa berubah kapan saja, Creator ID bersifat permanen.
+      const creator: any = creatorByCode.get(creatorCode);
 
       if (!creator) {
         skippedRows.push({
           row: i + 1,
           username: username || creatorCode,
-          reason: `Creator "${username || creatorCode}" tidak terdaftar di sistem HDA-GO`,
+          reason: `Creator ID "${creatorCode}" tidak terdaftar di sistem HDA-GO. Pastikan creator sudah didaftarkan dengan Creator ID yang benar.`,
         });
         continue;
       }
