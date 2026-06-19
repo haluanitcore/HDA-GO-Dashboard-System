@@ -41,6 +41,7 @@ export function Sidebar() {
         { name: 'Leaderboard', href: '/admin/leaderboard', icon: Trophy },
         { name: 'User Management', href: '/admin/users', icon: Users },
         { name: 'CM Management', href: '/admin/cm-management', icon: Users },
+        { name: 'Activity Monitor', href: '/admin/activity-tracker', icon: TrendingUp },
         { name: 'Configuration', href: '/admin/settings', icon: Settings },
       ];
     }

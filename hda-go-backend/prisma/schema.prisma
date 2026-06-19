@@ -26,6 +26,11 @@ model User {
   gdrive_url        String?         // Tautan Folder Google Drive (Khusus CM)
   gdrive_folder_id  String?         // Google Drive Folder ID (untuk API upload)
   
+  // Activity Monitoring
+  last_login_at DateTime?
+  activity_logs UserActivityLog[]
+  daily_stats   UserDailyStat[]
+  
   creator       Creator?
   managed_creators Creator[] @relation("CreatorCM")
   notifications Notification[]
@@ -537,5 +542,43 @@ model CreatorMilestoneClaim {
   reward       MilestoneReward @relation(fields: [reward_id], references: [id])
 
   @@unique([creator_id, reward_id])
+}
+
+// ═══════════════════════════════════════════════════
+// USER ACTIVITY TRACKING
+// ═══════════════════════════════════════════════════
+
+model UserActivityLog {
+  id             String    @id @default(uuid())
+  user_id        String
+  login_at       DateTime  @default(now())
+  logout_at      DateTime?
+  duration_min   Int?      // Duration of the session in minutes
+  ip_address     String?
+  user_agent     String?
+  is_active      Boolean   @default(true)
+  last_seen_at   DateTime  @default(now())
+
+  user           User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id, login_at])
+  @@index([is_active, last_seen_at])
+}
+
+model UserDailyStat {
+  id             String    @id @default(uuid())
+  user_id        String
+  date           String    // Format: YYYY-MM-DD
+  total_minutes  Int       @default(0)
+  session_count  Int       @default(0)
+  first_login_at DateTime?
+  last_login_at  DateTime?
+  met_daily_goal Boolean   @default(false) // total_minutes >= 240
+
+  user           User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, date])
+  @@index([date])
+  @@index([user_id])
 }
 

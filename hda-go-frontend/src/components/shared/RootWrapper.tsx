@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useAuthStore } from '@/store';
 import { useSocket } from '@/hooks/useSocket';
 import { RealtimePopup } from '@/components/shared/RealtimePopup';
+import { HeartbeatProvider } from '@/components/shared/HeartbeatProvider';
 
 import { Toaster } from 'react-hot-toast';
 
@@ -19,6 +20,7 @@ export function RootWrapper({ children }: { children: React.ReactNode }) {
 
   return (
     <>
+      <HeartbeatProvider />
       {children}
       <RealtimePopup />
       <Toaster position="top-right" toastOptions={{

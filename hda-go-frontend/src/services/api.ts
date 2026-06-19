@@ -3,7 +3,7 @@
 // All requests go through /api prefix on port 4000
 // ══════════════════════════════════════════════════
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4001/api';
 
 interface RequestOptions {
   method?: string;

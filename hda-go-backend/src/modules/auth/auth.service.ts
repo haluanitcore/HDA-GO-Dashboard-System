@@ -10,11 +10,14 @@ import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import { BCRYPT_ROUNDS } from '../../common/constants';
 
+import { UserActivityService } from '../user-activity/user-activity.service';
+
 @Injectable()
 export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
+    private userActivityService: UserActivityService,
   ) {}
 
   // ──────────────────────────────────────────────
@@ -78,6 +81,9 @@ export class AuthService {
     // Generate tokens
     const tokens = await this.generateTokens(user.id, user.role);
 
+    // Record login for activity tracking
+    await this.userActivityService.recordLogin(user.id);
+
     return {
       user: {
         id: user.id,
@@ -119,6 +125,9 @@ export class AuthService {
       });
       onboardingStatus = creator?.onboarding_status || 'ACTIVE';
     }
+
+    // Record login for activity tracking
+    await this.userActivityService.recordLogin(user.id);
 
     return {
       user: {
@@ -181,6 +190,16 @@ export class AuthService {
         .createHash('sha256')
         .update(refreshToken)
         .digest('hex');
+
+      const stored = await this.prisma.refreshToken.findUnique({
+        where: { token_hash: tokenHash },
+        select: { user_id: true },
+      });
+
+      if (stored) {
+        await this.userActivityService.recordLogout(stored.user_id);
+      }
+
       await this.prisma.refreshToken.updateMany({
         where: { token_hash: tokenHash, revoked: false },
         data: { revoked: true },

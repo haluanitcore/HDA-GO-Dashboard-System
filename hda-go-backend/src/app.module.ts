@@ -26,6 +26,7 @@ import { BrandModule } from './modules/brand/brand.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { GDriveModule } from './modules/gdrive/gdrive.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { UserActivityModule } from './modules/user-activity/user-activity.module';
 
 @Module({
   imports: [
@@ -62,6 +63,7 @@ import { AdminModule } from './modules/admin/admin.module';
     SettingsModule,
     GDriveModule,
     AdminModule,
+    UserActivityModule,
   ],
   controllers: [AppController],
   providers: [
