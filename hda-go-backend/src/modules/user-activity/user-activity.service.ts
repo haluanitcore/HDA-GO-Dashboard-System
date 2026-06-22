@@ -360,7 +360,7 @@ export class UserActivityService {
 
     const onlineThreshold = new Date(Date.now() - 90 * 1000);
 
-    return users.map((u) => {
+    const mapped = users.map((u) => {
       const todayStat = u.daily_stats[0];
       const lastSession = u.activity_logs[0];
       
@@ -381,6 +381,12 @@ export class UserActivityService {
         ip_address: lastSession ? lastSession.ip_address : null,
         user_agent: lastSession ? lastSession.user_agent : null,
       };
+    });
+
+    return mapped.sort((a, b) => {
+      if (a.is_online && !b.is_online) return -1;
+      if (!a.is_online && b.is_online) return 1;
+      return (a.name || '').localeCompare(b.name || '');
     });
   }
 

@@ -82,6 +82,13 @@ export default function AdminActivityTrackerPage() {
 
   useEffect(() => {
     fetchData();
+    
+    const interval = setInterval(() => {
+      fetchData();
+      fetchStats();
+    }, 15000); // Refresh every 15 seconds
+    
+    return () => clearInterval(interval);
   }, [selectedRole, searchQuery, selectedDate]);
 
   const handleExport = () => {
