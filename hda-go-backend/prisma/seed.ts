@@ -58,6 +58,11 @@ async function main() {
     data: { name: 'Arief BD', email: 'arief@hdago.com', password, role: 'BD' },
   });
 
+  // QC Officer — reviews video submissions from creators in campaigns
+  await prisma.user.create({
+    data: { name: 'QC Officer', email: 'qc@hdago.com', password, role: 'QC' },
+  });
+
   // ══════════════════════════════════════
   // CREATOR MANAGERS (CM)
   // ══════════════════════════════════════

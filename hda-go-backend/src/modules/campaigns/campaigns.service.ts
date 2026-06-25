@@ -173,15 +173,17 @@ export class CampaignsService {
     });
     const joinedIds = new Set(joined.map((j) => j.campaign_id));
 
-    return campaigns.map((c) => ({
-      ...c,
-      eligible: creator.creator_level >= c.min_level,
-      locked: creator.creator_level < c.min_level,
-      levelRequired: c.min_level,
+    // Strip internal-only fields before returning to Creator (CWE-200 / FINDING-08).
+    // budget, brand_id, and bd_reviewer_id are for internal staff only.
+    return campaigns.map(({ budget: _budget, brand_id: _brand, bd_reviewer_id: _bd, ...safe }) => ({
+      ...safe,
+      eligible: creator.creator_level >= safe.min_level,
+      locked: creator.creator_level < safe.min_level,
+      levelRequired: safe.min_level,
       creatorLevel: creator.creator_level,
-      alreadyJoined: joinedIds.has(c.id),
-      slotRemaining: c.slot - c._count.participants,
-      slotFull: c._count.participants >= c.slot && c.slot > 0,
+      alreadyJoined: joinedIds.has(safe.id),
+      slotRemaining: safe.slot - safe._count.participants,
+      slotFull: safe._count.participants >= safe.slot && safe.slot > 0,
     }));
   }
 
