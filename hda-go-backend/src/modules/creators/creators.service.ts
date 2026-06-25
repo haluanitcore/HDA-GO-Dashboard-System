@@ -161,18 +161,22 @@ export class CreatorsService {
   // ──────────────────────────────────────────────
   // GET ALL CREATORS (for CM/Admin)
   // ──────────────────────────────────────────────
-  async findAll(page: number = 1, limit: number = 50) {
+  // cmId is provided when the caller is a CM — restricts results to that CM's roster only.
+  // Admin/Executive pass cmId=undefined to see all creators (CWE-639 horizontal access fix).
+  async findAll(page: number = 1, limit: number = 50, cmId?: string) {
+    const where = cmId ? { cm_id: cmId } : {};
     const [data, total] = await Promise.all([
       this.prisma.creator.findMany({
-        take: Math.min(limit, 100), // max 100 per request
+        where,
+        take: Math.min(limit, 100),
         skip: (page - 1) * limit,
         include: {
           user: { select: { id: true, name: true, email: true } },
           progress: true,
         },
-        orderBy: { gmv_total: 'desc' }
+        orderBy: { gmv_total: 'desc' },
       }),
-      this.prisma.creator.count()
+      this.prisma.creator.count({ where }),
     ]);
     return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
   }

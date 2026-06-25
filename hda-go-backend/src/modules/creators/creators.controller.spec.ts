@@ -36,8 +36,9 @@ describe('CreatorsController', () => {
 
   it('findAll delegates to service', async () => {
     mockService.findAll.mockResolvedValue({ data: [], total: 0 });
-    await controller.findAll(1, 50);
-    expect(mockService.findAll).toHaveBeenCalledWith(1, 50);
+    const adminReq = { user: { userId: 'admin-1', role: 'ADMIN' } };
+    await controller.findAll(adminReq, 1, 50);
+    expect(mockService.findAll).toHaveBeenCalledWith(1, 50, undefined);
   });
 
   it('getMyCM delegates userId', async () => {

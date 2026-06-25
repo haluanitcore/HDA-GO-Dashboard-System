@@ -53,13 +53,17 @@ export class CreatorsController {
     return this.creatorsService.updateStreak(req.user.userId);
   }
 
-  // GET /creators — All creators (for CM/Admin views)
+  // GET /creators — Creator list scoped by role:
+  //   CM   → sees only their assigned creators (cm_id = their userId)
+  //   ADMIN/EXECUTIVE → sees all creators (no scope filter)
   @Get()
   @Roles(Role.CM, Role.ADMIN, Role.EXECUTIVE)
   findAll(
+    @Req() req: any,
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(50), ParseIntPipe) limit: number,
   ) {
-    return this.creatorsService.findAll(page, limit);
+    const cmId = req.user.role === Role.CM ? req.user.userId : undefined;
+    return this.creatorsService.findAll(page, limit, cmId);
   }
 }
