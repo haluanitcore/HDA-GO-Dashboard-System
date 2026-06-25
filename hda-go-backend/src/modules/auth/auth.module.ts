@@ -5,6 +5,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './jwt.strategy';
+import { TokenBlacklistService } from './token-blacklist.service';
 import { UserActivityModule } from '../user-activity/user-activity.module';
 
 @Module({
@@ -22,7 +23,7 @@ import { UserActivityModule } from '../user-activity/user-activity.module';
     UserActivityModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
-  exports: [AuthService, JwtModule],
+  providers: [AuthService, JwtStrategy, TokenBlacklistService],
+  exports: [AuthService, JwtModule, TokenBlacklistService],
 })
 export class AuthModule {}

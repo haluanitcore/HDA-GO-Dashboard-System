@@ -11,6 +11,11 @@ import * as crypto from 'crypto';
 import { BCRYPT_ROUNDS } from '../../common/constants';
 
 import { UserActivityService } from '../user-activity/user-activity.service';
+import { TokenBlacklistService } from './token-blacklist.service';
+
+// Pre-computed dummy hash used to normalize timing for non-existent emails.
+// Prevents user enumeration via response time differences (CWE-204).
+const DUMMY_HASH = '$2b$12$dummyhashforenumerationxxxxxxxxxxxxxxxxxxxxxxxxxxxx';
 
 @Injectable()
 export class AuthService {
@@ -18,6 +23,7 @@ export class AuthService {
     private prisma: PrismaService,
     private jwtService: JwtService,
     private userActivityService: UserActivityService,
+    private tokenBlacklist: TokenBlacklistService,
   ) {}
 
   // ──────────────────────────────────────────────
@@ -106,12 +112,15 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });
-    if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
 
-    const isPasswordValid = await bcrypt.compare(dto.password, user.password);
-    if (!isPasswordValid) {
+    // Always run bcrypt compare to prevent timing-based user enumeration (CWE-204).
+    // For non-existent users, compare against DUMMY_HASH so response time is uniform.
+    const isPasswordValid = await bcrypt.compare(
+      dto.password,
+      user?.password ?? DUMMY_HASH,
+    );
+
+    if (!user || !isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
@@ -212,16 +221,33 @@ export class AuthService {
   // ──────────────────────────────────────────────
   // HELPERS
   // ──────────────────────────────────────────────
+  // ──────────────────────────────────────────────
+  // REVOKE ACCESS TOKEN — called on logout to blacklist jti (CWE-613)
+  // ──────────────────────────────────────────────
+  async revokeAccessToken(accessToken: string): Promise<void> {
+    try {
+      const payload = this.jwtService.verify(accessToken, {
+        secret: process.env.JWT_SECRET,
+      }) as { jti?: string; exp?: number };
+      if (payload.jti && payload.exp) {
+        this.tokenBlacklist.revoke(payload.jti, new Date(payload.exp * 1000));
+      }
+    } catch {
+      // Token already expired or malformed — no action needed
+    }
+  }
+
   private async generateTokens(userId: string, role: string) {
+    const accessJti = crypto.randomUUID();
+    const refreshJti = crypto.randomUUID();
     const payload = { sub: userId, role };
-    const jti = crypto.randomUUID(); // ensures unique hash even within same second
 
     const [accessToken, refreshToken] = await Promise.all([
-      this.jwtService.signAsync(payload, {
+      this.jwtService.signAsync({ ...payload, jti: accessJti }, {
         secret: process.env.JWT_SECRET,
         expiresIn: '15m',
       }),
-      this.jwtService.signAsync({ ...payload, jti }, {
+      this.jwtService.signAsync({ ...payload, jti: refreshJti }, {
         secret: process.env.JWT_REFRESH_SECRET,
         expiresIn: '7d',
       }),

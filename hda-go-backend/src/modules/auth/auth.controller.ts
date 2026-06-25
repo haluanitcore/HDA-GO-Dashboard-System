@@ -79,9 +79,14 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const refreshToken = req.cookies?.refreshToken as string | undefined;
-    if (refreshToken) {
-      await this.authService.revokeRefreshToken(refreshToken);
-    }
+    const accessToken = req.cookies?.accessToken as string | undefined;
+
+    // Revoke both tokens so neither can be replayed after logout (CWE-613)
+    await Promise.all([
+      refreshToken ? this.authService.revokeRefreshToken(refreshToken) : Promise.resolve(),
+      accessToken ? this.authService.revokeAccessToken(accessToken) : Promise.resolve(),
+    ]);
+
     const isProduction = process.env.NODE_ENV === 'production';
     const cookieOptions = {
       httpOnly: true,
