@@ -15,7 +15,7 @@ import { TokenBlacklistService } from './token-blacklist.service';
 
 // Pre-computed dummy hash used to normalize timing for non-existent emails.
 // Prevents user enumeration via response time differences (CWE-204).
-const DUMMY_HASH = '$2b$12$dummyhashforenumerationxxxxxxxxxxxxxxxxxxxxxxxxxxxx';
+const DUMMY_HASH = '$2b$12$9BzNm80btgPplmxOmztHoednIUjrdOg1SM5UQ8DPdAobuPsCKfA7.';
 
 @Injectable()
 export class AuthService {

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import { Cron } from '@nestjs/schedule';
 
 @Injectable()
 export class TokenBlacklistService {
@@ -20,7 +20,7 @@ export class TokenBlacklistService {
   }
 
   // Purge expired entries every 15 minutes to prevent memory growth
-  @Cron(CronExpression.EVERY_15_MINUTES)
+  @Cron('0 */15 * * * *')
   cleanup(): void {
     const now = new Date();
     for (const [jti, expiry] of this.revoked.entries()) {
