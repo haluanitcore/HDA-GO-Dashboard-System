@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Query, Req, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../../common/roles.guard';
 import { Roles } from '../../common/roles.decorator';
@@ -50,8 +50,9 @@ export class AnalyticsController {
   // GET /analytics/creator/:id/history — Creator monthly stats history
   @Get('creator/:id/history')
   @Roles(Role.ADMIN, Role.EXECUTIVE, Role.CM)
-  getCreatorHistory(@Param('id') id: string) {
-    return this.analyticsService.getCreatorHistory(id);
+  getCreatorHistory(@Param('id') id: string, @Req() req: any) {
+    const requestingCmId = req.user.role === Role.CM ? req.user.userId : null;
+    return this.analyticsService.getCreatorHistory(id, requestingCmId);
   }
 
   // GET /analytics/run-aggregation — Manual trigger

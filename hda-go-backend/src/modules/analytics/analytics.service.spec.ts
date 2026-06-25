@@ -126,7 +126,7 @@ describe('AnalyticsService', () => {
     it('returns last 12 months of stats', async () => {
       mockPrisma.creatorMonthlyStats.findMany.mockResolvedValue([]);
 
-      await service.getCreatorHistory('u1');
+      await service.getCreatorHistory('u1', null);
 
       expect(mockPrisma.creatorMonthlyStats.findMany).toHaveBeenCalledWith({
         where: { creator_id: 'u1' },

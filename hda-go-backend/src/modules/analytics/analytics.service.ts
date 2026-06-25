@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
@@ -77,7 +77,17 @@ export class AnalyticsService {
   // ──────────────────────────────────────────────
   // CREATOR MONTHLY STATS HISTORY
   // ──────────────────────────────────────────────
-  async getCreatorHistory(creatorId: string) {
+  // requestingCmId: null = ADMIN/EXECUTIVE (no scope check); string = CM (must own creator)
+  async getCreatorHistory(creatorId: string, requestingCmId: string | null) {
+    if (requestingCmId !== null) {
+      const creator = await this.prisma.creator.findUnique({
+        where: { user_id: creatorId },
+        select: { cm_id: true },
+      });
+      if (!creator || creator.cm_id !== requestingCmId) {
+        throw new ForbiddenException('Access denied to creator outside your group');
+      }
+    }
     return this.prisma.creatorMonthlyStats.findMany({
       where: { creator_id: creatorId },
       orderBy: { month: 'desc' },

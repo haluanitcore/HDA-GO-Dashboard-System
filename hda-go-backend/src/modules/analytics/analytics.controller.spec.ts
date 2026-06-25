@@ -78,8 +78,9 @@ describe('AnalyticsController', () => {
 
   it('getCreatorHistory delegates by ID', async () => {
     mockAnalyticsService.getCreatorHistory.mockResolvedValue([]);
-    await controller.getCreatorHistory('c1');
-    expect(mockAnalyticsService.getCreatorHistory).toHaveBeenCalledWith('c1');
+    const adminReq = { user: { userId: 'admin-1', role: 'ADMIN' } };
+    await controller.getCreatorHistory('c1', adminReq);
+    expect(mockAnalyticsService.getCreatorHistory).toHaveBeenCalledWith('c1', null);
   });
 
   it('runAggregation delegates to cron service', async () => {
