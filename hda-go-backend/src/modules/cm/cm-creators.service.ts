@@ -1,6 +1,7 @@
 import {
   Injectable,
   BadRequestException,
+  ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -99,7 +100,8 @@ export class CmCreatorsService {
   }
 
   // ── GET CREATOR DETAIL ──
-  async getCreatorDetail(creatorId: string) {
+  // requestingCmId: null means ADMIN (bypasses ownership check)
+  async getCreatorDetail(creatorId: string, requestingCmId: string | null) {
     const creator = await this.prisma.creator.findUnique({
       where: { user_id: creatorId },
       include: {
@@ -113,15 +115,22 @@ export class CmCreatorsService {
       },
     });
     if (!creator) throw new NotFoundException('Creator not found');
+    if (requestingCmId !== null && creator.cm_id !== requestingCmId) {
+      throw new ForbiddenException('Access denied to creator outside your group');
+    }
     return creator;
   }
 
   // ── UPDATE CREATOR BIODATA ──
-  async updateCreator(creatorId: string, dto: any) {
+  // requestingCmId: null means ADMIN (bypasses ownership check)
+  async updateCreator(creatorId: string, dto: any, requestingCmId: string | null) {
     const creator = await this.prisma.creator.findUnique({
       where: { user_id: creatorId },
     });
     if (!creator) throw new NotFoundException('Creator not found');
+    if (requestingCmId !== null && creator.cm_id !== requestingCmId) {
+      throw new ForbiddenException('Access denied to creator outside your group');
+    }
     const updates: any = {};
     const fields = [
       'creator_code',
@@ -171,6 +180,9 @@ export class CmCreatorsService {
       where: { user_id: creatorId },
     });
     if (!creator) throw new NotFoundException('Creator not found');
+    if (creator.cm_id !== fromCmId) {
+      throw new ForbiddenException('Hanya CM pemilik creator yang dapat mentransfer');
+    }
     const targetCm = await this.prisma.user.findFirst({
       where: { id: toCmId, role: 'CM' },
     });

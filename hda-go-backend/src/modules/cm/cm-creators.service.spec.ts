@@ -160,13 +160,13 @@ describe('CmCreatorsService', () => {
         submissions: [],
       });
 
-      const result = await service.getCreatorDetail('u1');
+      const result = await service.getCreatorDetail('u1', null);
       expect(result.user_id).toBe('u1');
     });
 
     it('throws NotFoundException when creator not found', async () => {
       mockPrisma.creator.findUnique.mockResolvedValue(null);
-      await expect(service.getCreatorDetail('ghost')).rejects.toThrow(
+      await expect(service.getCreatorDetail('ghost', null)).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -183,7 +183,7 @@ describe('CmCreatorsService', () => {
       const result = await service.updateCreator('u1', {
         phone_number: '999',
         name: 'Updated Name',
-      });
+      }, null);
 
       expect(result.success).toBe(true);
       expect(mockPrisma.user.update).toHaveBeenCalledWith(
@@ -195,7 +195,7 @@ describe('CmCreatorsService', () => {
       mockPrisma.creator.findUnique.mockResolvedValue({ user_id: 'u1' });
       mockPrisma.creator.update.mockResolvedValue({ user_id: 'u1' });
 
-      await service.updateCreator('u1', { niche: ['FNB', 'Tech'] });
+      await service.updateCreator('u1', { niche: ['FNB', 'Tech'] }, null);
 
       expect(mockPrisma.creator.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -208,7 +208,7 @@ describe('CmCreatorsService', () => {
 
     it('throws NotFoundException when creator not found', async () => {
       mockPrisma.creator.findUnique.mockResolvedValue(null);
-      await expect(service.updateCreator('ghost', {})).rejects.toThrow(
+      await expect(service.updateCreator('ghost', {}, null)).rejects.toThrow(
         NotFoundException,
       );
     });

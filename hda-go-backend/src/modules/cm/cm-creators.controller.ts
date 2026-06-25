@@ -48,15 +48,18 @@ export class CmCreatorsController {
   // GET /cm/creators/:id — Detail creator
   @Get(':id')
   @Roles(Role.CM, Role.ADMIN)
-  getCreatorDetail(@Param('id') creatorId: string) {
-    return this.cmCreatorsService.getCreatorDetail(creatorId);
+  getCreatorDetail(@Req() req: any, @Param('id') creatorId: string) {
+    // ADMIN can access any creator; CM is scoped to their own group
+    const requestingCmId = req.user.role === Role.ADMIN ? null : req.user.userId;
+    return this.cmCreatorsService.getCreatorDetail(creatorId, requestingCmId);
   }
 
   // PATCH /cm/creators/:id — Edit biodata creator
   @Patch(':id')
   @Roles(Role.CM, Role.ADMIN)
-  updateCreator(@Param('id') creatorId: string, @Body() dto: UpdateCreatorDto) {
-    return this.cmCreatorsService.updateCreator(creatorId, dto);
+  updateCreator(@Req() req: any, @Param('id') creatorId: string, @Body() dto: UpdateCreatorDto) {
+    const requestingCmId = req.user.role === Role.ADMIN ? null : req.user.userId;
+    return this.cmCreatorsService.updateCreator(creatorId, dto, requestingCmId);
   }
 
   // POST /cm/creators/:id/transfer — Transfer creator ke CM lain
