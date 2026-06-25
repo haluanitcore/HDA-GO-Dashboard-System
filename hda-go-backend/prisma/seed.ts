@@ -36,8 +36,12 @@ async function main() {
 
   console.log('   ✅ All tables cleared.');
 
-  // Default hashed password for everyone to keep onboarding uniform
-  const password = await bcrypt.hash('HdaGo123!', 12);
+  // Default seed password — set SEED_DEFAULT_PASSWORD env var before running
+  const seedPassword = process.env.SEED_DEFAULT_PASSWORD;
+  if (!seedPassword || seedPassword.length < 12) {
+    throw new Error('SEED_DEFAULT_PASSWORD env var is required (min 12 chars). Never use a hardcoded default.');
+  }
+  const password = await bcrypt.hash(seedPassword, 12);
 
   // ══════════════════════════════════════
   // CORE ADMINISTRATORS & BUSINESS DEVELOPMENT
@@ -374,7 +378,7 @@ async function main() {
   console.log('');
   console.log('🎉 HDA-GO DATABASE SEED COMPLETE (10 REAL CREATORS + CMs)!');
   console.log('========================================================');
-  console.log('📧 Login Credentials (ALL PASSWORDS ARE: HdaGo123!):');
+  console.log('📧 Login Credentials (password = value of SEED_DEFAULT_PASSWORD env var):');
   console.log('--------------------------------------------------------');
   console.log('   Admin:      admin@hdago.com');
   console.log('   Executive:  exec@hdago.com');
