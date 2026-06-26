@@ -145,9 +145,12 @@ export class AuthService {
         email: user.email,
         role: user.role,
         onboarding_status: onboardingStatus,
+        mustChangePassword: user.must_change_password,
       },
       ...tokens,
-      redirectUrl: this.getRedirectUrl(user.role),
+      redirectUrl: user.must_change_password
+        ? '/settings?forceChangePassword=true'
+        : this.getRedirectUrl(user.role),
     };
   }
 

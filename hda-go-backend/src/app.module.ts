@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
+import { MustChangePasswordGuard } from './common/password-change.guard';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -71,6 +72,10 @@ import { UserActivityModule } from './modules/user-activity/user-activity.module
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: MustChangePasswordGuard,
     },
   ],
 })
