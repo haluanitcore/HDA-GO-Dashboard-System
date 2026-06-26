@@ -107,6 +107,27 @@ describe('SettingsService', () => {
       expect(mockPrisma.user.update).toHaveBeenCalled();
     });
 
+    it('resets must_change_password to false after successful password update', async () => {
+      const hashed = await bcrypt.hash('oldpass', 10);
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'u1',
+        password: hashed,
+        must_change_password: true,
+      });
+      mockPrisma.user.update.mockResolvedValue({});
+
+      await service.updatePassword('u1', {
+        oldPassword: 'oldpass',
+        newPassword: 'newpass123',
+      });
+
+      expect(mockPrisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ must_change_password: false }),
+        }),
+      );
+    });
+
     it('throws NotFoundException when user not found', async () => {
       mockPrisma.user.findUnique.mockResolvedValue(null);
 
