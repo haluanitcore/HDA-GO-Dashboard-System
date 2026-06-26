@@ -28,11 +28,12 @@ export default function CMCreatorsPage() {
   }, []);
 
   const getLoadIndicator = (count: number) => {
-    // Kelipatan 100 dengan 4 divisi: 25%, 50%, 75%, 100%
-    if (count < 25) return { label: 'LOW', color: 'text-emerald-500', bg: 'bg-emerald-500/10', bar: 'bg-emerald-500', width: `${Math.max((count/100)*100, 5)}%` };
-    if (count < 50) return { label: 'MEDIUM', color: 'text-amber-500', bg: 'bg-amber-500/10', bar: 'bg-amber-500', width: `${(count/100)*100}%` };
-    if (count < 75) return { label: 'HIGH', color: 'text-orange-500', bg: 'bg-orange-500/10', bar: 'bg-orange-500', width: `${(count/100)*100}%` };
-    if (count < 100) return { label: 'HEAVY', color: 'text-red-500', bg: 'bg-red-500/10', bar: 'bg-red-500', width: `${(count/100)*100}%` };
+    // Kelipatan 300 dengan 4 divisi: 75, 150, 225, 300
+    const MAX = 300;
+    if (count < 75) return { label: 'LOW', color: 'text-emerald-500', bg: 'bg-emerald-500/10', bar: 'bg-emerald-500', width: `${Math.max((count/MAX)*100, 3)}%` };
+    if (count < 150) return { label: 'MEDIUM', color: 'text-amber-500', bg: 'bg-amber-500/10', bar: 'bg-amber-500', width: `${(count/MAX)*100}%` };
+    if (count < 225) return { label: 'HIGH', color: 'text-orange-500', bg: 'bg-orange-500/10', bar: 'bg-orange-500', width: `${(count/MAX)*100}%` };
+    if (count < 300) return { label: 'HEAVY', color: 'text-red-500', bg: 'bg-red-500/10', bar: 'bg-red-500', width: `${(count/MAX)*100}%` };
     return { label: 'OVERLOAD', color: 'text-red-700', bg: 'bg-red-900/20', bar: 'bg-red-700', width: '100%' };
   };
 
@@ -83,10 +84,10 @@ export default function CMCreatorsPage() {
           </div>
           <div className="flex justify-between mt-2 text-[10px] font-bold text-gray-600 uppercase">
             <span>0</span>
-            <span>25</span>
-            <span>50</span>
             <span>75</span>
-            <span>100+</span>
+            <span>150</span>
+            <span>225</span>
+            <span>300+</span>
           </div>
         </CardContent>
       </Card>
