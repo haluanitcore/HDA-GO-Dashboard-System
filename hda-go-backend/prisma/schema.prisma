@@ -26,6 +26,9 @@ model User {
   gdrive_url        String?         // Tautan Folder Google Drive (Khusus CM)
   gdrive_folder_id  String?         // Google Drive Folder ID (untuk API upload)
   
+  // Security flags
+  must_change_password Boolean @default(false)
+
   // Activity Monitoring
   last_login_at DateTime?
   activity_logs UserActivityLog[]
