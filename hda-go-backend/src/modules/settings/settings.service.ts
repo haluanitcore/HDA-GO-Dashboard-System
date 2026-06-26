@@ -109,7 +109,7 @@ export class SettingsService {
 
     await this.prisma.user.update({
       where: { id: userId },
-      data: { password: hashedPassword },
+      data: { password: hashedPassword, must_change_password: false },
     });
 
     return { message: 'Password updated successfully' };
