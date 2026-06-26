@@ -96,7 +96,7 @@ export default function QCQueuePage() {
         submissionService.getQcStats().catch(() => null),
       ]);
       setQueue(qcData || []);
-      setGmvQueue((gmvRes as any) || []);
+      setGmvQueue((gmvRes as any)?.data || []);
 
       const overdueCount = qcData?.filter((item: any) => {
         const diffHours = (new Date().getTime() - new Date(item.submitted_at).getTime()) / (1000 * 60 * 60);
