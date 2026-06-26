@@ -4,12 +4,13 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store';
 import { authService } from '@/services';
-import { AlertCircle, Loader2, ArrowRight, Eye, EyeOff, UserPlus, ChevronDown } from 'lucide-react';
+import { AlertCircle, Loader2, ArrowRight, Eye, EyeOff, UserPlus, ChevronDown, AtSign } from 'lucide-react';
 
 export default function RegisterPage() {
   const router = useRouter();
   const { register, isLoading, error } = useAuthStore();
   const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -27,6 +28,7 @@ export default function RegisterPage() {
     try {
       const redirectUrl = await register({
         name,
+        username: username || undefined,
         email,
         password,
         cm_id: cmId || undefined,
@@ -101,6 +103,22 @@ export default function RegisterPage() {
                   className="glass-input w-full px-4 py-3 rounded-xl text-sm text-white placeholder:text-gray-600 focus:outline-none"
                   required
                 />
+              </div>
+
+              {/* Username */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Username</label>
+                <div className="relative">
+                  <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder="username_kamu"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                    className="glass-input w-full pl-9 pr-4 py-3 rounded-xl text-sm text-white placeholder:text-gray-600 focus:outline-none"
+                  />
+                </div>
+                <p className="text-[10px] text-gray-600 ml-1">Opsional — digunakan untuk login selain email</p>
               </div>
 
               {/* Email */}

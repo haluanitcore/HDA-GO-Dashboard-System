@@ -143,6 +143,11 @@ export class SubmitVtLinkDto {
 export class UpdateCreatorDto {
   @IsOptional()
   @IsString()
+  @MaxLength(255)
+  name?: string;
+
+  @IsOptional()
+  @IsString()
   @MaxLength(100)
   creator_code?: string;
 

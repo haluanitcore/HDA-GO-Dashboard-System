@@ -25,6 +25,7 @@ import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { RewardsModule } from './modules/rewards/rewards.module';
 import { BrandModule } from './modules/brand/brand.module';
 import { SettingsModule } from './modules/settings/settings.module';
+import { PasswordResetModule } from './modules/password-reset/password-reset.module';
 import { GDriveModule } from './modules/gdrive/gdrive.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { UserActivityModule } from './modules/user-activity/user-activity.module';
@@ -62,6 +63,7 @@ import { UserActivityModule } from './modules/user-activity/user-activity.module
     RewardsModule,
     BrandModule,
     SettingsModule,
+    PasswordResetModule,
     GDriveModule,
     AdminModule,
     UserActivityModule,

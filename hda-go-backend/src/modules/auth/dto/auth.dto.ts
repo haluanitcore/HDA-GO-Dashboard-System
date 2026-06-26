@@ -17,6 +17,11 @@ export class RegisterDto {
   @IsEmail()
   email: string;
 
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  username?: string;
+
   @IsNotEmpty()
   @MinLength(8)
   @MaxLength(128)
@@ -29,8 +34,15 @@ export class RegisterDto {
 }
 
 export class LoginDto {
-  @IsEmail()
-  email: string;
+  @IsNotEmpty()
+  @IsString()
+  @MaxLength(255)
+  email: string; // Can be email or username
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  username?: string;
 
   @IsNotEmpty()
   @MaxLength(128)

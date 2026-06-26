@@ -84,10 +84,10 @@ export default function LoginPage() {
 
               {/* Email */}
               <div className="space-y-2">
-                <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Email</label>
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Email / Username</label>
                 <input
-                  type="email"
-                  placeholder="name@example.com"
+                  type="text"
+                  placeholder="Email atau username"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="glass-input w-full px-4 py-3 rounded-xl text-sm text-white placeholder:text-gray-600 focus:outline-none"
@@ -99,9 +99,7 @@ export default function LoginPage() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between ml-1">
                   <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Password</label>
-                  <button type="button" className="text-[10px] font-bold text-[#F6D145] hover:text-[#E3903A] uppercase tracking-widest transition-colors">
-                    Forgot?
-                  </button>
+                  <a href="/forgot-password" className="text-[10px] font-bold text-[#F6D145] hover:text-[#E3903A] uppercase tracking-widest transition-colors">Lupa Password?</a>
                 </div>
                 <div className="relative">
                   <input
@@ -137,7 +135,8 @@ export default function LoginPage() {
                   </>
                 )}
               </button>
-            </form>
+            <div className="text-center mt-4"><a href="/forgot-password" className="text-sm text-[#F6D145] hover:underline font-medium">Lupa Password?</a></div>
+</form>
 
             {/* Register Link */}
             <div className="mt-6 text-center">

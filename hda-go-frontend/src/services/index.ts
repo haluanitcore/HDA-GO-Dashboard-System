@@ -172,6 +172,8 @@ export const authService = {
     api.post<any>('/auth/register', data),
   logout: () => api.post<any>('/auth/logout', {}),
   getCMListPublic: () => api.get<any[]>('/auth/cm-list'),
+  forgotPassword: (email: string) => api.post<any>('/auth/forgot-password', { email }),
+  resetPassword: (token: string, newPassword: string) => api.post<any>('/auth/reset-password', { token, newPassword }),
 };
 
 // ── Brand Services ──

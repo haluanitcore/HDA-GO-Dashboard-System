@@ -46,6 +46,7 @@ export class AuthService {
         data: {
           name: dto.name,
           email: dto.email,
+          username: dto.username || null,
           password: hashedPassword,
           role: 'CREATOR',
         },
@@ -109,8 +110,8 @@ export class AuthService {
   // Validate Credential → Generate JWT + Refresh → Role Detection → Redirect
   // ──────────────────────────────────────────────
   async login(dto: LoginDto) {
-    const user = await this.prisma.user.findUnique({
-      where: { email: dto.email },
+    const user = await this.prisma.user.findFirst({
+      where: { OR: [{ email: dto.email }, { username: dto.email }] },
     });
 
     // Always run bcrypt compare to prevent timing-based user enumeration (CWE-204).
