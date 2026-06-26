@@ -10,6 +10,15 @@
 
 9 security findings identified, all **FIXED IN PRODUCTION** and regression-tested post-sync. Credential rotation executed for all accounts used during audit. Codebase synchronized between local, GitHub, and VPS. Hardcoded seed password removed from source.
 
+**Default password sweep complete: 25/25 accounts handled.**
+- 14 staff accounts (CM + BRAND + QC + BD + ADMIN + EXECUTIVE subset): force-rotated via endpoint
+- 1 EXECUTIVE (exec@hdago.com, deactivated): direct SQL UPDATE
+- 10 CREATOR: `must_change_password=true` flag enforced — forced change on next login
+  - agisrutt@creator.com: completed password change (E2E test, 2026-06-26)
+  - 9 remaining: flag active, email notification queued for 2026-06-27 morning
+
+All VPS credential files (`/tmp/new-creds-*`, `/tmp/e2e-*`) confirmed deleted.
+
 ---
 
 ## Finding Status (All 9)
@@ -148,9 +157,11 @@ All 9 findings tested after git sync from `e111a27` → `1bcde98`:
 
 **DB schema change:** `ALTER TABLE "User" ADD COLUMN must_change_password BOOLEAN NOT NULL DEFAULT false` — applied ✅
 
-- [ ] **Admin:** Retrieve and delete all 4 credential files from VPS after saving to 1Password
-- [ ] **Admin:** Distribute new passwords to 11 CM and 3 BRAND via Signal/Slack DM
+- [x] **Admin:** VPS credential files confirmed deleted ✅ (2026-06-26)
 - [x] **Backend/Deploy:** Step 6 — deploy `mustChangePassword` enforcement logic ✅ DEPLOYED 2026-06-26
+- [ ] **Admin:** Distribute new passwords to 11 CM and 3 BRAND via Signal/Slack DM
+- [ ] **Admin:** Distribute `qc@hdago.com` and `arief@hdago.com` passwords via Signal/Slack DM
+- [ ] **Admin:** Send email notification to 9 remaining Creators (template: `reports/email-template-creator-password-change-20260626.md`) — deadline 2026-06-27 pagi
 
 ### Regression Test Post-Step-6 (2026-06-26)
 
@@ -167,9 +178,8 @@ All 9 findings tested after git sync from `e111a27` → `1bcde98`:
 ---
 
 ### P2 — This Sprint
-- [ ] **Frontend:** Add "segera ubah password jika masih default" banner di Creator dashboard (targets 10 Creator accounts still on default)
+- [ ] **Frontend:** Add "segera ubah password" banner di Creator dashboard (fallback visual hint selain redirect enforcement)
 - [ ] **DevOps/Backend:** Set `SEED_DEFAULT_PASSWORD` env var in environment runbook and deployment docs
-- [ ] **All team members:** Distribute new passwords for `arinda@hdago.com` and `rayhaan@hdago.com` via Signal/Slack DM (not WhatsApp — cloud backup not E2E encrypted for metadata)
 
 ### P3 — Next Sprint
 - [ ] **Backend:** Migrate `TokenBlacklistService` from in-memory Map to Redis for persistence across restarts
