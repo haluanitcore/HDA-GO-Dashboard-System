@@ -112,7 +112,7 @@ export default function CreatorOnboardingPage() {
 
   const validateStep2 = () => {
     if (!formData.tiktok_username.trim()) return 'Username TikTok wajib diisi';
-    if (!formData.tiktok_username.startsWith('@')) return 'Username TikTok harus diawali dengan @ (contoh: @cimolips)';
+    // Username stored without @ prefix
     if (!formData.tiktok_followers) return 'Jumlah Followers wajib diisi';
     if (formData.niche.length === 0) return 'Pilih minimal 1 Niche/Kategori';
     if (!formData.cm_id) return 'Silakan pilih Campaign Manager (CM) pembimbing Anda';
@@ -347,8 +347,8 @@ export default function CreatorOnboardingPage() {
                     <input 
                       type="text" 
                       placeholder="cimolips"
-                      value={formData.tiktok_username.replace(/^@/, '')}
-                      onChange={e => handleInputChange('tiktok_username', `@${e.target.value.trim()}`)}
+                      value={formData.tiktok_username}
+                      onChange={e => handleInputChange('tiktok_username', e.target.value.trim().replace(/^@+/, ''))}
                       className="glass-input w-full pl-9 pr-4 py-3 rounded-xl text-sm text-white focus:outline-none placeholder:text-gray-700"
                       required
                     />

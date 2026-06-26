@@ -30,6 +30,7 @@ import {
   Check,
   RefreshCw,
 } from 'lucide-react';
+import { formatUsername } from '@/lib/format-username';
 
 export default function BDDashboard() {
   const { dashboard, fetchDashboard, isLoading } = useBDStore();
@@ -336,7 +337,7 @@ export default function BDDashboard() {
                         </div>
                         <div>
                           <p className="text-sm font-bold text-white">{c.name}</p>
-                          <p className="text-xs text-gray-500 mt-0.5">@{c.username} &middot; <span className="text-[#F6D145] font-semibold">{c.levelName}</span></p>
+                          <p className="text-xs text-gray-500 mt-0.5">{formatUsername(c.username)} &middot; <span className="text-[#F6D145] font-semibold">{c.levelName}</span></p>
                         </div>
                       </div>
                     ))}
@@ -362,7 +363,7 @@ export default function BDDashboard() {
                         <div key={i} className="px-6 py-3.5 flex items-center justify-between text-xs font-medium">
                           <div className="flex flex-col gap-1">
                             <span className="text-white font-bold">{c.name}</span>
-                            <span className="text-gray-500 text-[10px]">@{c.username}</span>
+                            <span className="text-gray-500 text-[10px]">{formatUsername(c.username)}</span>
                             {c.fieldsChanged && c.fieldsChanged.length > 0 && (
                               <div className="flex flex-wrap gap-1 mt-1">
                                 {c.fieldsChanged.map((field: string) => (

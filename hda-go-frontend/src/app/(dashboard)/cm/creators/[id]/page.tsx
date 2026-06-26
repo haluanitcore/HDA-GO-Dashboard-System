@@ -7,6 +7,7 @@ import { safeUrl } from '@/lib/utils';
 import { api } from '@/services/api';
 import { Card, CardContent } from '@/components/ui/card';
 import { ChevronLeft, User, MapPin, Phone, Calendar, Hash, Users, ExternalLink, Save, Repeat, Edit2, Shield, FileSpreadsheet } from 'lucide-react';
+import { formatUsername } from '@/lib/format-username';
 
 export default function CreatorDetailPage() {
   const params = useParams();
@@ -87,9 +88,9 @@ export default function CreatorDetailPage() {
               {creator.user?.name?.charAt(0).toUpperCase()}
             </div>
             <div>
-              <h1 className="text-3xl font-black text-white tracking-tight">{creator.user?.name}</h1>
+              <h1 className="text-3xl font-black text-white tracking-tight">{formatUsername(creator.tiktok_username)}</h1>
               <div className="flex items-center gap-3 mt-1 text-sm font-medium flex-wrap">
-                <span className="text-blue-400">@{creator.tiktok_username || 'n/a'}</span>
+                <span className="text-gray-400">{creator.user?.name}</span>
                 <span className="w-1 h-1 rounded-full bg-white/20" />
                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest ${creator.onboarding_status === 'ACTIVE' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
                   {creator.onboarding_status}

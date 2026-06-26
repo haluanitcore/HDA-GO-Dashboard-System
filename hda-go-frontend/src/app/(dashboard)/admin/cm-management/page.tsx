@@ -9,6 +9,7 @@ import {
   Loader2, RefreshCw, Move, CheckCircle2, ShieldAlert, Award
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { formatUsername } from '@/lib/format-username';
 
 export default function AdminCMManagementPage() {
   const [cmPerformance, setCmPerformance] = useState<any[]>([]);
@@ -181,7 +182,7 @@ export default function AdminCMManagementPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <p className="text-sm text-gray-400">@{c.tiktok_username || 'no-username'}</p>
+                        <p className="text-sm text-gray-400">{formatUsername(c.tiktok_username)}</p>
                       </td>
                       <td className="px-6 py-4">
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-white/5 text-gray-400 border border-white/10">

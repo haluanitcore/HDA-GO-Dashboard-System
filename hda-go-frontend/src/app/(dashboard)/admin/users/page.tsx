@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Users, UserPlus, Search, ShieldAlert, CheckCircle, Ban, Filter, ChevronRight, Loader2, Award, ShoppingBag } from 'lucide-react';
 import { api } from '@/services/api';
+import { formatUsername } from '@/lib/format-username';
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<any[]>([]);
@@ -184,7 +185,7 @@ export default function AdminUsersPage() {
                               </span>
                               {user.role === 'CREATOR' && (
                                 <span className="text-[10px] text-gray-500 font-medium mt-0.5">
-                                  TikTok: @{user.tiktok_username || 'no-username'} | Lvl {user.level} | {(user.tiktok_followers || 0).toLocaleString('id-ID')} followers
+                                  TikTok: {formatUsername(user.tiktok_username)} | Lvl {user.level} | {(user.tiktok_followers || 0).toLocaleString('id-ID')} followers
                                 </span>
                               )}
                             </div>

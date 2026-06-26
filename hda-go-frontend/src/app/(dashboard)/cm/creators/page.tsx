@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { api } from '@/services/api';
 import { Card, CardContent } from '@/components/ui/card';
 import { Users, Plus, ArrowRight, UserCheck, TrendingUp, AlertCircle, Clock } from 'lucide-react';
+import { formatUsername } from '@/lib/format-username';
 
 export default function CMCreatorsPage() {
   const [creators, setCreators] = useState<any[]>([]);
@@ -154,8 +155,8 @@ export default function CMCreatorsPage() {
                         <span className="font-black text-white">{creator.user?.name?.charAt(0).toUpperCase()}</span>
                       </div>
                       <div>
-                        <p className="font-bold text-white mb-1 group-hover:text-blue-400 transition-colors">{creator.user?.name}</p>
-                        <p className="text-xs text-gray-400 font-medium">@{creator.tiktok_username || 'n/a'}</p>
+                        <p className="font-bold text-white mb-0.5 group-hover:text-blue-400 transition-colors">{formatUsername(creator.tiktok_username)}</p>
+                        <p className="text-[11px] text-gray-500 font-medium">{creator.user?.name}</p>
                         <div className="flex items-center gap-2 mt-2">
                           <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${creator.onboarding_status === 'ACTIVE' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
                             {creator.onboarding_status}

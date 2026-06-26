@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { formatUsername } from '@/lib/format-username';
 
 export default function AdminPage() {
   const [dashboardData, setDashboardData] = useState<any>(null);
@@ -426,7 +427,7 @@ export default function AdminPage() {
                   </Avatar>
                   <div>
                     <p className="text-sm font-bold text-white">{c.user?.name}</p>
-                    <p className="text-xs text-gray-500">@{c.tiktok_username || 'no-tiktok'}</p>
+                    <p className="text-xs text-gray-500">{formatUsername(c.tiktok_username)}</p>
                   </div>
                 </div>
                 <div className="text-right">
@@ -457,7 +458,7 @@ export default function AdminPage() {
                 </Avatar>
                 <div>
                   <h3 className="text-xl font-bold text-white">{selectedCreator.user?.name}</h3>
-                  <p className="text-sm text-gray-400">@{selectedCreator.tiktok_username || 'no-tiktok'}</p>
+                  <p className="text-sm text-gray-400">{formatUsername(selectedCreator.tiktok_username)}</p>
                   <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 mt-1">
                     {selectedCreator.onboarding_status}
                   </span>
