@@ -16,7 +16,13 @@ export default function QCLayout({ children }: { children: React.ReactNode }) {
     if (!isAuthenticated) {
       router.push('/login');
     } else if (user?.role !== 'QC' && user?.role !== 'CM' && user?.role !== 'ADMIN') {
-      router.push(`/${user?.role?.toLowerCase() ?? 'login'}`);
+      // Redirect ke role dashboard yang sesuai, fallback ke login
+      const roleMap: Record<string, string> = {
+        CREATOR: '/creator',
+        BD: '/bd',
+        BRAND: '/brand',
+      };
+      router.push(roleMap[user?.role ?? ''] ?? '/login');
     }
   }, [isAuthenticated, isInitialized, user, router]);
 
